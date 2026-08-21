@@ -1,0 +1,784 @@
+/* The advisory building blocks — the visual language of the A2UI catalog. */
+
+.panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-card);
+}
+
+.panel__title {
+  margin: 0 0 var(--space-2);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.008em;
+}
+
+.panel__subtitle {
+  margin: 0 0 var(--space-4);
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.panel__note {
+  margin: var(--space-4) 0 0;
+  color: var(--text-faint);
+  font-size: 12.5px;
+}
+
+.eyebrow {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-accent);
+  margin-bottom: var(--space-2);
+}
+
+.chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.chip--estimate {
+  margin-left: var(--space-2);
+  background: var(--tone-caution-bg);
+  border-color: transparent;
+  color: var(--tone-caution);
+}
+
+.rt-p {
+  margin: 0 0 var(--space-2);
+}
+
+.rt-p:last-child {
+  margin-bottom: 0;
+}
+
+.rt-list {
+  margin: 0;
+  padding-left: 1.15em;
+}
+
+.rt-list li + li {
+  margin-top: 3px;
+}
+
+/* ---------- AdvisoryHeader ---------- */
+
+.adv-header {
+  margin-bottom: var(--space-1);
+}
+
+.adv-header__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  line-height: 1.22;
+}
+
+.adv-header__icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: var(--radius-m);
+  background: var(--brand-accent-soft);
+  color: var(--brand-accent);
+}
+
+.adv-header__subtitle {
+  margin: var(--space-2) 0 0;
+  max-width: 68ch;
+  color: var(--text-muted);
+  font-size: 15px;
+}
+
+/* ---------- ProfileSummary ---------- */
+
+.profile__facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-3) var(--space-5);
+}
+
+.profile__fact dt {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.profile__fact dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.profile__open {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--line-strong);
+}
+
+.profile__open-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tone-caution);
+}
+
+.profile__open ul {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.15em;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+
+/* ---------- InsightCard ---------- */
+
+.insight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* The tone stripe carries the judgement, so the copy does not have to. */
+  border-left: 3px solid var(--tone);
+  height: 100%;
+}
+
+.insight--positive {
+  --tone: var(--tone-positive);
+  --tone-bg: var(--tone-positive-bg);
+}
+
+.insight--neutral {
+  --tone: var(--tone-neutral);
+  --tone-bg: var(--tone-neutral-bg);
+}
+
+.insight--caution {
+  --tone: var(--tone-caution);
+  --tone-bg: var(--tone-caution-bg);
+}
+
+.insight__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.insight__icon {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  border-radius: var(--radius-s);
+  background: var(--tone-bg);
+  color: var(--tone);
+}
+
+.insight__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.insight__metric {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.insight__metric-value {
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.05;
+  color: var(--tone);
+  font-variant-numeric: tabular-nums;
+}
+
+.insight__metric-label {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.insight__body {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ---------- ComparisonTable ---------- */
+
+.compare__scroll {
+  overflow-x: auto;
+  margin: 0 calc(var(--space-5) * -1) calc(var(--space-5) * -1);
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+.compare__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.compare__table th,
+.compare__table td {
+  padding: var(--space-3) var(--space-3);
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.compare__table thead th {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--line-strong);
+}
+
+.compare__criterion {
+  text-align: left !important;
+  font-weight: 500;
+  color: var(--text-muted);
+  white-space: normal;
+  min-width: 170px;
+}
+
+.compare__table .is-highlight {
+  background: var(--brand-accent-soft);
+}
+
+.compare__table thead .is-highlight {
+  color: var(--brand-accent);
+  font-weight: 700;
+}
+
+.compare__table tr.is-emphasis td,
+.compare__table tr.is-emphasis .compare__criterion {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.compare__table td.is-positive {
+  color: var(--tone-positive);
+}
+
+.compare__table td.is-caution {
+  color: var(--tone-caution);
+}
+
+.compare__table tbody tr:last-child th,
+.compare__table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ---------- ScenarioSelector ---------- */
+
+.scenarios__grid {
+  /* Room for the "Empfehlung" badge, which sits above its card's top edge. */
+  padding-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--space-3);
+}
+
+.scenario {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+  padding: var(--space-4);
+  text-align: left;
+  background: var(--bg-sunken);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-m);
+  color: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
+}
+
+.scenario:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+}
+
+.scenario.is-active {
+  border-color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+
+.scenario__flag {
+  position: absolute;
+  top: -9px;
+  left: var(--space-4);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-accent);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.scenario__label {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.scenario__metric {
+  display: grid;
+}
+
+.scenario__metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.scenario__metric-label {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.scenario__desc {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.scenario__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: var(--space-1);
+}
+
+/* ---------- MetricChart ---------- */
+
+.chart__figure {
+  margin: 0;
+}
+
+.chart__scroll {
+  overflow-x: auto;
+}
+
+.chart__svg {
+  width: 100%;
+  min-width: 480px;
+  height: auto;
+  display: block;
+}
+
+.chart__grid {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart__axis {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+
+.chart__tick,
+.chart__label {
+  fill: var(--text-faint);
+  font-size: 11px;
+  font-family: var(--font-sans);
+}
+
+.chart__threshold {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+}
+
+.chart__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-3);
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.chart__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart__swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: none;
+}
+
+.chart__unit {
+  margin-left: auto;
+  color: var(--text-faint);
+}
+
+.chart__empty {
+  margin: 0;
+  padding: var(--space-5) 0;
+  color: var(--text-faint);
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.chart__data {
+  margin-top: var(--space-3);
+}
+
+.chart__data summary {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.chart__table {
+  width: 100%;
+  margin-top: var(--space-3);
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.chart__table th,
+.chart__table td {
+  padding: 6px var(--space-3);
+  text-align: right;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.chart__table tbody th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+/* ---------- Timeline ---------- */
+
+.timeline__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+}
+
+.timeline__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+
+/* The connector line stops at the last step rather than trailing into space. */
+.timeline__step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 30px;
+  bottom: 0;
+  width: 2px;
+  background: var(--line-strong);
+}
+
+.timeline__step:last-child {
+  padding-bottom: 0;
+}
+
+.timeline__marker {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg-sunken);
+  border: 1.5px solid var(--line-strong);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  z-index: 1;
+}
+
+.timeline__step.is-wichtig .timeline__marker,
+.timeline__step.is-ziel .timeline__marker {
+  background: var(--brand-accent);
+  border-color: var(--brand-accent);
+  color: #fff;
+}
+
+.timeline__step.is-laden .timeline__marker {
+  background: var(--tone-neutral-bg);
+  border-color: var(--tone-neutral);
+  color: var(--tone-neutral);
+}
+
+.timeline__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.timeline__head h4 {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+}
+
+.timeline__duration {
+  flex: none;
+  font-size: 12px;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline__content p {
+  margin: 3px 0 0;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  max-width: 70ch;
+}
+
+.timeline__step.is-wichtig .timeline__content p {
+  color: var(--tone-caution);
+}
+
+/* ---------- Recommendation ---------- */
+
+.recommendation__head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--space-4);
+}
+
+.recommendation__rank {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.recommendation__title-group h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.recommendation__summary {
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  max-width: 70ch;
+}
+
+.recommendation__fit {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  min-width: 120px;
+}
+
+.recommendation__fit-bar {
+  width: 110px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.recommendation__fit-bar span {
+  display: block;
+  height: 100%;
+  background: var(--brand-accent);
+  border-radius: inherit;
+}
+
+.recommendation__fit-value {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.recommendation__fit-label {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+.recommendation__lists {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.recommendation__list h4 {
+  margin: 0 0 var(--space-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.recommendation__list--pro h4 {
+  color: var(--tone-positive);
+}
+
+.recommendation__list--con h4 {
+  color: var(--tone-caution);
+}
+
+.recommendation__list ul {
+  margin: 0;
+  padding-left: 1.15em;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+
+.recommendation__list li + li {
+  margin-top: 4px;
+}
+
+/* ---------- NextStepCTA ---------- */
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  background: linear-gradient(135deg, var(--brand-accent-soft), transparent 70%),
+    var(--bg-elevated);
+  border-color: var(--brand-accent);
+}
+
+.cta__text h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.cta__text p {
+  margin: var(--space-2) 0 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  max-width: 60ch;
+}
+
+.cta__actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* ---------- AssumptionNote ---------- */
+
+.assumptions {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-m);
+  padding: var(--space-3) var(--space-4);
+  background: transparent;
+}
+
+.assumptions summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  list-style: none;
+}
+
+.assumptions summary::-webkit-details-marker {
+  display: none;
+}
+
+.assumptions summary::after {
+  content: '▾';
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-faint);
+  transition: transform 0.15s ease;
+}
+
+.assumptions[open] summary::after {
+  transform: rotate(180deg);
+}
+
+.assumptions__count {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.assumptions__list {
+  margin: var(--space-3) 0 0;
+  padding-left: 1.15em;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.assumptions__source {
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+  color: var(--text-faint);
+  font-size: 11.5px;
+}
+
+/* ---------- A2UI basic-catalog layout components ---------- */
+
+/* The agent composes with Row and Column from the basic catalog; these give
+   them the spacing rhythm the advisory blocks expect. */
+.a2ui-column,
+[class*='column'] > .panel + .panel {
+  margin-top: 0;
+}
+
+.stage .surface > * {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
