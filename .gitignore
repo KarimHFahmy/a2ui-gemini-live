@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Build output (produced by `make build`, baked into the image)
+backend/static/
+
+# Local configuration
+.env
+.env.local
+
+# Tooling
+.DS_Store
+*.log

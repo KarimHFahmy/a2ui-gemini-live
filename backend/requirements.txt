@@ -1,0 +1,7 @@
+# Pinned to minor versions: the Live API surface in google-genai still moves,
+# and an unattended upgrade mid-demo is not a risk worth taking.
+fastapi>=0.118,<1.0
+uvicorn[standard]>=0.38,<1.0
+google-genai>=2.19,<3.0
+websockets>=15.0
+python-dotenv>=1.1
