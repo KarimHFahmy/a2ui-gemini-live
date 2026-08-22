@@ -12,20 +12,47 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.journeys import JOURNEYS  # noqa: E402
+from google.adk.events import EventActions  # noqa: E402
+from google.adk.tools import ToolContext  # noqa: E402
+
+from app.journeys import energie, mobilitaet  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "frontend" / "fixtures.json"
 
+
+class CaptureContext:
+    """A minimal stand-in for ADK's ToolContext.
+
+    Tools touch exactly two things — session state and `render_ui_widget` — so
+    capturing fixtures needs neither a runner nor a model. Borrowing the real
+    method means these payloads are byte-for-byte what a live session produces.
+    """
+
+    def __init__(self) -> None:
+        self.state: dict[str, Any] = {}
+        self._event_actions = EventActions()
+
+    render_ui_widget = ToolContext.render_ui_widget
+
+    def drain(self) -> list[dict[str, Any]]:
+        """Returns the A2UI messages pushed since the last call."""
+        widgets = self._event_actions.render_ui_widgets or []
+        self._event_actions = EventActions()
+        return [message for widget in widgets for message in widget.payload["messages"]]
+
+
+Script = list[tuple[Callable[..., Any], dict[str, Any]]]
+
 #: A representative conversation per journey — the demo moments from the
-#: briefing, with the same tool arguments the model would produce.
-SCRIPTS: dict[str, list[tuple[str, dict[str, Any]]]] = {
+#: briefing, with the tool arguments a model would produce.
+SCRIPTS: dict[str, Script] = {
     "energie": [
         (
-            "profil_aktualisieren",
+            energie.profil_aktualisieren,
             {
                 "baujahr": 1985,
                 "wohnflaeche_qm": 160,
@@ -38,12 +65,12 @@ SCRIPTS: dict[str, list[tuple[str, dict[str, Any]]]] = {
                 "offene_punkte": ["Genauer Gasverbrauch der letzten Jahre"],
             },
         ),
-        ("waermepumpen_eignung_zeigen", {}),
-        ("szenarien_vergleichen", {"empfohlen": "waermepumpe"}),
-        ("wirtschaftlichkeit_zeigen", {"szenario": "waermepumpe"}),
-        ("foerderung_und_fahrplan_zeigen", {"szenario": "waermepumpe"}),
+        (energie.waermepumpen_eignung_zeigen, {}),
+        (energie.szenarien_vergleichen, {"empfohlen": "waermepumpe"}),
+        (energie.wirtschaftlichkeit_zeigen, {"szenario": "waermepumpe"}),
+        (energie.foerderung_und_fahrplan_zeigen, {"szenario": "waermepumpe"}),
         (
-            "bedenken_adressieren",
+            energie.bedenken_adressieren,
             {
                 "titel": "Reicht die Wärmepumpe im Winter?",
                 "einordnung": (
@@ -81,7 +108,7 @@ SCRIPTS: dict[str, list[tuple[str, dict[str, Any]]]] = {
             },
         ),
         (
-            "naechsten_schritt_anbieten",
+            energie.naechsten_schritt_anbieten,
             {
                 "empfehlung": (
                     "Eine Wärmepumpe passt gut zu Ihrem Haus. Ich würde sie ohne "
@@ -89,7 +116,7 @@ SCRIPTS: dict[str, list[tuple[str, dict[str, Any]]]] = {
                     "separat prüfen."
                 ),
                 "begruendung": [
-                    "Ihre Heizkörper kommen mit 55 °C aus – das ist der entscheidende Punkt",
+                    "Ihre Heizkörper kommen mit 55 °C aus – der entscheidende Punkt",
                     "Nach rund 12 Jahren sind Sie gegenüber der Gasheizung im Plus",
                     "Die Förderung senkt Ihren Eigenanteil deutlich",
                 ],
@@ -103,7 +130,7 @@ SCRIPTS: dict[str, list[tuple[str, dict[str, Any]]]] = {
     ],
     "mobilitaet": [
         (
-            "profil_aktualisieren",
+            mobilitaet.profil_aktualisieren,
             {
                 "taeglich_km": 55,
                 "pendeltage_pro_woche": 5,
@@ -117,12 +144,12 @@ SCRIPTS: dict[str, list[tuple[str, dict[str, Any]]]] = {
                 "offene_punkte": ["Lademöglichkeit beim Arbeitgeber"],
             },
         ),
-        ("alltagstauglichkeit_zeigen", {}),
-        ("ladeloesungen_vergleichen", {}),
-        ("fahrzeuge_vorschlagen", {}),
-        ("kosten_vergleichen", {}),
+        (mobilitaet.alltagstauglichkeit_zeigen, {}),
+        (mobilitaet.ladeloesungen_vergleichen, {}),
+        (mobilitaet.fahrzeuge_vorschlagen, {}),
+        (mobilitaet.kosten_vergleichen, {}),
         (
-            "bedenken_adressieren",
+            mobilitaet.bedenken_adressieren,
             {
                 "titel": "Ist ein E-Auto ohne eigene Wallbox praktikabel?",
                 "einordnung": (
@@ -158,7 +185,7 @@ SCRIPTS: dict[str, list[tuple[str, dict[str, Any]]]] = {
             },
         ),
         (
-            "naechsten_schritt_anbieten",
+            mobilitaet.naechsten_schritt_anbieten,
             {
                 "empfehlung": (
                     "Klären Sie zuerst die Ladefrage, nicht die Fahrzeugfrage. Mit "
@@ -184,16 +211,13 @@ SCRIPTS: dict[str, list[tuple[str, dict[str, Any]]]] = {
 def capture() -> dict[str, list[dict[str, Any]]]:
     fixtures: dict[str, list[dict[str, Any]]] = {}
 
-    for journey_id, journey in JOURNEYS.items():
-        state = journey.state_factory()
+    for journey_id, script in SCRIPTS.items():
+        context = CaptureContext()
         messages: list[dict[str, Any]] = []
-        seen: set[str] = set()
 
-        for name, args in SCRIPTS[journey_id]:
-            result = journey.handle(state, name, args)
-            for surface in result.surfaces:
-                messages.extend(surface.messages(exists=surface.surface_id in seen))
-                seen.add(surface.surface_id)
+        for tool, args in script:
+            tool(tool_context=context, **args)  # type: ignore[arg-type]
+            messages.extend(context.drain())
 
         fixtures[journey_id] = messages
 

@@ -2,18 +2,39 @@
 
 from __future__ import annotations
 
-from .base import Journey, ToolResult
-from .energie import JOURNEY as ENERGIE
-from .mobilitaet import JOURNEY as MOBILITAET
+from functools import lru_cache
 
-JOURNEYS: dict[str, Journey] = {ENERGIE.id: ENERGIE, MOBILITAET.id: MOBILITAET}
+from .base import A2UI_PROVIDER, Journey
+from . import energie, mobilitaet
 
-DEFAULT_JOURNEY = ENERGIE.id
+DEFAULT_JOURNEY = "energie"
+
+_BUILDERS = {"energie": energie.build, "mobilitaet": mobilitaet.build}
+
+#: The handover summary builder for each journey, used when a session ends.
+SUMMARIES = {"energie": energie.summary, "mobilitaet": mobilitaet.summary}
 
 
-def get_journey(journey_id: str | None) -> Journey:
-    """Resolves a journey id, falling back to the default."""
-    return JOURNEYS.get(journey_id or DEFAULT_JOURNEY, JOURNEYS[DEFAULT_JOURNEY])
+@lru_cache(maxsize=None)
+def get_journey(journey_id: str | None = None) -> Journey:
+    """Resolves a journey id, falling back to the default.
+
+    Cached because building a Journey constructs an ADK Agent, and every
+    WebSocket connection asks for one.
+    """
+    builder = _BUILDERS.get(journey_id or DEFAULT_JOURNEY, _BUILDERS[DEFAULT_JOURNEY])
+    return builder()
 
 
-__all__ = ["Journey", "ToolResult", "JOURNEYS", "DEFAULT_JOURNEY", "get_journey"]
+def all_journeys() -> list[Journey]:
+    return [get_journey(journey_id) for journey_id in _BUILDERS]
+
+
+__all__ = [
+    "A2UI_PROVIDER",
+    "DEFAULT_JOURNEY",
+    "Journey",
+    "SUMMARIES",
+    "all_journeys",
+    "get_journey",
+]

@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, Sequence
 
 from ..domain import demo_data as dd
-from . import components as c
+from .builder import TONE_MARK, SurfaceBuilder, bind
 from .surface import Surface
 
 Journey = Literal["energie", "mobilitaet"]
@@ -15,51 +15,40 @@ def bedenken_surface(
     *,
     titel: str,
     einordnung: str,
-    punkte: list[dict[str, str]],
-    tone: Literal["positive", "neutral", "caution"] = "neutral",
+    punkte: Sequence[dict[str, str]],
 ) -> Surface:
     """"Empathische Reaktion auf Bedenken, ohne Druck aufzubauen".
 
     A worry gets its own surface rather than being buried in a paragraph:
-    named plainly, then answered point by point.
+    named in the client's words, then answered point by point.
     """
-    children = ["kopf", "einordnung"]
-    components: list[dict[str, Any]] = [
-        c.advisory_header(
-            "kopf",
-            eyebrow="Ihre Frage",
-            title=titel,
-            icon="question",
-        ),
-        c.insight_card(
-            "einordnung",
-            title="Kurz eingeordnet",
-            body=einordnung,
-            tone=tone,
-            icon="info",
-        ),
-    ]
+    b = SurfaceBuilder("bedenken", "Ihre Frage")
 
-    for index, punkt in enumerate(punkte[:4]):
-        comp_id = f"punkt_{index}"
-        children.append(comp_id)
-        components.append(
-            c.insight_card(
-                comp_id,
-                title=punkt.get("titel", ""),
-                body=punkt.get("text", ""),
-                tone=punkt.get("tone", "neutral"),  # type: ignore[arg-type]
-                icon=punkt.get("icon"),
-            )
+    punkt = b.card(
+        b.column([b.text(bind("titel")), b.text(bind("text"), variant="body")])
+    )
+
+    b.root(
+        b.column(
+            [
+                b.heading("Ihre Frage", titel),
+                b.card(b.text(einordnung)),
+                b.repeat(punkt, "/punkte"),
+            ]
         )
+    )
 
-    components.insert(0, c.column("root", children))
-
-    return Surface(
-        surface_id="bedenken",
-        title="Ihre Frage",
-        components=components,
-        data={},
+    return b.finish(
+        {
+            "punkte": [
+                {
+                    "titel": f"**{TONE_MARK.get(p.get('tone', 'neutral'), '→')} "
+                    f"{p.get('titel', '')}**",
+                    "text": p.get("text", ""),
+                }
+                for p in punkte[:4]
+            ]
+        }
     )
 
 
@@ -68,8 +57,8 @@ def handover_surface(
     journey: Journey,
     titel: str,
     empfehlung: str,
-    begruendung: list[str],
-    offene_punkte: list[str],
+    begruendung: Sequence[str],
+    offene_punkte: Sequence[str],
     schritt_label: str,
     schritt_event: str,
 ) -> Surface:
@@ -84,57 +73,70 @@ def handover_surface(
         else ("Angebot anfordern", "angebot_anfordern")
     )
 
-    components = [
-        c.column("root", ["kopf", "empfehlung", "cta", "hinweis"]),
-        c.advisory_header(
-            "kopf",
-            eyebrow="Ihr nächster Schritt",
-            title=titel,
-            subtitle="Alles, was wir besprochen haben, in einer Übersicht.",
-            icon="flag",
-        ),
-        c.recommendation(
-            "empfehlung",
-            title="Meine Empfehlung für Sie",
-            summary=empfehlung,
-            pros=c.bind("/begruendung"),
-            cons=c.bind("/offen"),
-        ),
-        c.next_step_cta(
-            "cta",
-            title=schritt_label,
-            body=(
-                "Sie entscheiden, wie es weitergeht – nichts davon ist verbindlich."
-            ),
-            primary_label=schritt_label,
-            primary_event=schritt_event,
-            primary_context={"journey": journey},
-            secondary_label=zweit_label,
-            secondary_event=zweit_event,
-            secondary_context={"journey": journey},
-        ),
-        c.assumption_note(
-            "hinweis",
-            title="Transparenz",
-            assumptions=c.bind("/hinweise"),
-            source=(
-                dd.QUELLE_ENERGIE if journey == "energie" else dd.QUELLE_MOBILITAET
-            ),
-            as_of=dd.STAND,
-        ),
-    ]
-
-    return Surface(
-        surface_id="naechster_schritt",
-        title="Ihr nächster Schritt",
-        components=components,
-        data={
-            "begruendung": begruendung,
-            "offen": offene_punkte or ["Keine offenen Punkte"],
-            "hinweise": [
-                "Diese Beratung ist unverbindlich und ersetzt kein Angebot.",
-                "Ihre Angaben bleiben in dieser Sitzung und werden nicht gespeichert.",
-                dd.DISCLAIMER,
-            ],
-        },
+    b = SurfaceBuilder("naechster_schritt", "Ihr nächster Schritt")
+    b.root(
+        b.column(
+            [
+                b.heading(
+                    "Ihr nächster Schritt",
+                    titel,
+                    "Alles, was wir besprochen haben, in einer Übersicht.",
+                ),
+                b.card(
+                    b.column(
+                        [
+                            b.text("Meine Empfehlung für Sie", variant="h3"),
+                            b.text(empfehlung),
+                            b.row(
+                                [
+                                    b.bullets(begruendung, heading="Dafür spricht"),
+                                    b.bullets(
+                                        offene_punkte or ["Keine offenen Punkte"],
+                                        heading="Noch zu klären",
+                                    ),
+                                ]
+                            ),
+                        ]
+                    )
+                ),
+                b.card(
+                    b.column(
+                        [
+                            b.text(schritt_label, variant="h3"),
+                            b.text(
+                                "Sie entscheiden, wie es weitergeht – nichts davon "
+                                "ist verbindlich."
+                            ),
+                            b.row(
+                                [
+                                    b.button(
+                                        schritt_label,
+                                        event=schritt_event,
+                                        context={"journey": journey},
+                                        variant="primary",
+                                    ),
+                                    b.button(
+                                        zweit_label,
+                                        event=zweit_event,
+                                        context={"journey": journey},
+                                    ),
+                                ],
+                                align="center",
+                            ),
+                        ]
+                    )
+                ),
+                b.assumptions(
+                    [
+                        "Diese Beratung ist unverbindlich und ersetzt kein Angebot.",
+                        "Ihre Angaben bleiben in dieser Sitzung und werden nicht gespeichert.",
+                        dd.DISCLAIMER,
+                    ],
+                    source=dd.QUELLE_ENERGIE if journey == "energie" else dd.QUELLE_MOBILITAET,
+                    as_of=dd.STAND,
+                ),
+            ]
+        )
     )
+
+    return b.finish({})

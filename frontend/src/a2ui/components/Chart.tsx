@@ -9,8 +9,7 @@
 
 import {useId} from 'react';
 
-import {formatValue} from './primitives';
-import type {Series} from '../schemas';
+import {formatValue, type Series} from '../schemas';
 
 type ChartType = 'bar' | 'groupedBar' | 'stackedBar' | 'line' | 'donut';
 type ValueFormat = 'number' | 'currency' | 'percent';
