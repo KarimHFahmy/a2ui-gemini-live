@@ -1,9 +1,10 @@
 # Adaptive Advisory Experiences
 
 Two voice-led advisory demos for the German market — **Energieberater** and
-**Autoberater** — built on the **Gemini Live API over Vertex AI** and
-**[A2UI](https://github.com/a2ui-project/a2ui)**. The client talks; the agent
-listens, understands, and builds the advisory interface in real time.
+**Autoberater** — built on **Google's Agent Development Kit (ADK)**, the
+**Gemini Live API over Vertex AI**, and **[A2UI](https://github.com/a2ui-project/a2ui)**.
+The client talks; the agent listens, understands, and builds the advisory
+interface in real time.
 
 > Nicht die Kund:innen durch Komplexität navigieren lassen. Die KI baut in
 > Echtzeit genau die Beratungserfahrung, die zur individuellen Frage, Situation
@@ -44,24 +45,48 @@ away.
 ## Architecture
 
 ```
-Browser                          Cloud Run (one container)              Google Cloud
-┌──────────────────────┐         ┌───────────────────────────┐          ┌──────────────┐
-│ React SPA            │         │ FastAPI                   │          │ Vertex AI    │
-│                      │  audio  │                           │  audio   │              │
-│ AudioWorklet ────────┼────────>│ AdvisorySession ──────────┼─────────>│ Gemini Live  │
-│ 16 kHz PCM16         │  (bin)  │                           │  (WSS)   │ native audio │
-│                      │<────────┼── 24 kHz PCM16            │<─────────┤ de-DE        │
-│                      │         │                           │ tool call│              │
-│ @a2ui/react v0_9     │<────────┼── A2UI envelopes (JSON)   │          └──────────────┘
-│  ├ basic catalog     │  (text) │      ▲                    │
-│  └ advisory blocks   │         │      │ composes           │
-│                      │────────>│  Journey ──> Domain calc  │
-│ transcript + dock    │ actions │  (tools)     (no LLM)     │
-└──────────────────────┘         └───────────────────────────┘
+Browser                        Cloud Run (one container)                Google Cloud
+┌────────────────────┐       ┌──────────────────────────────┐        ┌──────────────┐
+│ React SPA          │ audio │ FastAPI  /ws                 │  audio │ Vertex AI    │
+│ AudioWorklet ──────┼──────>│   └ AdvisorySession          ├───────>│ Gemini Live  │
+│ 16 kHz PCM16       │ (bin) │       └ ADK Runner.run_live  │ (WSS)  │ native audio │
+│                    │<──────┼─── 24 kHz PCM16              │<───────┤ de-DE        │
+│                    │       │            │                 │  tool  │              │
+│ @a2ui/react v0_9   │<──────┼─── A2UI envelopes            │  call  └──────────────┘
+│  Adaptive Advisory │(text) │            ▲                 │
+│  catalog:          │       │      UiWidget(provider=a2ui) │
+│   basic catalog    │       │            │                 │
+│   + chart, table   │       │   ADK FunctionTool           │
+│                    │──────>│      └ Domain calc (no LLM)  │
+│ transcript + dock  │action │      └ Composer → A2UI       │
+└────────────────────┘       └──────────────────────────────┘
 ```
 
-**The model never emits UI JSON.** It calls semantic tools —
-`waermepumpen_eignung_zeigen`, `ladeloesungen_vergleichen` — and the backend
+### ADK does the plumbing
+
+`Runner.run_live()` owns the Live API connection, the session store, tool
+dispatch and the event stream. The application code left over is the
+translation between ADK events and what a browser needs — audio frames,
+transcripts, and the A2UI stream.
+
+Tools are plain Python functions. ADK derives each declaration the model sees
+from the signature and docstring, so the contract and the implementation cannot
+drift apart:
+
+```python
+def waermepumpen_eignung_zeigen(tool_context: ToolContext) -> dict[str, Any]:
+    """Zeigt, ob das Haus für eine Wärmepumpe geeignet ist. …"""
+    profil = _profil(tool_context)
+    push(tool_context, compose.eignung_surface(profil))   # → the browser
+    return {"urteil": calc.eignung(profil)["urteil"], ...}  # → the model
+```
+
+`push()` uses ADK's own generative-UI channel: `tool_context.render_ui_widget`
+attaches a `UiWidget(provider="a2ui", …)` to the event the tool produces, and
+the WebSocket layer forwards widgets with that provider. `provider` exists for
+exactly this — pluggable rendering strategies — so no side channel is needed.
+
+**The model never emits UI JSON.** It calls semantic tools and the backend
 composes the surface from deterministic domain calculations. That is the
 guardrail the briefing asks for:
 
@@ -76,36 +101,50 @@ guardrail the briefing asks for:
 
 The official renderers (`@a2ui/react`, `@a2ui/web_core`) ship **v0.8 and
 v0.9**; v1.0 is still a candidate specification. This demo targets **v0.9.1**
-and uses the official React renderer rather than a hand-written one.
+and uses the official React renderer unmodified — including its Markdown
+pipeline (`@a2ui/markdown-it`, markdown-it + DOMPurify), which is what keeps
+agent-authored text from becoming an XSS vector.
 
 v0.9 also resolves every component against the *surface's* catalog — there is
 no per-component `catalogId` override yet. So the Adaptive Advisory catalog is
-a superset: the basic catalog's components and functions plus our advisory
-blocks, registered under one id
-(`urn:a2ui:catalog:adaptive-advisory:1.0`, shared by
-`backend/app/a2ui/protocol.py` and `frontend/src/a2ui/catalog.ts`).
+registered as a superset: the basic catalog's components and functions plus our
+two additions, under one id (`urn:a2ui:catalog:adaptive-advisory:1.0`, shared
+by `backend/app/a2ui/protocol.py` and `frontend/src/a2ui/catalog.ts`).
 
-### The advisory catalog
+### The catalog is Google's, plus two
 
-Ten building blocks, matching the briefing's "6–8 UI-Bausteine":
+Almost everything on screen is rendered by `@a2ui/react`'s own basic catalog,
+themed entirely through its `--a2ui-*` custom properties — no component
+overrides:
 
-| Component | Rolle |
+| Baustein | Rendered with |
 |---|---|
-| `AdvisoryHeader` | Rahmt, was gerade gezeigt wird |
-| `ProfileSummary` | „Zusammenfassung des Verstandenen", mit Schätzmarkierung |
-| `InsightCard` | Eine Aussage, optional mit Leitkennzahl |
-| `ComparisonTable` | Optionen als Spalten, Kriterien als Zeilen |
-| `ScenarioSelector` | Auswählbare Szenarien (Zwei-Wege-Bindung) |
-| `MetricChart` | Balken, gruppiert, gestapelt, Linie |
-| `Timeline` | Reihenfolge und Dauer |
-| `Recommendation` | Rangfolge mit offen gezeigten Trade-offs |
-| `NextStepCTA` | Übergabe an Mensch oder Prozess |
-| `AssumptionNote` | Annahmen und Datenquellen sichtbar machen |
+| Section headers | `Text` variants `caption` + `h2` |
+| Karten mit Leitkennzahl | `Card` › `Column` › `Text` (`h4`, `h1`, `body`) |
+| Fakten, Timeline, Empfehlungen | `List` with a `ChildList` **template** over the data model |
+| Szenarioauswahl | `ChoicePicker`, `displayStyle: chips` |
+| Call-to-action | `Button` with an agent event |
+| Annahmen & Datenquellen | `Modal` (trigger + content) |
+| Aufzählungen, Hervorhebung | `Text` with Markdown |
+| **Diagramm** | `MetricChart` — ours; no official equivalent |
+| **Vergleichstabelle** | `ComparisonTable` — ours; no official equivalent |
 
-`ScenarioSelector` shows off A2UI's reactive binding: picking a scenario writes
-to the data model, the comparison table below re-highlights immediately, and
-the action reaches the agent separately so it can react in speech. The UI never
-waits on the model.
+Two things are worth pointing at during a demo.
+
+**The list template.** A timeline, a fact grid and a ranked recommendation list
+are each *one* component definition plus a data array. Adding a step is an
+`updateDataModel` message, not a layout change.
+
+**The shared binding.** The `ChoicePicker` and the comparison table's
+`highlight` read the same data-model path. Picking a scenario re-highlights the
+table immediately — client-side, no round trip — while the Button separately
+tells the agent, which reacts in speech. The UI never waits on the model.
+
+> **Note on `@a2ui/react@0.10.2`.** The published package ships its CSS Modules
+> without the class-name map, so `Button`, `TextField` and `ChoicePicker`
+> render with some `undefined` classes. The elements are semantically correct,
+> so `frontend/src/styles/blocks.css` styles them by element — one clearly
+> marked section that can be deleted once the package emits its own names.
 
 ---
 
@@ -188,30 +227,31 @@ production deployment would move it to Redis or Firestore.
 backend/
   app/
     main.py               FastAPI: /ws, /api/journeys, /healthz, SPA hosting
-    live_session.py       Gemini Live orchestration, tool execution, A2UI streaming
-    config.py             Environment configuration
+    session.py            ADK Runner.run_live → browser: audio, transcripts, A2UI
+    config.py             Environment configuration (also configures ADK)
     a2ui/
       protocol.py         A2UI v0.9 envelopes + tree validation
-      components.py       Typed builders for every allowed component
+      builder.py          SurfaceBuilder over the official basic catalog
       surface.py          One composed surface, create-or-update aware
       composer_*.py       Domain results -> advisory surfaces
     journeys/
-      base.py             Journey definition + shared prompt and tools
-      energie.py          Energieberater: prompt, tools, handlers
-      mobilitaet.py       Autoberater: prompt, tools, handlers
+      base.py             Journey + the UiWidget push, shared prompt fragments
+      energie.py          Energieberater: ADK tools, instruction, handover
+      mobilitaet.py       Autoberater: ADK tools, instruction, handover
     domain/
       demo_data.py        German market demo values (single source of numbers)
       energie.py          Wärmebedarf, JAZ, Szenarien, Förderung, Amortisation
       mobilitaet.py       Reichweite, Ladeoptionen, TCO, Fahrzeugpassung
   scripts/generate_fixtures.py
-  tests/                  59 tests: protocol, domain, journey contracts, session
+  tests/                  98 tests: protocol, domain, tool contracts, session
 
 frontend/
   src/
     a2ui/
-      schemas.ts          Zod component APIs (the agent's contract)
-      catalog.ts          Catalog registration
-      components/         React implementations + inline SVG charts
+      A2uiHost.tsx        Provides the official Markdown renderer
+      catalog.ts          Catalog registration (basic catalog + our two)
+      schemas.ts          Zod component APIs for MetricChart, ComparisonTable
+      components/         Their implementations + the inline SVG chart
     live/
       audio.ts            Capture (16 kHz) and playback (24 kHz) with barge-in
       session.ts          WebSocket client
@@ -220,6 +260,7 @@ frontend/
     preview/              Offline catalog preview
   scripts/check-catalog.mjs
 ```
+
 
 ---
 
@@ -230,13 +271,16 @@ make test
 ```
 
 - **Backend** (`pytest`) — the A2UI wire format, the advisory arithmetic, and
-  the journey contracts: every declared tool has a handler, every tool produces
-  a renderable tree from bare arguments, and every data binding resolves
-  against the data model it ships with.
+  the tool contracts: ADK can build a declaration for every tool, every
+  parameter is documented, every tool renders from its required arguments
+  alone, the profile survives across calls, and every data binding resolves
+  against the data model it ships with. The ADK event translation is driven
+  with hand-built events, so no runner or credentials are needed.
 - **Frontend** (`tsc`) — typecheck.
 - **Catalog check** (Playwright) — renders every captured surface in a real
   browser in light and dark mode and fails on a missing-child placeholder, an
-  unknown component, an empty chart or a page that scrolls sideways.
+  unknown component, an empty chart, literal Markdown on screen (the sign of a
+  missing renderer) or a page that scrolls sideways.
 
 ---
 
@@ -249,12 +293,15 @@ demo ships deliberately brand-neutral.
 **Change the numbers.** Everything lives in `backend/app/domain/demo_data.py`
 with a `STAND` date that is surfaced in the UI. Nothing else hardcodes a price.
 
-**Add a building block.** Define the Zod API in `frontend/src/a2ui/schemas.ts`,
-implement it in `components/blocks.tsx`, add it to `ADVISORY_COMPONENTS`, and
-add a matching builder in `backend/app/a2ui/components.py`.
+**Add a surface.** Compose it in a `composer_*.py` with `SurfaceBuilder`, then
+call it from a tool. Reach for a new *component* only when the basic catalog
+genuinely cannot express the idea — two additions in this whole demo is the
+bar. If you do: Zod API in `frontend/src/a2ui/schemas.ts`, implementation in
+`components/blocks.tsx`, add it to `ADVISORY_COMPONENTS`, and a matching method
+on `SurfaceBuilder`.
 
-**Add a journey.** Copy `backend/app/journeys/energie.py`: a system
-instruction, tool declarations, handlers and a state dataclass. Register it in
+**Add a journey.** Copy `backend/app/journeys/energie.py`: an instruction, a
+list of tool functions, and a `build()` returning a `Journey`. Register it in
 `journeys/__init__.py` and the landing page picks it up from `/api/journeys`.
 
 ---

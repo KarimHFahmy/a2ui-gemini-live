@@ -1,70 +1,363 @@
-"""Journey 01 — Der persönliche Energieberater."""
+"""Journey 01 — Der persönliche Energieberater.
+
+Each tool is a plain Python function. ADK builds the declaration the model sees
+from the signature and docstring, runs the domain calculation, and pushes the
+composed A2UI surface to the browser. The model chooses *when*; it never
+chooses the numbers or the layout.
+"""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
+
+from google.adk.tools import ToolContext
 
 from ..a2ui import composer_energie as compose
 from ..a2ui import composer_shared as shared
+from ..config import get_settings
 from ..domain import energie as calc
-from .base import GEMEINSAME_HALTUNG, BEDENKEN_TOOL, Journey, ToolResult
+from .base import HALTUNG, Journey, apply, load_profile, open_points, push, save_profile
+
+Heizung = Literal["gas", "oel", "fernwaerme", "nachtspeicher", "waermepumpe"]
+Zustand = Literal["unsaniert", "teilsaniert", "saniert"]
+Verteilung = Literal[
+    "fussbodenheizung",
+    "flaechenheizkoerper_gross",
+    "heizkoerper_standard",
+    "heizkoerper_klein_alt",
+]
+Weg = Literal["waermepumpe", "waermepumpe_huelle", "waermepumpe_pv"]
 
 
-@dataclass
-class EnergieState:
-    """What the session knows about this household."""
+def _profil(tool_context: ToolContext) -> calc.Gebaeudeprofil:
+    return load_profile(tool_context, calc.Gebaeudeprofil)
 
-    profil: calc.Gebaeudeprofil = field(default_factory=calc.Gebaeudeprofil)
-    profil_gesetzt: bool = False
-    einkommensbonus: bool = False
-    gewaehltes_szenario: str = "waermepumpe"
-    offene_punkte: list[str] = field(default_factory=list)
 
-    def szenarien(self) -> list[calc.Szenario]:
-        return calc.szenarien(self.profil, einkommensbonus=self.einkommensbonus)
+def _szenarien(tool_context: ToolContext) -> list[calc.Szenario]:
+    return calc.szenarien(
+        _profil(tool_context),
+        einkommensbonus=bool(tool_context.state.get("_einkommensbonus", False)),
+    )
 
-    def snapshot(self) -> dict[str, Any]:
-        check = calc.eignung(self.profil)
-        szenarien = self.szenarien()
-        gewaehlt = next(
-            (s for s in szenarien if s.id == self.gewaehltes_szenario), szenarien[1]
-        )
-        return {
-            "journey": "energie",
-            "gebaeude": {
-                "baujahr": self.profil.baujahr,
-                "wohnflaeche_qm": self.profil.wohnflaeche_qm,
-                "heizung": self.profil.heizung,
-                "sanierungsstand": self.profil.sanierungsstand,
-                "personen": self.profil.personen,
-                "waermebedarf_kwh_a": calc.waermebedarf_kwh_a(self.profil),
-            },
-            "eignung": {
-                "urteil": check["urteil"],
-                "score": check["score"],
-                "jaz": check["jaz"],
-                "vorlauftemperatur_c": check["vorlauftemperatur_c"],
-            },
-            "empfehlung": {
-                "szenario": gewaehlt.label,
-                "investition_eur": gewaehlt.investition_eur,
-                "foerderung_eur": gewaehlt.foerderung_eur,
-                "eigenanteil_eur": gewaehlt.eigenanteil_eur,
-                "energiekosten_eur_a": gewaehlt.energiekosten_eur_a,
-                "massnahmen": gewaehlt.massnahmen,
-            },
-            "prioritaeten": self.profil.prioritaeten,
-            "bedenken": self.profil.bedenken,
-            "offene_punkte": self.offene_punkte,
-        }
+
+def _gewaehlt(tool_context: ToolContext, requested: str | None) -> str:
+    """Remembers which path the conversation is currently working on."""
+    if requested:
+        tool_context.state["_gewaehltes_szenario"] = requested
+        return requested
+    return str(tool_context.state.get("_gewaehltes_szenario", "waermepumpe"))
 
 
 # ---------------------------------------------------------------------------
-# System instruction
+# Tools
 # ---------------------------------------------------------------------------
 
-SYSTEM_INSTRUCTION = f"""
+
+def profil_aktualisieren(
+    tool_context: ToolContext,
+    baujahr: int | None = None,
+    wohnflaeche_qm: float | None = None,
+    heizung: Heizung | None = None,
+    sanierungsstand: Zustand | None = None,
+    waermesystem: Verteilung | None = None,
+    personen: int | None = None,
+    verbrauch_kwh_a: float | None = None,
+    pv_vorhanden: bool | None = None,
+    prioritaeten: list[str] | None = None,
+    bedenken: list[str] | None = None,
+    offene_punkte: list[str] | None = None,
+) -> dict[str, Any]:
+    """Zeigt auf dem Bildschirm, was du über das Zuhause verstanden hast.
+
+    Rufe das früh auf und danach jedes Mal, wenn du etwas Neues erfährst oder
+    die Person dich korrigiert. Übergib nur, was du tatsächlich weißt.
+
+    Args:
+        baujahr: Baujahr des Gebäudes.
+        wohnflaeche_qm: Beheizte Wohnfläche in Quadratmetern.
+        heizung: Die heutige Heizung.
+        sanierungsstand: Zustand der Gebäudehülle, z. B. teilsaniert wenn
+            Fenster oder Dach schon erneuert wurden.
+        waermesystem: Wie die Wärme im Haus verteilt wird. Bestimmt die nötige
+            Vorlauftemperatur und damit die Eignung.
+        personen: Personen im Haushalt.
+        verbrauch_kwh_a: Gemessener Jahresverbrauch in kWh, falls bekannt.
+            Schlägt jede Schätzung — frag ruhig danach.
+        pv_vorhanden: Ob bereits eine PV-Anlage auf dem Dach ist.
+        prioritaeten: Was der Person wichtig ist, in ihren Worten.
+        bedenken: Geäußerte Sorgen, in den Worten der Person.
+        offene_punkte: Was du noch nicht weißt und geschätzt hast. Wird der
+            Person transparent angezeigt.
+    """
+    profil = apply(
+        _profil(tool_context),
+        baujahr=baujahr,
+        wohnflaeche_qm=wohnflaeche_qm,
+        heizung=heizung,
+        sanierungsstand=sanierungsstand,
+        waermesystem=waermesystem,
+        personen=personen,
+        verbrauch_kwh_a=verbrauch_kwh_a,
+        pv_vorhanden=pv_vorhanden,
+        prioritaeten=prioritaeten,
+        bedenken=bedenken,
+    )
+    save_profile(tool_context, profil)
+    offen = open_points(tool_context, offene_punkte)
+
+    push(tool_context, compose.profil_surface(profil, offen))
+    return {
+        "waermebedarf_kwh_a": calc.waermebedarf_kwh_a(profil),
+        "hinweis": "Bestätige kurz, was du verstanden hast, ohne alle Werte vorzulesen.",
+    }
+
+
+def waermepumpen_eignung_zeigen(tool_context: ToolContext) -> dict[str, Any]:
+    """Zeigt, ob das Haus für eine Wärmepumpe geeignet ist.
+
+    Nötige Vorlauftemperatur, erwartete Jahresarbeitszahl, Heizlast und der
+    Verlauf der Heizlast über den Winter. Beantwortet die Sorge, ob es im
+    Winter reicht. Rufe das auf, sobald du Gebäude, Heizung und Wärmeverteilung
+    kennst.
+    """
+    profil = _profil(tool_context)
+    check = calc.eignung(profil)
+    push(tool_context, compose.eignung_surface(profil))
+    return {
+        "urteil": check["urteil"],
+        "score": check["score"],
+        "vorlauftemperatur_c": check["vorlauftemperatur_c"],
+        "jaz": check["jaz"],
+        "heizlast_kw": check["heizlast_kw"],
+        "hinweise": check["hinweise"],
+        "massnahmen": check["massnahmen"],
+    }
+
+
+def szenarien_vergleichen(
+    tool_context: ToolContext,
+    empfohlen: Literal["bestand", "waermepumpe", "waermepumpe_huelle", "waermepumpe_pv"]
+    | None = None,
+) -> dict[str, Any]:
+    """Stellt die möglichen Wege nebeneinander.
+
+    Weiter wie bisher, Wärmepumpe, Wärmepumpe mit Dämmung, Wärmepumpe mit PV —
+    mit Investition, Förderung, Eigenanteil, laufenden Kosten und CO2. Die
+    Person kann auf dem Bildschirm einen Weg auswählen.
+
+    Args:
+        empfohlen: Welchen Weg du auf Basis des Gesprächs hervorhebst.
+            Orientiere dich an den Prioritäten der Person.
+    """
+    szenarien = _szenarien(tool_context)
+    verfuegbar = {s.id for s in szenarien}
+    gewaehlt = _gewaehlt(tool_context, empfohlen if empfohlen in verfuegbar else None)
+
+    push(tool_context, compose.szenarien_surface(_profil(tool_context), szenarien, empfohlen_id=gewaehlt))
+    return {
+        "hervorgehoben": gewaehlt,
+        "szenarien": [
+            {
+                "id": s.id,
+                "label": s.label,
+                "eigenanteil_eur": s.eigenanteil_eur,
+                "energiekosten_eur_a": s.energiekosten_eur_a,
+                "co2_kg_a": s.co2_kg_a,
+            }
+            for s in szenarien
+        ],
+    }
+
+
+def wirtschaftlichkeit_zeigen(
+    tool_context: ToolContext,
+    szenario: Weg = "waermepumpe",
+) -> dict[str, Any]:
+    """Rechnet einen Weg über 20 Jahre durch.
+
+    Kumulierte Gesamtkosten gegenüber „weiter wie bisher", Break-even-Punkt und
+    jährliche Ersparnis. Nutze das, wenn die Person wissen will, ob es sich lohnt.
+
+    Args:
+        szenario: Der Weg, der durchgerechnet werden soll.
+    """
+    szenarien = _szenarien(tool_context)
+    fokus_id = _gewaehlt(tool_context, szenario)
+    if fokus_id not in {s.id for s in szenarien}:
+        fokus_id = _gewaehlt(tool_context, "waermepumpe")
+
+    bestand = next(s for s in szenarien if s.id == "bestand")
+    fokus = next(s for s in szenarien if s.id == fokus_id)
+    amort = calc.amortisation(bestand, fokus)
+
+    push(
+        tool_context,
+        compose.wirtschaftlichkeit_surface(_profil(tool_context), szenarien, fokus_id=fokus_id),
+    )
+    return {
+        "szenario": fokus.label,
+        "eigenanteil_eur": fokus.eigenanteil_eur,
+        "ersparnis_eur_a": round(bestand.betriebskosten_eur_a - fokus.betriebskosten_eur_a),
+        "break_even_jahre": amort["jahre"],
+        "break_even_erreichbar": amort["erreichbar"],
+    }
+
+
+def foerderung_und_fahrplan_zeigen(
+    tool_context: ToolContext,
+    szenario: Weg = "waermepumpe",
+    einkommensbonus: bool = False,
+) -> dict[str, Any]:
+    """Zeigt den erwarteten Zuschuss und den Umsetzungsfahrplan.
+
+    Wie sich die Förderquote zusammensetzt, und die fünf Schritte inklusive des
+    Hinweises, dass der Antrag vor der Beauftragung gestellt werden muss.
+
+    Args:
+        szenario: Der Weg, für den gefördert wird.
+        einkommensbonus: Nur auf true setzen, wenn die Person von sich aus
+            gesagt hat, dass das Haushaltseinkommen unter der Bonusgrenze
+            liegt. Frag nicht aktiv danach.
+    """
+    tool_context.state["_einkommensbonus"] = einkommensbonus
+    szenarien = _szenarien(tool_context)
+    szenario_id = _gewaehlt(tool_context, szenario)
+    if szenario_id not in {s.id for s in szenarien}:
+        szenario_id = _gewaehlt(tool_context, "waermepumpe")
+    gewaehlt = next(s for s in szenarien if s.id == szenario_id)
+
+    details = calc.foerderung(
+        min(gewaehlt.investition_eur, calc.dd.FOERDERUNG["hoechstkosten_efh_eur"]),
+        einkommensbonus=einkommensbonus,
+    )
+
+    push(tool_context, compose.foerderung_surface(_profil(tool_context), gewaehlt, details))
+    return {
+        "foerderquote": details["satz"],
+        "betrag_eur": details["betrag_eur"],
+        "eigenanteil_eur": gewaehlt.eigenanteil_eur,
+        "hinweis": "Antrag muss vor Beauftragung gestellt werden — sprich das aus.",
+    }
+
+
+def bedenken_adressieren(
+    tool_context: ToolContext,
+    titel: str,
+    einordnung: str,
+    punkte: list[dict[str, str]],
+) -> dict[str, Any]:
+    """Beantwortet eine konkrete Sorge mit einer eigenen Ansicht.
+
+    Nutze das, sobald jemand eine Unsicherheit äußert („ich habe Sorge,
+    dass…", „lohnt sich das überhaupt", „was ist wenn…"). Formuliere die Sorge
+    in der Sprache der Person, nicht in Fachsprache.
+
+    Args:
+        titel: Die Sorge als Frage, so wie die Person sie stellen würde.
+        einordnung: Zwei bis drei Sätze, die die Sorge ernst nehmen und
+            einordnen. Keine Floskeln.
+        punkte: Zwei bis vier Aspekte, die die Sorge auflösen. Jeder Eintrag
+            hat 'titel', 'text' und optional 'tone' mit den Werten 'positive'
+            (entlastet), 'neutral' oder 'caution' (echte Einschränkung).
+    """
+    push(
+        tool_context,
+        shared.bedenken_surface(titel=titel, einordnung=einordnung, punkte=punkte),
+    )
+    return {"status": "angezeigt"}
+
+
+_SCHRITT_LABEL = {
+    "beratungstermin": "Beratungstermin vereinbaren",
+    "vor_ort_check": "Vor-Ort-Check anfragen",
+    "foerder_check": "Förderfähigkeit prüfen lassen",
+}
+
+
+def naechsten_schritt_anbieten(
+    tool_context: ToolContext,
+    empfehlung: str,
+    begruendung: list[str],
+    schritt: Literal["beratungstermin", "vor_ort_check", "foerder_check"],
+    offene_punkte: list[str] | None = None,
+) -> dict[str, Any]:
+    """Schließt die Beratung ab und übergibt.
+
+    Zusammenfassung, Empfehlung mit Begründung, offene Punkte und ein konkreter
+    nächster Schritt. Rufe das auf, wenn die Person genug gesehen hat oder
+    selbst nach dem nächsten Schritt fragt.
+
+    Args:
+        empfehlung: Zwei bis drei Sätze in Alltagssprache: was du empfiehlst
+            und warum es zu dieser Person passt.
+        begruendung: Zwei bis vier Gründe, die für diesen Weg sprechen.
+        schritt: Der konkrete nächste Schritt.
+        offene_punkte: Was vor einer Entscheidung noch zu klären ist. Ehrlich
+            benennen, nicht beschönigen.
+    """
+    offen = offene_punkte or open_points(tool_context, None)
+    push(
+        tool_context,
+        shared.handover_surface(
+            journey="energie",
+            titel="Ihr Weg zur neuen Heizung",
+            empfehlung=empfehlung,
+            begruendung=begruendung,
+            offene_punkte=offen,
+            schritt_label=_SCHRITT_LABEL[schritt],
+            schritt_event=f"handover_{schritt}",
+        ),
+    )
+    return {"status": "abgeschlossen", "zusammenfassung": summary(tool_context)}
+
+
+def summary(tool_context: ToolContext) -> dict[str, Any]:
+    """The structured handover payload a CRM or a human advisor picks up."""
+    profil = _profil(tool_context)
+    check = calc.eignung(profil)
+    szenarien = _szenarien(tool_context)
+    gewaehlt = next(
+        (s for s in szenarien if s.id == _gewaehlt(tool_context, None)), szenarien[1]
+    )
+    return {
+        "journey": "energie",
+        "gebaeude": {
+            "baujahr": profil.baujahr,
+            "wohnflaeche_qm": profil.wohnflaeche_qm,
+            "heizung": profil.heizung,
+            "sanierungsstand": profil.sanierungsstand,
+            "waermebedarf_kwh_a": calc.waermebedarf_kwh_a(profil),
+        },
+        "eignung": {
+            "urteil": check["urteil"],
+            "score": check["score"],
+            "jaz": check["jaz"],
+            "vorlauftemperatur_c": check["vorlauftemperatur_c"],
+        },
+        "empfehlung": {
+            "szenario": gewaehlt.label,
+            "eigenanteil_eur": gewaehlt.eigenanteil_eur,
+            "energiekosten_eur_a": gewaehlt.energiekosten_eur_a,
+            "massnahmen": gewaehlt.massnahmen,
+        },
+        "prioritaeten": profil.prioritaeten,
+        "bedenken": profil.bedenken,
+        "offene_punkte": open_points(tool_context, None),
+    }
+
+
+TOOLS = [
+    profil_aktualisieren,
+    waermepumpen_eignung_zeigen,
+    szenarien_vergleichen,
+    wirtschaftlichkeit_zeigen,
+    foerderung_und_fahrplan_zeigen,
+    bedenken_adressieren,
+    naechsten_schritt_anbieten,
+]
+
+
+INSTRUCTION = f"""
 Du bist der persönliche Energieberater einer deutschen Energie-Experience.
 Du hilfst Menschen, die über Heizung, Sanierung und ihren Weg zur Energiewende
 nachdenken — und dabei oft überfordert sind.
@@ -74,7 +367,7 @@ Jahre kommt, und zwei Sorgen: „Reicht eine Wärmepumpe im Winter?" und „Lohn
 sich das für mich überhaupt?" Deine Aufgabe ist es, aus dieser Unsicherheit ein
 verständliches Zukunftsbild zu machen.
 
-{GEMEINSAME_HALTUNG}
+{HALTUNG}
 
 ## Dein Gesprächsbogen
 
@@ -111,422 +404,19 @@ Zuhause. Frage nicht nach Daten, sondern nach ihrer Situation.
 """.strip()
 
 
-OPENER = (
-    "Begrüße die Person kurz und warm auf Deutsch und stelle eine offene Frage "
-    "zu ihrem Zuhause und dem, was sie gerade beschäftigt. Halte dich sehr kurz."
-)
-
-
-# ---------------------------------------------------------------------------
-# Tool declarations
-# ---------------------------------------------------------------------------
-
-_PROFIL_TOOL: dict[str, Any] = {
-    "name": "profil_aktualisieren",
-    "description": (
-        "Zeigt auf dem Bildschirm, was du über das Zuhause der Person "
-        "verstanden hast, und aktualisiert die Berechnungsgrundlage. Rufe das "
-        "früh auf und danach jedes Mal, wenn du etwas Neues erfährst oder die "
-        "Person dich korrigiert. Übergib nur, was du tatsächlich weißt oder "
-        "plausibel schätzen kannst."
-    ),
-    "parameters": {
-        "type": "OBJECT",
-        "properties": {
-            "baujahr": {"type": "INTEGER", "description": "Baujahr des Gebäudes."},
-            "wohnflaeche_qm": {
-                "type": "NUMBER",
-                "description": "Beheizte Wohnfläche in Quadratmetern.",
-            },
-            "heizung": {
-                "type": "STRING",
-                "enum": ["gas", "oel", "fernwaerme", "nachtspeicher", "waermepumpe"],
-                "description": "Die heutige Heizung.",
-            },
-            "sanierungsstand": {
-                "type": "STRING",
-                "enum": ["unsaniert", "teilsaniert", "saniert"],
-                "description": (
-                    "Zustand der Gebäudehülle. teilsaniert z. B. wenn Fenster "
-                    "oder Dach schon erneuert wurden."
-                ),
-            },
-            "waermesystem": {
-                "type": "STRING",
-                "enum": [
-                    "fussbodenheizung",
-                    "flaechenheizkoerper_gross",
-                    "heizkoerper_standard",
-                    "heizkoerper_klein_alt",
-                ],
-                "description": (
-                    "Wie die Wärme im Haus verteilt wird. Bestimmt die nötige "
-                    "Vorlauftemperatur und damit die Eignung."
-                ),
-            },
-            "personen": {"type": "INTEGER", "description": "Personen im Haushalt."},
-            "verbrauch_kwh_a": {
-                "type": "NUMBER",
-                "description": (
-                    "Gemessener Jahresverbrauch in kWh, falls die Person ihn "
-                    "kennt. Schlägt jede Schätzung — frag ruhig danach."
-                ),
-            },
-            "pv_vorhanden": {
-                "type": "BOOLEAN",
-                "description": "Ob bereits eine PV-Anlage auf dem Dach ist.",
-            },
-            "prioritaeten": {
-                "type": "ARRAY",
-                "items": {"type": "STRING"},
-                "description": (
-                    "Was der Person wichtig ist, in ihren Worten. Beispiel: "
-                    "'Unabhängigkeit', 'Wirtschaftlichkeit', 'Klimaschutz'."
-                ),
-            },
-            "bedenken": {
-                "type": "ARRAY",
-                "items": {"type": "STRING"},
-                "description": "Geäußerte Sorgen, in den Worten der Person.",
-            },
-            "offene_punkte": {
-                "type": "ARRAY",
-                "items": {"type": "STRING"},
-                "description": (
-                    "Was du noch nicht weißt und geschätzt hast. Wird der Person "
-                    "transparent angezeigt."
-                ),
-            },
-        },
-    },
-}
-
-_EIGNUNG_TOOL: dict[str, Any] = {
-    "name": "waermepumpen_eignung_zeigen",
-    "description": (
-        "Zeigt, ob das Haus für eine Wärmepumpe geeignet ist: nötige "
-        "Vorlauftemperatur, erwartete Jahresarbeitszahl, Heizlast und der "
-        "Verlauf der Heizlast über den Winter. Beantwortet die Sorge, ob es im "
-        "Winter reicht. Rufe das auf, sobald du Gebäude, Heizung und "
-        "Wärmeverteilung kennst."
-    ),
-    "parameters": {"type": "OBJECT", "properties": {}},
-}
-
-_SZENARIEN_TOOL: dict[str, Any] = {
-    "name": "szenarien_vergleichen",
-    "description": (
-        "Stellt die möglichen Wege nebeneinander: weiter wie bisher, "
-        "Wärmepumpe, Wärmepumpe mit Dämmung, Wärmepumpe mit PV. Mit "
-        "Investition, Förderung, Eigenanteil, laufenden Kosten und CO2. "
-        "Die Person kann auf dem Bildschirm einen Weg auswählen."
-    ),
-    "parameters": {
-        "type": "OBJECT",
-        "properties": {
-            "empfohlen": {
-                "type": "STRING",
-                "enum": ["bestand", "waermepumpe", "waermepumpe_huelle", "waermepumpe_pv"],
-                "description": (
-                    "Welchen Weg du auf Basis des Gesprächs hervorhebst. "
-                    "Orientiere dich an den Prioritäten der Person."
-                ),
-            }
-        },
-    },
-}
-
-_WIRTSCHAFT_TOOL: dict[str, Any] = {
-    "name": "wirtschaftlichkeit_zeigen",
-    "description": (
-        "Rechnet einen Weg über 20 Jahre durch: kumulierte Gesamtkosten "
-        "gegenüber 'weiter wie bisher', Break-even-Punkt und jährliche "
-        "Ersparnis. Nutze das, wenn die Person wissen will, ob es sich lohnt."
-    ),
-    "parameters": {
-        "type": "OBJECT",
-        "properties": {
-            "szenario": {
-                "type": "STRING",
-                "enum": ["waermepumpe", "waermepumpe_huelle", "waermepumpe_pv"],
-                "description": "Der Weg, der durchgerechnet werden soll.",
-            }
-        },
-        "required": ["szenario"],
-    },
-}
-
-_FOERDERUNG_TOOL: dict[str, Any] = {
-    "name": "foerderung_und_fahrplan_zeigen",
-    "description": (
-        "Zeigt den erwarteten Zuschuss, wie sich die Förderquote zusammensetzt, "
-        "und den Umsetzungsfahrplan in fünf Schritten inklusive des Hinweises, "
-        "dass der Antrag vor der Beauftragung gestellt werden muss."
-    ),
-    "parameters": {
-        "type": "OBJECT",
-        "properties": {
-            "szenario": {
-                "type": "STRING",
-                "enum": ["waermepumpe", "waermepumpe_huelle", "waermepumpe_pv"],
-            },
-            "einkommensbonus": {
-                "type": "BOOLEAN",
-                "description": (
-                    "Nur auf true setzen, wenn die Person von sich aus gesagt "
-                    "hat, dass das Haushaltseinkommen unter der Bonusgrenze "
-                    "liegt. Frag nicht aktiv danach."
-                ),
-            },
-        },
-        "required": ["szenario"],
-    },
-}
-
-_ABSCHLUSS_TOOL: dict[str, Any] = {
-    "name": "naechsten_schritt_anbieten",
-    "description": (
-        "Schließt die Beratung ab: Zusammenfassung, Empfehlung mit Begründung, "
-        "offene Punkte und ein konkreter nächster Schritt. Rufe das auf, wenn "
-        "die Person genug gesehen hat oder selbst nach dem nächsten Schritt fragt."
-    ),
-    "parameters": {
-        "type": "OBJECT",
-        "properties": {
-            "empfehlung": {
-                "type": "STRING",
-                "description": (
-                    "Zwei bis drei Sätze in Alltagssprache: was du empfiehlst "
-                    "und warum es zu dieser Person passt."
-                ),
-            },
-            "begruendung": {
-                "type": "ARRAY",
-                "items": {"type": "STRING"},
-                "description": "Zwei bis vier Gründe, die für diesen Weg sprechen.",
-            },
-            "offene_punkte": {
-                "type": "ARRAY",
-                "items": {"type": "STRING"},
-                "description": (
-                    "Was vor einer Entscheidung noch zu klären ist. Ehrlich "
-                    "benennen, nicht beschönigen."
-                ),
-            },
-            "schritt": {
-                "type": "STRING",
-                "enum": ["beratungstermin", "vor_ort_check", "foerder_check"],
-                "description": "Der konkrete nächste Schritt.",
-            },
-        },
-        "required": ["empfehlung", "begruendung", "schritt"],
-    },
-}
-
-
-# ---------------------------------------------------------------------------
-# Handlers
-# ---------------------------------------------------------------------------
-
-
-def _profil_aktualisieren(state: EnergieState, args: dict[str, Any]) -> ToolResult:
-    profil = state.profil
-    for feld in (
-        "baujahr",
-        "wohnflaeche_qm",
-        "heizung",
-        "sanierungsstand",
-        "waermesystem",
-        "personen",
-        "verbrauch_kwh_a",
-        "pv_vorhanden",
-        "prioritaeten",
-        "bedenken",
-    ):
-        if args.get(feld) is not None:
-            setattr(profil, feld, args[feld])
-
-    state.offene_punkte = args.get("offene_punkte") or state.offene_punkte
-    state.profil_gesetzt = True
-
-    surface = compose.profil_surface(profil, state.offene_punkte)
-    return ToolResult(
-        surfaces=[surface],
-        result={
-            "status": "angezeigt",
-            "waermebedarf_kwh_a": calc.waermebedarf_kwh_a(profil),
-            "hinweis": (
-                "Das Profil ist jetzt auf dem Bildschirm. Bestätige kurz, was du "
-                "verstanden hast, ohne alle Werte vorzulesen."
-            ),
-        },
+def build() -> Journey:
+    return Journey(
+        journey_id="energie",
+        label="Mein Zuhause",
+        tagline=(
+            "Von komplexen Sanierungsfragen zur verständlichen persönlichen Energiewende."
+        ),
+        opener=(
+            "Begrüße die Person kurz und warm auf Deutsch und stelle eine offene "
+            "Frage zu ihrem Zuhause und dem, was sie gerade beschäftigt. Halte "
+            "dich sehr kurz."
+        ),
+        instruction=INSTRUCTION,
+        tools=TOOLS,
+        model=get_settings().model,
     )
-
-
-def _eignung_zeigen(state: EnergieState, args: dict[str, Any]) -> ToolResult:
-    check = calc.eignung(state.profil)
-    surface = compose.eignung_surface(state.profil)
-    return ToolResult(
-        surfaces=[surface],
-        result={
-            "urteil": check["urteil"],
-            "score": check["score"],
-            "vorlauftemperatur_c": check["vorlauftemperatur_c"],
-            "jaz": check["jaz"],
-            "heizlast_kw": check["heizlast_kw"],
-            "strombedarf_kwh_a": check["strombedarf_kwh_a"],
-            "hinweise": check["hinweise"],
-            "massnahmen": check["massnahmen"],
-        },
-    )
-
-
-def _szenarien_vergleichen(state: EnergieState, args: dict[str, Any]) -> ToolResult:
-    empfohlen = args.get("empfohlen") or "waermepumpe"
-    state.gewaehltes_szenario = empfohlen
-    szenarien = state.szenarien()
-    verfuegbar = {s.id for s in szenarien}
-    if empfohlen not in verfuegbar:
-        empfohlen = "waermepumpe"
-        state.gewaehltes_szenario = empfohlen
-
-    surface = compose.szenarien_surface(state.profil, szenarien, empfohlen_id=empfohlen)
-    return ToolResult(
-        surfaces=[surface],
-        result={
-            "szenarien": [
-                {
-                    "id": s.id,
-                    "label": s.label,
-                    "eigenanteil_eur": s.eigenanteil_eur,
-                    "energiekosten_eur_a": s.energiekosten_eur_a,
-                    "co2_kg_a": s.co2_kg_a,
-                }
-                for s in szenarien
-            ],
-            "hervorgehoben": empfohlen,
-        },
-    )
-
-
-def _wirtschaftlichkeit_zeigen(state: EnergieState, args: dict[str, Any]) -> ToolResult:
-    szenarien = state.szenarien()
-    fokus_id = args.get("szenario") or state.gewaehltes_szenario
-    if fokus_id not in {s.id for s in szenarien}:
-        fokus_id = "waermepumpe"
-    state.gewaehltes_szenario = fokus_id
-
-    bestand = next(s for s in szenarien if s.id == "bestand")
-    fokus = next(s for s in szenarien if s.id == fokus_id)
-    amort = calc.amortisation(bestand, fokus)
-
-    surface = compose.wirtschaftlichkeit_surface(
-        state.profil, szenarien, fokus_id=fokus_id
-    )
-    return ToolResult(
-        surfaces=[surface],
-        result={
-            "szenario": fokus.label,
-            "eigenanteil_eur": fokus.eigenanteil_eur,
-            "ersparnis_eur_a": round(
-                bestand.betriebskosten_eur_a - fokus.betriebskosten_eur_a
-            ),
-            "break_even_jahre": amort["jahre"],
-            "break_even_erreichbar": amort["erreichbar"],
-        },
-    )
-
-
-def _foerderung_zeigen(state: EnergieState, args: dict[str, Any]) -> ToolResult:
-    state.einkommensbonus = bool(args.get("einkommensbonus", state.einkommensbonus))
-    szenarien = state.szenarien()
-    szenario_id = args.get("szenario") or state.gewaehltes_szenario
-    if szenario_id not in {s.id for s in szenarien}:
-        szenario_id = "waermepumpe"
-    state.gewaehltes_szenario = szenario_id
-    szenario = next(s for s in szenarien if s.id == szenario_id)
-
-    # Nur der Heizungsanteil ist über die Heizungsförderung förderfähig.
-    details = calc.foerderung(
-        min(szenario.investition_eur, calc.dd.FOERDERUNG["hoechstkosten_efh_eur"]),
-        einkommensbonus=state.einkommensbonus,
-    )
-
-    surface = compose.foerderung_surface(state.profil, szenario, details)
-    return ToolResult(
-        surfaces=[surface],
-        result={
-            "foerderquote": details["satz"],
-            "betrag_eur": details["betrag_eur"],
-            "eigenanteil_eur": szenario.eigenanteil_eur,
-            "hinweis": (
-                "Antrag muss vor Beauftragung gestellt werden — das ist der "
-                "Punkt, den du unbedingt aussprechen solltest."
-            ),
-        },
-    )
-
-
-def _bedenken_adressieren(state: EnergieState, args: dict[str, Any]) -> ToolResult:
-    surface = shared.bedenken_surface(
-        titel=args.get("titel", "Ihre Frage"),
-        einordnung=args.get("einordnung", ""),
-        punkte=args.get("punkte") or [],
-    )
-    return ToolResult(surfaces=[surface], result={"status": "angezeigt"})
-
-
-_SCHRITT_LABEL = {
-    "beratungstermin": "Beratungstermin vereinbaren",
-    "vor_ort_check": "Vor-Ort-Check anfragen",
-    "foerder_check": "Förderfähigkeit prüfen lassen",
-}
-
-
-def _abschluss(state: EnergieState, args: dict[str, Any]) -> ToolResult:
-    schritt = args.get("schritt", "beratungstermin")
-    offene = args.get("offene_punkte") or state.offene_punkte
-
-    surface = shared.handover_surface(
-        journey="energie",
-        titel="Ihr Weg zur neuen Heizung",
-        empfehlung=args.get("empfehlung", ""),
-        begruendung=args.get("begruendung") or [],
-        offene_punkte=offene,
-        schritt_label=_SCHRITT_LABEL.get(schritt, "Beratungstermin vereinbaren"),
-        schritt_event=f"handover_{schritt}",
-    )
-    return ToolResult(
-        surfaces=[surface],
-        result={"status": "abgeschlossen", "zusammenfassung": state.snapshot()},
-    )
-
-
-JOURNEY = Journey(
-    id="energie",
-    label="Mein Zuhause",
-    tagline=(
-        "Von komplexen Sanierungsfragen zur verständlichen persönlichen Energiewende."
-    ),
-    opener=OPENER,
-    system_instruction=SYSTEM_INSTRUCTION,
-    function_declarations=[
-        _PROFIL_TOOL,
-        _EIGNUNG_TOOL,
-        _SZENARIEN_TOOL,
-        _WIRTSCHAFT_TOOL,
-        _FOERDERUNG_TOOL,
-        BEDENKEN_TOOL,
-        _ABSCHLUSS_TOOL,
-    ],
-    handlers={
-        "profil_aktualisieren": _profil_aktualisieren,
-        "waermepumpen_eignung_zeigen": _eignung_zeigen,
-        "szenarien_vergleichen": _szenarien_vergleichen,
-        "wirtschaftlichkeit_zeigen": _wirtschaftlichkeit_zeigen,
-        "foerderung_und_fahrplan_zeigen": _foerderung_zeigen,
-        "bedenken_adressieren": _bedenken_adressieren,
-        "naechsten_schritt_anbieten": _abschluss,
-    },
-    state_factory=EnergieState,
-)

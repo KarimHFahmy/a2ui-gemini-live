@@ -5,29 +5,30 @@
  * conversation. Everything on screen after that is built by the agent.
  */
 
-import {useCallback, useEffect, useState} from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import {Landing, type JourneyOption} from './ui/Landing';
-import {Stage} from './ui/Stage';
-import {TranscriptPanel} from './ui/TranscriptPanel';
-import {VoiceDock} from './ui/VoiceDock';
-import {useAdvisory} from './useAdvisory';
+import { A2uiHost } from "./a2ui/A2uiHost";
+import { Landing, type JourneyOption } from "./ui/Landing";
+import { Stage } from "./ui/Stage";
+import { TranscriptPanel } from "./ui/TranscriptPanel";
+import { VoiceDock } from "./ui/VoiceDock";
+import { useAdvisory } from "./useAdvisory";
 
-const BRAND_NAME = import.meta.env.VITE_BRAND_NAME ?? 'Adaptive Advisory';
+const BRAND_NAME = import.meta.env.VITE_BRAND_NAME ?? "Adaptive Advisory";
 
 /** Used until /api/journeys answers, so the first paint is never empty. */
 const FALLBACK_JOURNEYS: JourneyOption[] = [
   {
-    id: 'energie',
-    label: 'Mein Zuhause',
+    id: "energie",
+    label: "Mein Zuhause",
     tagline:
-      'Von komplexen Sanierungsfragen zur verständlichen persönlichen Energiewende.',
+      "Von komplexen Sanierungsfragen zur verständlichen persönlichen Energiewende.",
   },
   {
-    id: 'mobilitaet',
-    label: 'Meine Mobilität',
+    id: "mobilitaet",
+    label: "Meine Mobilität",
     tagline:
-      'Von Reichweitenangst und Tarifdschungel zur passenden E-Mobilitätsentscheidung.',
+      "Von Reichweitenangst und Tarifdschungel zur passenden E-Mobilitätsentscheidung.",
   },
 ];
 
@@ -40,9 +41,9 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/journeys')
-      .then(response => (response.ok ? response.json() : null))
-      .then(data => {
+    fetch("/api/journeys")
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
         if (!cancelled && data?.journeys?.length) setJourneys(data.journeys);
       })
       .catch(() => {
@@ -55,7 +56,7 @@ export default function App() {
 
   const handleSelect = useCallback(
     async (journeyId: string) => {
-      const journey = journeys.find(item => item.id === journeyId);
+      const journey = journeys.find((item) => item.id === journeyId);
       if (!journey) return;
 
       setStarting(journeyId);
@@ -86,40 +87,48 @@ export default function App() {
   }
 
   return (
-    <div className="session">
-      <header className="session__bar">
-        <span className="session__wordmark">{BRAND_NAME}</span>
-        <span className="session__journey">{active.label}</span>
-        <span className="session__demo-badge" title="Alle Zahlen sind Demo-Beispielwerte">
-          Demo-Daten
-        </span>
-      </header>
+    <A2uiHost>
+      <div className="session">
+        <header className="session__bar">
+          <span className="session__wordmark">{BRAND_NAME}</span>
+          <span className="session__journey">{active.label}</span>
+          <span
+            className="session__demo-badge"
+            title="Alle Zahlen sind Demo-Beispielwerte"
+          >
+            Demo-Daten
+          </span>
+        </header>
 
-      {advisory.error ? (
-        <div className="banner banner--error" role="alert">
-          {advisory.error}
+        {advisory.error ? (
+          <div className="banner banner--error" role="alert">
+            {advisory.error}
+          </div>
+        ) : null}
+
+        <div className="session__body">
+          <Stage
+            surfaces={advisory.surfaces}
+            titles={advisory.surfaceTitles}
+            journeyLabel={active.label}
+          />
+          <TranscriptPanel
+            entries={advisory.transcript}
+            busyTool={advisory.busyTool}
+          />
         </div>
-      ) : null}
 
-      <div className="session__body">
-        <Stage
-          surfaces={advisory.surfaces}
-          titles={advisory.surfaceTitles}
-          journeyLabel={active.label}
+        <VoiceDock
+          state={advisory.state}
+          micActive={advisory.micActive}
+          micLevel={advisory.micLevel}
+          agentLevel={advisory.agentLevel}
+          agentSpeaking={advisory.agentSpeaking}
+          onToggleMic={advisory.toggleMic}
+          onSendText={advisory.sendText}
+          onEnd={handleEnd}
         />
-        <TranscriptPanel entries={advisory.transcript} busyTool={advisory.busyTool} />
       </div>
-
-      <VoiceDock
-        state={advisory.state}
-        micActive={advisory.micActive}
-        micLevel={advisory.micLevel}
-        agentLevel={advisory.agentLevel}
-        agentSpeaking={advisory.agentSpeaking}
-        onToggleMic={advisory.toggleMic}
-        onSendText={advisory.sendText}
-        onEnd={handleEnd}
-      />
-    </div>
+    </A2uiHost>
   );
 }

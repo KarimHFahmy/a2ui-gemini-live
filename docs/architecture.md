@@ -3,6 +3,43 @@
 Detail that does not belong in the README: why the pieces are shaped the way
 they are, and what would have to change to take this past a demo.
 
+## Standing on Google's pieces
+
+Three decisions define the shape of this codebase, and all three are about
+using something official rather than building it:
+
+1. **ADK owns the runtime.** `Runner.run_live()` handles the Live API
+   connection, the session store, tool dispatch and the event stream. The
+   hand-rolled equivalent it replaced was ~350 lines of queue pumping and
+   response demultiplexing that had to track the SDK.
+2. **The A2UI renderer is Google's.** `@a2ui/react` v0.9, unmodified, including
+   its Markdown pipeline and its Generic Binder.
+3. **The catalog is Google's, plus two.** Everything the agent composes with
+   comes from the official basic catalog, except a chart and a comparison
+   table, which have no official equivalent.
+
+What is left is the part that is actually this demo: the German advisory
+domain, the conversation design, and the composers that turn one into the
+other.
+
+### Why tools push UI through `UiWidget`
+
+An ADK tool returns a value to the model. Getting a *second* payload to the
+browser needs a channel, and there were three candidates: session state deltas,
+smuggling the payload through the tool's return value, or ADK's UI-widget
+channel.
+
+`ToolContext.render_ui_widget` is the right one. It exists for exactly this —
+its `provider` field is documented as the dispatch key for rendering
+strategies, with `mcp` as the first one — so `provider="a2ui"` is an intended
+extension rather than a workaround. The payload travels on the same event as
+the tool call, ordering with the audio is preserved, and it never enters the
+model's context, so a 3 kB surface costs no tokens.
+
+The state-delta route would also work but conflates "what the session knows"
+with "what the screen shows", and the return-value route would put the whole
+component tree into the model's context on every call.
+
 ## The A2UI decision
 
 ### Targeting v0.9, not v1.0
@@ -35,8 +72,8 @@ catalog named in `createSurface`. There is no per-component override. Emitting
 `{"component": "Column", "catalogId": "<basic>"}` on a surface created with the
 advisory catalog therefore renders "Unknown component: Column".
 
-So `frontend/src/a2ui/catalog.ts` registers one catalog that contains the basic
-catalog's 18 components plus the 10 advisory blocks, under
+So `frontend/src/a2ui/catalog.ts` registers one catalog containing the basic
+catalog's 18 components plus our two, under
 `urn:a2ui:catalog:adaptive-advisory:1.0`. The basic catalog stays registered
 under its own id as well, so a surface created against the standard id still
 renders.
@@ -44,6 +81,23 @@ renders.
 The id is duplicated in two places by necessity — `protocol.ADVISORY_CATALOG_ID`
 and `catalog.ts` — and a mismatch is a blank surface, so both carry a comment
 pointing at the other.
+
+### Only two custom components
+
+The first version of this demo had ten. Collapsing them to two was not
+minimalism for its own sake — it changed what has to be maintained.
+
+A `Card` containing a heading, a big number and a paragraph does not need to be
+a component; it needs a *function that composes those three*. That is what
+`SurfaceBuilder.stat_card()` is: server-side, no renderer contract, no schema,
+no CSS. The same applies to headers, timelines, ranked lists and calls to
+action. What survived is the two things the basic catalog genuinely cannot
+express — a chart and a table.
+
+The cost is real and worth naming: the tone of an insight is now a leading
+glyph (`✓ → !`) rather than a coloured stripe, because the basic catalog has no
+tone affordance to theme. That is the price of the agent composing from
+approved primitives instead of from bespoke widgets.
 
 ### Semantic tools instead of generated UI
 
@@ -53,7 +107,10 @@ This demo does not, for three reasons.
 **Latency.** A live voice conversation cannot wait for a few hundred tokens of
 UI JSON between the client finishing a sentence and the agent responding.
 A tool call with six arguments is an order of magnitude cheaper, and the
-surface is composed in microseconds.
+surface is composed in microseconds. (The Flutter reference this demo borrows
+from, `VGVentures/genui_life_goal_simulator`, takes the other route — the model
+generates the widget tree — which works well for a turn-based chat and would
+be felt immediately in a voice session.)
 
 **Correctness.** The numbers in this demo have relationships — a heat pump's
 seasonal performance factor follows from the flow temperature, which follows
@@ -72,11 +129,11 @@ A general assistant would want the opposite.
 
 ## Session model
 
-One `AdvisorySession` per WebSocket, holding:
-
-- the Live API connection,
-- the journey's state dataclass (the profile built up over the conversation),
-- the set of surface ids already on screen.
+One `AdvisorySession` per WebSocket, wrapping an ADK `InMemoryRunner` and a
+`LiveRequestQueue`. The conversation state — the profile built up over the
+call, the chosen scenario, the set of surfaces already on screen — lives in
+ADK's session state, written by tools through `tool_context.state` and read
+back on the next call.
 
 That last one is what makes a refinement feel right. The first call to a tool
 sends `createSurface` + `updateDataModel` + `updateComponents`; every later call
@@ -125,19 +182,21 @@ agent showed this" is preserved by the transport.
 | Concern | Where it is enforced |
 |---|---|
 | Only approved components render | Renderer catalog whitelist; unknown types render as an explicit error |
+| Agent text cannot inject markup | The official Markdown renderer sanitises with DOMPurify |
 | No invented numbers | Every figure comes from `app/domain/*`; the prompt forbids the model from stating others |
 | Malformed UI never reaches the browser | `protocol.validate_tree` runs before every emit; a bad tree is logged and dropped, the conversation continues |
-| A failing tool does not end the call | `_handle_tool_call` catches, returns an error to the model, and the agent speaks on |
+| A failing tool does not end the call | ADK returns the error to the model as the function response, and the agent speaks on |
 | A dying session is never silent | `_drain_session` reports an unexpected end to the browser |
 | Assumptions are visible | `AssumptionNote` on every surface carrying a number |
 | No personal data | The prompts do not ask for it; nothing is persisted |
 
 ## What a production version would change
 
-**State.** Session state is in-process, which is why the deployment uses
-session affinity and why a restart ends open conversations. Redis or Firestore
-keyed by session id, plus the Live API's own session resumption, would fix
-both.
+**State.** `InMemoryRunner` keeps sessions in-process, which is why the
+deployment uses session affinity and why a restart ends open conversations.
+Swapping in ADK's `DatabaseSessionService` or `VertexAiSessionService` is a
+constructor change; the Live API's session resumption is already requested in
+`RunConfig`.
 
 **Data.** `demo_data.py` would become a service call — real tariffs, real
 funding rules with their validity windows, a real vehicle catalog — and the

@@ -68,17 +68,55 @@
     "Helvetica Neue", Arial, sans-serif;
   --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
 
-  /* A2UI basic-catalog components read these, so the official Text, Button and
-     layout components inherit the same visual language as our own. */
+  /* ------------------------------------------------------------------
+     The official basic catalog.
+
+     Almost everything on screen is rendered by @a2ui/react's own components,
+     which read these custom properties. Mapping them onto our tokens is the
+     whole theming story — no component overrides, no fighting their CSS.
+     ------------------------------------------------------------------ */
   --a2ui-color-primary: var(--brand-accent);
+  --a2ui-color-primary-hover: var(--brand-accent-strong);
+  --a2ui-color-primary-dark: var(--brand-accent-strong);
+  --a2ui-color-primary-light: var(--brand-accent-soft);
+  --a2ui-color-on-primary: #ffffff;
+
+  --a2ui-color-secondary: var(--bg-sunken);
+  --a2ui-color-secondary-hover: var(--line);
+  --a2ui-color-secondary-dark: var(--line-strong);
+  --a2ui-color-secondary-light: var(--bg-sunken);
+  --a2ui-color-on-secondary: var(--text);
+
+  --a2ui-color-background: var(--bg);
   --a2ui-color-on-background: var(--text);
-  --a2ui-color-background: var(--bg-elevated);
   --a2ui-color-surface: var(--bg-elevated);
-  --a2ui-color-outline: var(--line);
+  --a2ui-color-on-surface: var(--text);
+  --a2ui-color-input: var(--bg-sunken);
+  --a2ui-color-on-input: var(--text);
+  --a2ui-color-border: var(--line);
+
+  --a2ui-border-width: 1px;
+  --a2ui-border-radius: var(--radius-m);
+  --a2ui-border: var(--a2ui-border-width) solid var(--a2ui-color-border);
+
+  --a2ui-font-family-title: var(--font-sans);
+  --a2ui-font-family-monospace: var(--font-mono);
+  --a2ui-font-size: 15px;
+  --a2ui-font-size-xs: 11.5px;
+  --a2ui-font-size-s: 13px;
+  --a2ui-font-size-m: 15px;
+  --a2ui-font-size-l: 18px;
+  --a2ui-font-size-xl: 24px;
+  --a2ui-font-size-2xl: 30px;
+  --a2ui-line-height-body: 1.55;
+  --a2ui-line-height-headings: 1.2;
+
+  --a2ui-grid-base: 4px;
+  --a2ui-spacing-xs: var(--space-1);
   --a2ui-spacing-s: var(--space-2);
   --a2ui-spacing-m: var(--space-3);
-  --a2ui-spacing-l: var(--space-5);
-  --a2ui-radius-m: var(--radius-m);
+  --a2ui-spacing-l: var(--space-4);
+  --a2ui-spacing-xl: var(--space-5);
 }
 
 @media (prefers-color-scheme: dark) {

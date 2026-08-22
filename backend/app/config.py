@@ -34,8 +34,9 @@ class Settings:
     allowed_origins: list[str] = field(default_factory=lambda: _csv("ALLOWED_ORIGINS"))
 
     # --- Vertex AI / Gemini ----------------------------------------------
-    # Vertex AI is the default transport. Set USE_VERTEX_AI=false together
-    # with GOOGLE_API_KEY to develop against the AI Studio endpoint instead.
+    # Vertex AI is the default transport, reached with Application Default
+    # Credentials. Set USE_VERTEX_AI=false together with GOOGLE_API_KEY to
+    # develop against the AI Studio endpoint instead.
     use_vertex_ai: bool = _flag("USE_VERTEX_AI", True)
     project: str = os.getenv("GOOGLE_CLOUD_PROJECT", "")
     location: str = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
@@ -75,6 +76,22 @@ class Settings:
                 "GOOGLE_API_KEY is not set and USE_VERTEX_AI is disabled."
             )
         return problems
+
+
+    def apply_to_environment(self) -> None:
+        """Publishes the settings ADK reads from the environment.
+
+        ADK constructs its own google-genai client, configured by
+        ``GOOGLE_GENAI_USE_VERTEXAI`` and friends rather than by constructor
+        arguments. Setting them here keeps one source of truth and means a
+        `.env` file works the same as Cloud Run env vars.
+        """
+        os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "1" if self.use_vertex_ai else "0"
+        if self.use_vertex_ai:
+            os.environ.setdefault("GOOGLE_CLOUD_PROJECT", self.project)
+            os.environ.setdefault("GOOGLE_CLOUD_LOCATION", self.location)
+        elif self.api_key:
+            os.environ.setdefault("GOOGLE_API_KEY", self.api_key)
 
 
 @lru_cache(maxsize=1)

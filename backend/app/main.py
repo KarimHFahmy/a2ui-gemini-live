@@ -26,8 +26,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
-from .journeys import JOURNEYS, get_journey
-from .live_session import AdvisorySession, build_client
+from .journeys import all_journeys, get_journey
+from .session import AdvisorySession
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +52,10 @@ async def lifespan(app: FastAPI):
             settings.language_code,
         )
 
-    # The client is created once and shared: it is stateless, and creating one
-    # per connection would add Vertex auth latency to every session start.
+    # ADK reads its Gemini configuration from the environment.
+    settings.apply_to_environment()
+
     app.state.settings = settings
-    app.state.genai_client = build_client(settings) if not problems else None
     app.state.config_problems = problems
 
     yield
@@ -101,7 +101,7 @@ async def journeys() -> dict[str, Any]:
     return {
         "journeys": [
             {"id": j.id, "label": j.label, "tagline": j.tagline}
-            for j in JOURNEYS.values()
+            for j in all_journeys()
         ]
     }
 
@@ -125,8 +125,8 @@ async def advisory_socket(
     await websocket.accept()
 
     settings = get_settings()
-    client = getattr(app.state, "genai_client", None)
-    if client is None:
+    problems = getattr(app.state, "config_problems", [])
+    if problems:
         await websocket.send_json(
             {
                 "type": "error",
@@ -134,7 +134,7 @@ async def advisory_socket(
                     "Der Dienst ist nicht vollständig konfiguriert. "
                     "Bitte prüfen Sie die Projekteinstellungen."
                 ),
-                "detail": "; ".join(getattr(app.state, "config_problems", [])),
+                "detail": "; ".join(problems),
             }
         )
         await websocket.close()
@@ -152,7 +152,6 @@ async def advisory_socket(
     session = AdvisorySession(
         settings=settings,
         journey=selected,
-        client=client,
         audio_sink=audio_sink,
         event_sink=event_sink,
     )

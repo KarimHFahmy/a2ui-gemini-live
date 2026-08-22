@@ -101,8 +101,11 @@ numbers.
 - **The interface is generated, not scripted.** A different opening produces a
   different sequence of surfaces — the agent chooses which tool the moment
   calls for.
-- **The catalog is fixed.** The agent composes from ten approved blocks and
-  cannot invent a component or a number.
+- **The catalog is fixed.** The agent composes from Google's own A2UI basic
+  catalog plus two additions, and cannot invent a component or a number.
+- **The chips and the table are one binding.** Clicking a scenario chip
+  re-highlights the comparison table instantly, before the agent has said
+  anything — that is A2UI's reactive data model, not a round trip.
 
 ## If the room has no microphone
 

@@ -59,26 +59,42 @@ for (const scheme of ['light','dark']) {
     await page.waitForTimeout(400);
     const stats = await page.evaluate(() => {
       const html = document.body.innerHTML;
+      const q = (sel) => document.querySelectorAll(sel).length;
       return {
-        surfaces: document.querySelectorAll('.surface').length,
-        ids: [...document.querySelectorAll('[data-surface-id]')].map(e=>e.dataset.surfaceId),
-        placeholders: (html.match(/\[Loading /g)||[]).length,
-        unknown: (html.match(/Unknown component/g)||[]).length,
-        charts: document.querySelectorAll('.chart__svg').length,
-        chartEmpty: document.querySelectorAll('.chart__empty').length,
-        tables: document.querySelectorAll('.compare__table').length,
-        timelines: document.querySelectorAll('.timeline__list').length,
-        recs: document.querySelectorAll('.recommendation').length,
-        insights: document.querySelectorAll('.insight').length,
-        scenarios: document.querySelectorAll('.scenario').length,
-        assumptions: document.querySelectorAll('.assumptions').length,
-        ctas: document.querySelectorAll('.cta').length,
-        profiles: document.querySelectorAll('.profile').length,
-        emptyFacts: [...document.querySelectorAll('.profile__facts')].filter(e=>e.children.length===0).length,
+        surfaces: q('.surface'),
+        ids: [...document.querySelectorAll('[data-surface-id]')].map(e => e.dataset.surfaceId),
+        // A2UI failure modes: a child that never arrived, or a component the
+        // catalog does not whitelist.
+        placeholders: (html.match(/\[Loading /g) || []).length,
+        unknown: (html.match(/Unknown component/g) || []).length,
+        // Our two additions.
+        charts: q('.chart__svg'),
+        chartEmpty: q('.chart__empty'),
+        tables: q('.compare__table'),
+        // Official basic-catalog components the composers rely on.
+        cards: q('.a2ui-card'),
+        headings: q('.surface h2'),
+        lists: q('.surface ul'),
+        chips: q('.surface button.chip'),
+        buttons: q('.surface button:not(.chip)'),
+        modals: q('.a2ui-modal-trigger'),
+        // Literal Markdown on screen means the renderer has no Markdown
+        // renderer wired up, or a non-Markdown variant was used with syntax.
+        rawMarkdown: (document.body.innerText.match(/(^|\s)(\*\*|##+\s|- \*\*)/gm) || []).length,
         hScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
       };
     });
-    const bad = stats.placeholders || stats.unknown || stats.chartEmpty || stats.emptyFacts || stats.hScroll;
+    const bad =
+      stats.placeholders ||
+      stats.unknown ||
+      stats.chartEmpty ||
+      stats.rawMarkdown ||
+      stats.hScroll ||
+      stats.charts === 0 ||
+      stats.tables === 0 ||
+      stats.cards === 0 ||
+      stats.headings === 0 ||
+      stats.modals === 0;
     if (bad) failures++;
     console.log(`[${scheme}] ${journey}:`, JSON.stringify(stats));
     if (scheme==='light') {
