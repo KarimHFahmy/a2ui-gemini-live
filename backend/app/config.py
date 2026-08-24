@@ -1,7 +1,8 @@
 """Runtime configuration for the Adaptive Advisory backend.
 
 All settings are read from the environment so the same image runs locally,
-in Cloud Run and in CI without modification.
+in Cloud Run and in CI without modification. A local `.env` fills the gap in
+between — see :func:`_load_dotenv`.
 """
 
 from __future__ import annotations
@@ -9,6 +10,31 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from functools import lru_cache
+
+from dotenv import find_dotenv, load_dotenv
+
+
+def _load_dotenv() -> str:
+    """Loads a local `.env`, if there is one.
+
+    `find_dotenv` walks up from this file, so the same call works whether
+    uvicorn is started from the repository root or from `backend/` — which is
+    what `make dev-backend` does.
+
+    Real environment variables win: `load_dotenv` does not override what is
+    already set, so a `.env` left in a working copy can never shadow what Cloud
+    Run injects.
+
+    Must run before `Settings` is defined — its field defaults read the
+    environment as the class body executes.
+    """
+    path = find_dotenv(usecwd=False)
+    if path:
+        load_dotenv(path, override=False)
+    return path
+
+
+DOTENV_PATH = _load_dotenv()
 
 
 def _flag(name: str, default: bool = False) -> bool:
@@ -60,6 +86,10 @@ class Settings:
     affective_dialog: bool = _flag("LIVE_AFFECTIVE_DIALOG", True)
     proactive_audio: bool = _flag("LIVE_PROACTIVE_AUDIO", False)
     session_idle_timeout_s: int = int(os.getenv("SESSION_IDLE_TIMEOUT_S", "900"))
+
+    #: Where the settings came from, surfaced at startup so a "why is my key
+    #: not picked up" question is one log line away.
+    dotenv_path: str = DOTENV_PATH
 
     def validate(self) -> list[str]:
         """Returns a list of human readable configuration problems."""
