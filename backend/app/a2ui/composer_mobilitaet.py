@@ -36,18 +36,22 @@ def profil_surface(profil: calc.Mobilitaetsprofil, offene_punkte: list[str]) -> 
 
     fakt = b.column([b.text(bind("label"), variant="caption"), b.text(bind("wert"))])
 
-    children = [
-        b.heading(
-            "Ihr Alltag",
-            "Das habe ich verstanden",
-            "Korrigieren Sie mich jederzeit – ich rechne sofort neu.",
-        ),
-        b.card(b.repeat(fakt, "/fakten", direction="horizontal")),
+    # Pinned for the whole session — see the note in composer_energie.
+    inner = [
+        b.text("Ihr Alltag", variant="caption"),
+        b.text("Das habe ich verstanden", variant="h3"),
+        b.repeat(fakt, "/fakten", direction="horizontal"),
     ]
     if offene_punkte:
-        children.append(b.bullets(offene_punkte, heading="Noch offen"))
+        inner.append(b.bullets(offene_punkte, heading="Noch offen"))
+    inner.append(
+        b.text(
+            "Korrigieren Sie mich jederzeit – ich rechne sofort neu.",
+            variant="caption",
+        )
+    )
 
-    b.root(b.column(children))
+    b.root(b.card(b.column(inner)))
 
     fakten: list[dict[str, str]] = [
         {

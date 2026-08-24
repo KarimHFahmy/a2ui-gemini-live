@@ -84,25 +84,10 @@
       "id": "c4",
       "component": "Text",
       "text": "Das habe ich verstanden",
-      "variant": "h2"
+      "variant": "h3"
      },
      {
       "id": "c5",
-      "component": "Text",
-      "text": "Sagen Sie einfach, wenn etwas nicht stimmt – ich passe es an.",
-      "variant": "body"
-     },
-     {
-      "id": "c6",
-      "component": "Column",
-      "children": [
-       "c3",
-       "c4",
-       "c5"
-      ]
-     },
-     {
-      "id": "c7",
       "component": "List",
       "children": {
        "componentId": "c2",
@@ -111,37 +96,45 @@
       "direction": "horizontal"
      },
      {
-      "id": "c8",
-      "component": "Card",
-      "child": "c7"
-     },
-     {
-      "id": "c9",
+      "id": "c6",
       "component": "Text",
       "text": "Noch offen",
       "variant": "h5"
      },
      {
-      "id": "c10",
+      "id": "c7",
       "component": "Text",
       "text": "- Genauer Gasverbrauch der letzten Jahre"
      },
      {
-      "id": "c11",
+      "id": "c8",
       "component": "Column",
       "children": [
-       "c9",
-       "c10"
+       "c6",
+       "c7"
+      ]
+     },
+     {
+      "id": "c9",
+      "component": "Text",
+      "text": "Sagen Sie einfach, wenn etwas nicht stimmt – ich passe es an.",
+      "variant": "caption"
+     },
+     {
+      "id": "c10",
+      "component": "Column",
+      "children": [
+       "c3",
+       "c4",
+       "c5",
+       "c8",
+       "c9"
       ]
      },
      {
       "id": "root",
-      "component": "Column",
-      "children": [
-       "c6",
-       "c8",
-       "c11"
-      ]
+      "component": "Card",
+      "child": "c10"
      }
     ]
    }
@@ -1710,25 +1703,10 @@
       "id": "c4",
       "component": "Text",
       "text": "Das habe ich verstanden",
-      "variant": "h2"
+      "variant": "h3"
      },
      {
       "id": "c5",
-      "component": "Text",
-      "text": "Korrigieren Sie mich jederzeit – ich rechne sofort neu.",
-      "variant": "body"
-     },
-     {
-      "id": "c6",
-      "component": "Column",
-      "children": [
-       "c3",
-       "c4",
-       "c5"
-      ]
-     },
-     {
-      "id": "c7",
       "component": "List",
       "children": {
        "componentId": "c2",
@@ -1737,37 +1715,45 @@
       "direction": "horizontal"
      },
      {
-      "id": "c8",
-      "component": "Card",
-      "child": "c7"
-     },
-     {
-      "id": "c9",
+      "id": "c6",
       "component": "Text",
       "text": "Noch offen",
       "variant": "h5"
      },
      {
-      "id": "c10",
+      "id": "c7",
       "component": "Text",
       "text": "- Lademöglichkeit beim Arbeitgeber"
      },
      {
-      "id": "c11",
+      "id": "c8",
       "component": "Column",
       "children": [
-       "c9",
-       "c10"
+       "c6",
+       "c7"
+      ]
+     },
+     {
+      "id": "c9",
+      "component": "Text",
+      "text": "Korrigieren Sie mich jederzeit – ich rechne sofort neu.",
+      "variant": "caption"
+     },
+     {
+      "id": "c10",
+      "component": "Column",
+      "children": [
+       "c3",
+       "c4",
+       "c5",
+       "c8",
+       "c9"
       ]
      },
      {
       "id": "root",
-      "component": "Column",
-      "children": [
-       "c6",
-       "c8",
-       "c11"
-      ]
+      "component": "Card",
+      "child": "c10"
      }
     ]
    }

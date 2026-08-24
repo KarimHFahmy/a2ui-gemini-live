@@ -13,11 +13,7 @@ import type {ReactComponentImplementation} from '@a2ui/react/v0_9';
 
 import {CATALOGS} from './a2ui/catalog';
 import {MicrophoneCapture, SpeechPlayer} from './live/audio';
-import {
-  AdvisorySocket,
-  type ConnectionState,
-  type TranscriptEntry,
-} from './live/session';
+import {AdvisorySocket, type ConnectionState, type TranscriptEntry} from './live/session';
 
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
@@ -159,9 +155,7 @@ export function useAdvisory(): AdvisoryController {
         setMicActive(true);
       } catch {
         setMicActive(false);
-        setError(
-          'Ohne Mikrofonfreigabe kann ich Sie nicht hören. Sie können trotzdem tippen.',
-        );
+        setError('Ohne Mikrofonfreigabe kann ich Sie nicht hören. Sie können trotzdem tippen.');
       }
     },
     [appendTranscript, processor, syncSurfaces],

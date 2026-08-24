@@ -6,36 +6,43 @@
  * tested without spending a voice session — and so a design change can be
  * checked against every building block at once.
  *
+ * It mounts the real `Stage`, not a simplified stand-in, so the sticky pinned
+ * profile and the scrolling flow behave here exactly as they do in a session.
+ * Layout bugs that only appear while scrolling are only catchable that way.
+ *
  * Regenerate the fixtures with:  make fixtures
  */
 
-import { useMemo, useState } from "react";
-import { MessageProcessor } from "@a2ui/web_core/v0_9";
-import { A2uiSurface } from "@a2ui/react/v0_9";
-import type { ReactComponentImplementation } from "@a2ui/react/v0_9";
+import {useMemo, useState} from 'react';
+import {MessageProcessor} from '@a2ui/web_core/v0_9';
+import type {ReactComponentImplementation} from '@a2ui/react/v0_9';
 
-import { A2uiHost } from "../a2ui/A2uiHost";
-import { CATALOGS } from "../a2ui/catalog";
-import fixtures from "../../fixtures.json";
+import {A2uiHost} from '../a2ui/A2uiHost';
+import {CATALOGS} from '../a2ui/catalog';
+import {Stage} from '../ui/Stage';
+import fixtures from '../../fixtures.json';
 
 type Fixtures = Record<string, unknown[]>;
 
 const JOURNEY_LABELS: Record<string, string> = {
-  energie: "Mein Zuhause",
-  mobilitaet: "Meine Mobilität",
+  energie: 'Mein Zuhause',
+  mobilitaet: 'Meine Mobilität',
 };
 
 export default function Preview() {
   const journeys = Object.keys(fixtures as Fixtures);
   const [active, setActive] = useState(journeys[0]);
 
-  const surfaces = useMemo(() => {
-    const processor = new MessageProcessor<ReactComponentImplementation>(
-      CATALOGS,
-      (action) => console.info("action dispatched:", action),
+  const {surfaces, titles} = useMemo(() => {
+    const processor = new MessageProcessor<ReactComponentImplementation>(CATALOGS, action =>
+      console.info('action dispatched:', action),
     );
     processor.processMessages((fixtures as Fixtures)[active] as never);
-    return Array.from(processor.model.surfacesMap.values());
+    const list = Array.from(processor.model.surfacesMap.values());
+    return {
+      surfaces: list,
+      titles: new Map(list.map(surface => [surface.id, surface.id])),
+    };
   }, [active]);
 
   return (
@@ -43,11 +50,11 @@ export default function Preview() {
       <div className="session">
         <header className="session__bar">
           <span className="session__wordmark">Katalog-Vorschau</span>
-          {journeys.map((journey) => (
+          {journeys.map(journey => (
             <button
               type="button"
               key={journey}
-              className={`btn btn--ghost ${journey === active ? "is-active" : ""}`}
+              className={`btn btn--ghost ${journey === active ? 'is-active' : ''}`}
               onClick={() => setActive(journey)}
               aria-pressed={journey === active}
             >
@@ -57,19 +64,13 @@ export default function Preview() {
           <span className="session__demo-badge">Demo-Daten</span>
         </header>
 
-        <main className="stage" data-surface-count={surfaces.length}>
-          <div className="stage__flow">
-            {surfaces.map((surface) => (
-              <section
-                className="surface"
-                key={surface.id}
-                data-surface-id={surface.id}
-              >
-                <A2uiSurface surface={surface} />
-              </section>
-            ))}
-          </div>
-        </main>
+        <div className="session__body session__body--preview">
+          <Stage
+            surfaces={surfaces}
+            titles={titles}
+            journeyLabel={JOURNEY_LABELS[active] ?? active}
+          />
+        </div>
       </div>
     </A2uiHost>
   );

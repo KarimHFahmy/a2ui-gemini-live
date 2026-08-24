@@ -68,8 +68,17 @@ export function VoiceDock({
           style={{transform: `scale(${1 + (agentSpeaking ? agentLevel : micLevel) * 0.7})`}}
           aria-hidden="true"
         />
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor"
-             strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <svg
+          viewBox="0 0 24 24"
+          width="20"
+          height="20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
           {micActive ? (
             <>
               <path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z" />

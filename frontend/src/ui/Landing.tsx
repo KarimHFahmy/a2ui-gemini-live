@@ -14,8 +14,7 @@ export interface JourneyOption {
 
 const ACCENT_ICONS: Record<string, string> = {
   energie: 'M12 2 5 13h6l-1 9 8-12h-6z',
-  mobilitaet:
-    'M5 16v2M19 16v2M3 16h18v-4l-2-5H5l-2 5zM7 13h.01M17 13h.01',
+  mobilitaet: 'M5 16v2M19 16v2M3 16h18v-4l-2-5H5l-2 5zM7 13h.01M17 13h.01',
 };
 
 interface LandingProps {
@@ -35,9 +34,9 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
             Von Antworten zu <em>Beratung</em>, die sich anfühlt wie ein Gespräch.
           </h1>
           <p className="landing__lede">
-            Erzählen Sie einfach von Ihrer Situation. Ich höre zu, stelle nur die Fragen,
-            die wirklich weiterhelfen — und baue Ihnen währenddessen genau die Übersicht,
-            die zu Ihrer Frage passt.
+            Erzählen Sie einfach von Ihrer Situation. Ich höre zu, stelle nur die Fragen, die
+            wirklich weiterhelfen — und baue Ihnen währenddessen genau die Übersicht, die zu Ihrer
+            Frage passt.
           </p>
         </header>
 
@@ -52,8 +51,14 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
               aria-busy={starting === journey.id}
             >
               <span className="choice__icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}
-                     strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <path d={ACCENT_ICONS[journey.id] ?? ACCENT_ICONS.energie} />
                 </svg>
               </span>
@@ -61,8 +66,17 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
               <span className="choice__tagline">{journey.tagline}</span>
               <span className="choice__cta">
                 {starting === journey.id ? 'Verbinde …' : 'Gespräch starten'}
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                     strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
                   <path d="M5 12h14M13 6l6 6-6 6" />
                 </svg>
               </span>
@@ -73,8 +87,8 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
         <footer className="landing__foot">
           <p>
             Sie brauchen ein Mikrofon. Das Gespräch bleibt in dieser Sitzung und wird nicht
-            gespeichert. Alle gezeigten Zahlen sind gekennzeichnete Demo-Beispielwerte und
-            ersetzen keine Fachberatung.
+            gespeichert. Alle gezeigten Zahlen sind gekennzeichnete Demo-Beispielwerte und ersetzen
+            keine Fachberatung.
           </p>
         </footer>
       </div>
