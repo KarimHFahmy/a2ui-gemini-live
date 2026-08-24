@@ -30,10 +30,52 @@ const FALLBACK_JOURNEYS: JourneyOption[] = [
   },
 ];
 
+function TranscriptIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="15"
+      height="15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M4 7h16M4 12h10M4 17h13" />
+    </svg>
+  );
+}
+
+function RestartIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="15"
+      height="15"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5" />
+    </svg>
+  );
+}
+
 export default function App() {
   const [journeys, setJourneys] = useState<JourneyOption[]>(FALLBACK_JOURNEYS);
   const [active, setActive] = useState<JourneyOption | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
+  /**
+   * The transcript is off by default. Voice leads the experience and a live
+   * API needs no reading along, so the 340px it costs belongs to the advisory
+   * surfaces — but the briefing asks for a visible transcript, and it is worth
+   * being able to show one on demand.
+   */
+  const [showTranscript, setShowTranscript] = useState(false);
 
   const advisory = useAdvisory();
 
@@ -68,9 +110,11 @@ export default function App() {
     [advisory, journeys],
   );
 
-  const handleEnd = useCallback(() => {
+  /** Ends the session and returns to the journey choice. */
+  const handleRestart = useCallback(() => {
     advisory.stop();
     setActive(null);
+    setShowTranscript(false);
   }, [advisory]);
 
   if (!active) {
@@ -90,9 +134,33 @@ export default function App() {
         <header className="session__bar">
           <span className="session__wordmark">{BRAND_NAME}</span>
           <span className="session__journey">{active.label}</span>
-          <span className="session__demo-badge" title="Alle Zahlen sind Demo-Beispielwerte">
-            Demo-Daten
-          </span>
+
+          <div className="session__actions">
+            <button
+              type="button"
+              className="session__control"
+              onClick={() => setShowTranscript(value => !value)}
+              aria-pressed={showTranscript}
+              title="Mitschrift des Gesprächs ein- oder ausblenden"
+            >
+              <TranscriptIcon />
+              Mitschrift
+            </button>
+
+            <button
+              type="button"
+              className="session__control"
+              onClick={handleRestart}
+              title="Beratung beenden und eine andere wählen"
+            >
+              <RestartIcon />
+              Neu starten
+            </button>
+
+            <span className="session__demo-badge" title="Alle Zahlen sind Demo-Beispielwerte">
+              Demo-Daten
+            </span>
+          </div>
         </header>
 
         {advisory.error ? (
@@ -101,13 +169,15 @@ export default function App() {
           </div>
         ) : null}
 
-        <div className="session__body">
+        <div className={`session__body${showTranscript ? '' : ' session__body--solo'}`}>
           <Stage
             surfaces={advisory.surfaces}
             titles={advisory.surfaceTitles}
             journeyLabel={active.label}
           />
-          <TranscriptPanel entries={advisory.transcript} busyTool={advisory.busyTool} />
+          {showTranscript ? (
+            <TranscriptPanel entries={advisory.transcript} busyTool={advisory.busyTool} />
+          ) : null}
         </div>
 
         <VoiceDock
@@ -118,7 +188,7 @@ export default function App() {
           agentSpeaking={advisory.agentSpeaking}
           onToggleMic={advisory.toggleMic}
           onSendText={advisory.sendText}
-          onEnd={handleEnd}
+          busyTool={advisory.busyTool}
         />
       </div>
     </A2uiHost>

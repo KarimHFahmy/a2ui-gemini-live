@@ -9,6 +9,7 @@
 import {useState, type FormEvent} from 'react';
 
 import type {ConnectionState} from '../live/session';
+import {toolLabel} from './toolLabels';
 
 interface VoiceDockProps {
   state: ConnectionState;
@@ -18,7 +19,8 @@ interface VoiceDockProps {
   agentSpeaking: boolean;
   onToggleMic: () => void;
   onSendText: (text: string) => void;
-  onEnd: () => void;
+  /** The advisory tool currently running, if any. */
+  busyTool: string | null;
 }
 
 const STATE_LABEL: Record<ConnectionState, string> = {
@@ -37,7 +39,7 @@ export function VoiceDock({
   agentSpeaking,
   onToggleMic,
   onSendText,
-  onEnd,
+  busyTool,
 }: VoiceDockProps) {
   const [draft, setDraft] = useState('');
 
@@ -49,11 +51,25 @@ export function VoiceDock({
 
   return (
     <div className="dock">
-      <div className="dock__status">
-        <span className={`dot dot--${state}`} aria-hidden="true" />
-        <span className="dock__status-label">
-          {agentSpeaking ? 'Berater spricht' : STATE_LABEL[state]}
-        </span>
+      {/*
+        With the transcript hidden this is the only place the client learns
+        that something is happening, so tool activity takes precedence over
+        the connection state.
+      */}
+      <div className="dock__status" aria-live="polite">
+        {busyTool ? (
+          <>
+            <span className="dock__spinner" aria-hidden="true" />
+            <span className="dock__status-label">{toolLabel(busyTool)}</span>
+          </>
+        ) : (
+          <>
+            <span className={`dot dot--${state}`} aria-hidden="true" />
+            <span className="dock__status-label">
+              {agentSpeaking ? 'Berater spricht' : STATE_LABEL[state]}
+            </span>
+          </>
+        )}
       </div>
 
       <button
@@ -106,10 +122,6 @@ export function VoiceDock({
           Senden
         </button>
       </form>
-
-      <button type="button" className="btn btn--ghost dock__end" onClick={onEnd}>
-        Beenden
-      </button>
     </div>
   );
 }
