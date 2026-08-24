@@ -9,25 +9,12 @@
 import {useEffect, useRef} from 'react';
 
 import type {TranscriptEntry} from '../live/session';
+import {toolLabel} from './toolLabels';
 
 interface TranscriptPanelProps {
   entries: TranscriptEntry[];
   busyTool: string | null;
 }
-
-const TOOL_LABEL: Record<string, string> = {
-  profil_aktualisieren: 'Fasst Ihre Situation zusammen …',
-  waermepumpen_eignung_zeigen: 'Prüft die Eignung Ihres Hauses …',
-  szenarien_vergleichen: 'Stellt die Wege gegenüber …',
-  wirtschaftlichkeit_zeigen: 'Rechnet über 20 Jahre …',
-  foerderung_und_fahrplan_zeigen: 'Ermittelt Förderung und Fahrplan …',
-  alltagstauglichkeit_zeigen: 'Legt Ihre Woche über die Reichweite …',
-  ladeloesungen_vergleichen: 'Vergleicht die Ladeoptionen …',
-  fahrzeuge_vorschlagen: 'Sucht passende Fahrzeugklassen …',
-  kosten_vergleichen: 'Rechnet die Gesamtkosten …',
-  bedenken_adressieren: 'Geht auf Ihre Frage ein …',
-  naechsten_schritt_anbieten: 'Fasst alles zusammen …',
-};
 
 export function TranscriptPanel({entries, busyTool}: TranscriptPanelProps) {
   const endRef = useRef<HTMLDivElement>(null);
@@ -60,7 +47,7 @@ export function TranscriptPanel({entries, busyTool}: TranscriptPanelProps) {
         {busyTool ? (
           <div className="turn turn--tool" aria-live="polite">
             <span className="turn__spinner" aria-hidden="true" />
-            <p className="turn__text">{TOOL_LABEL[busyTool] ?? 'Baut die Ansicht …'}</p>
+            <p className="turn__text">{toolLabel(busyTool)}</p>
           </div>
         ) : null}
 

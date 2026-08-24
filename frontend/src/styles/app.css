@@ -134,8 +134,15 @@
 
 .session {
   height: 100%;
-  display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  /*
+   * Flex, not grid. `grid-template-rows: auto auto 1fr auto` assumed four
+   * children, but the error banner only renders when there is an error — so
+   * the usual three children shifted up a row, the dock inherited the `1fr`
+   * and its contents floated in the middle of the screen. A flex column does
+   * not care how many children there are.
+   */
+  display: flex;
+  flex-direction: column;
   background: var(--bg);
 }
 
@@ -167,8 +174,14 @@
   color: var(--text-faint);
 }
 
-.session__demo-badge {
+.session__actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.session__demo-badge {
   padding: 3px 10px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line-strong);
@@ -180,14 +193,46 @@
 }
 
 .session__body {
+  flex: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
   min-height: 0;
 }
 
+/* Voice leads, so the transcript is off by default and the stage takes it all. */
+.session__body--solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 /* The preview has no transcript panel, so the stage takes the full width. */
 .session__body--preview {
   grid-template-columns: minmax(0, 1fr);
+}
+
+/* A header control: quiet until you need it. */
+.session__control {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius-m);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.session__control:hover {
+  color: var(--text);
+  border-color: var(--line-strong);
+}
+
+.session__control[aria-pressed='true'] {
+  color: var(--brand-accent);
+  border-color: var(--brand-accent);
+  background: var(--brand-accent-soft);
 }
 
 .banner {
@@ -240,8 +285,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  /* A comfortable reading measure, centred once the transcript is hidden. */
   max-width: 940px;
   width: 100%;
+  margin-inline: auto;
 }
 
 .surface {
@@ -250,6 +297,7 @@
 
 .surface--pinned {
   max-width: 940px;
+  margin-inline: auto;
   /*
    * A long profile must not eat the stage. Past this it scrolls inside itself
    * and the conversation keeps the room it needs.
@@ -488,6 +536,16 @@
   position: relative;
 }
 
+.dock__spinner {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  border-top-color: var(--brand-accent);
+  animation: spin 0.7s linear infinite;
+}
+
 .dock__type {
   flex: 1;
   display: flex;
@@ -559,6 +617,10 @@
   .session__body {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .session__journey {
+    display: none;
   }
 
   .transcript {
