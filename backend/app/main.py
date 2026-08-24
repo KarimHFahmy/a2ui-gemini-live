@@ -43,6 +43,9 @@ async def lifespan(app: FastAPI):
     problems = settings.validate()
     for problem in problems:
         logger.error("Configuration problem: %s", problem)
+    if settings.dotenv_path:
+        logger.info("Loaded configuration from %s", settings.dotenv_path)
+
     if not problems:
         logger.info(
             "Adaptive Advisory backend ready (model=%s, vertex=%s, voice=%s/%s)",
