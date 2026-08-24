@@ -46,18 +46,24 @@ def profil_surface(profil: calc.Gebaeudeprofil, offene_punkte: list[str]) -> Sur
         ]
     )
 
-    children = [
-        b.heading(
-            "Ihre Situation",
-            "Das habe ich verstanden",
-            "Sagen Sie einfach, wenn etwas nicht stimmt – ich passe es an.",
-        ),
-        b.card(b.repeat(fakt, "/fakten", direction="horizontal")),
+    # This surface is pinned to the top of the stage for the whole session, so
+    # everything lives inside one card. Bare text on the stage background would
+    # have the scrolling conversation showing through it.
+    inner = [
+        b.text("Ihre Situation", variant="caption"),
+        b.text("Das habe ich verstanden", variant="h3"),
+        b.repeat(fakt, "/fakten", direction="horizontal"),
     ]
     if offene_punkte:
-        children.append(b.bullets(offene_punkte, heading="Noch offen"))
+        inner.append(b.bullets(offene_punkte, heading="Noch offen"))
+    inner.append(
+        b.text(
+            "Sagen Sie einfach, wenn etwas nicht stimmt – ich passe es an.",
+            variant="caption",
+        )
+    )
 
-    b.root(b.column(children))
+    b.root(b.card(b.column(inner)))
 
     bedarf = calc.waermebedarf_kwh_a(profil)
     fakten: list[dict[str, str]] = [

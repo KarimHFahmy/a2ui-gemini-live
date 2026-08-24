@@ -3,8 +3,11 @@
  *
  * Serves the built `preview.html`, renders every captured surface in a real
  * browser in both colour schemes, and fails if anything comes out as a missing
- * child placeholder, an unknown component, an empty chart or a page that
- * scrolls sideways. Run it after touching a component, a schema or a composer.
+ * child placeholder, an unknown component, an empty chart, literal Markdown or
+ * a page that scrolls sideways. It also scrolls the stage and checks that the
+ * pinned profile stays opaque — a sticky header that lets the conversation
+ * show through is only visible mid-scroll. Run it after touching a component,
+ * a schema or a composer.
  *
  *   make check-catalog
  */
@@ -97,6 +100,12 @@ for (const scheme of ['light','dark']) {
       stats.modals === 0;
     if (bad) failures++;
     console.log(`[${scheme}] ${journey}:`, JSON.stringify(stats));
+    const pinned = await checkPinnedBand(page);
+    if (pinned.problems.length) {
+      failures++;
+      console.log(`  [${scheme}] ${journey} pinned band: ${pinned.problems.join("; ")}`);
+    }
+
     if (scheme==='light') {
       const slug = journey==='Mein Zuhause'?'energie':'mobilitaet';
       await page.screenshot({path: path.resolve(shotDir, `${slug}.png`), fullPage: true});
@@ -110,3 +119,48 @@ await browser.close();
 server.close();
 console.log(failures ? `\nFAILURES: ${failures}` : '\nALL CHECKS PASSED');
 process.exit(failures?1:0);
+
+/**
+ * Scrolls the stage and inspects the sticky profile band.
+ *
+ * The band has to be fully opaque and flush with the top of the scrollport.
+ * A transparent edge — or a sticky inset measured from the padding box rather
+ * than the border box — leaves a strip the conversation scrolls through, which
+ * looks like text printed on top of a chart. That is only visible mid-scroll,
+ * so a static render will never catch it.
+ */
+async function checkPinnedBand(page) {
+  if (!(await page.locator('.stage__pinned').count())) return {problems: []};
+
+  await page.evaluate(() => document.querySelector('.stage').scrollBy(0, 700));
+  await page.waitForTimeout(250);
+
+  return page.evaluate(() => {
+    const problems = [];
+    const stage = document.querySelector('.stage');
+    const pinned = document.querySelector('.stage__pinned');
+    const surface = document.querySelector('.surface--pinned');
+
+    if (Math.round(pinned.getBoundingClientRect().top - stage.getBoundingClientRect().top) !== 0) {
+      problems.push('band is not flush with the top of the stage');
+    }
+
+    const background = getComputedStyle(pinned).backgroundImage;
+    if (background !== 'none') {
+      problems.push(`band background is not a solid colour (${background})`);
+    }
+
+    // Every text leaf in the band must sit on a card of its own, so nothing
+    // relies on the band's background alone.
+    const bare = [...pinned.querySelectorAll('h3, h5, li, em')].filter(el => !el.closest('.a2ui-card'));
+    if (bare.length) {
+      problems.push(`${bare.length} element(s) in the band sit outside a card`);
+    }
+
+    if (surface && surface.scrollHeight > surface.clientHeight + 1) {
+      problems.push(`profile exceeds its height cap (${surface.scrollHeight}px)`);
+    }
+
+    return {problems};
+  });
+}

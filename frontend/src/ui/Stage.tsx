@@ -42,7 +42,7 @@ export function Stage({surfaces, titles, journeyLabel}: StageProps) {
       {pinned.length > 0 ? (
         <div className="stage__pinned">
           {pinned.map(surface => (
-            <div className="surface surface--pinned" key={surface.id}>
+            <div className="surface surface--pinned" key={surface.id} data-surface-id={surface.id}>
               <A2uiSurface surface={surface} />
             </div>
           ))}
@@ -65,6 +65,7 @@ export function Stage({surfaces, titles, journeyLabel}: StageProps) {
           <section
             className="surface"
             key={surface.id}
+            data-surface-id={surface.id}
             aria-label={titles.get(surface.id) ?? surface.id}
           >
             <A2uiSurface surface={surface} />

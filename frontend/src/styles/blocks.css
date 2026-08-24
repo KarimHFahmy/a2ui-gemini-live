@@ -35,7 +35,9 @@
 .surface h1,
 .surface h2,
 .surface h3,
-.surface h4 {
+.surface h4,
+.surface h5,
+.surface h6 {
   margin: 0;
   letter-spacing: -0.014em;
   line-height: 1.22;
@@ -48,6 +50,12 @@
 
 .surface h3 {
   font-size: 17px;
+  font-weight: 600;
+}
+
+.surface h4,
+.surface h5 {
+  font-size: 14px;
   font-weight: 600;
 }
 
@@ -149,6 +157,37 @@
 .surface .a2ui-modal-trigger:hover {
   color: var(--brand-accent);
   text-decoration-color: var(--brand-accent);
+}
+
+/*
+ * The fact grid in the pinned profile.
+ *
+ * The agent renders it as a horizontal `List` of label/value pairs. The
+ * renderer emits that as an inline-styled flex row with no class (see the
+ * packaging note above), and flex sizes each column to its content — so long
+ * values wrap mid-phrase while short ones waste the space. A grid with a
+ * sensible minimum column width reads far better, and beating an inline
+ * `display: flex` is what the `!important` is for.
+ */
+.surface--pinned div[style*="flex-direction: row"] {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: var(--space-2) var(--space-4);
+  align-items: start;
+}
+
+/* Label above value, tight — this block is persistent chrome, not content. */
+.surface--pinned div[style*="flex-direction: column"] {
+  gap: 1px !important;
+}
+
+.surface--pinned ul {
+  margin-top: 2px;
+}
+
+/* Persistent chrome earns less padding than a content card. */
+.surface--pinned .a2ui-card {
+  padding: var(--space-4);
 }
 
 /* ---------- MetricChart ---------- */

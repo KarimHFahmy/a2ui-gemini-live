@@ -50,9 +50,7 @@ export function Chart({chartType, categories, series, unit, valueFormat = 'numbe
    */
   const maxValue =
     chartType === 'stackedBar'
-      ? Math.max(
-          ...categories.map((_, i) => clean.reduce((sum, s) => sum + (s.werte[i] ?? 0), 0)),
-        )
+      ? Math.max(...categories.map((_, i) => clean.reduce((sum, s) => sum + (s.werte[i] ?? 0), 0)))
       : Math.max(...clean.flatMap(s => s.werte.map(v => v ?? 0)));
   const minValue = Math.min(0, ...clean.flatMap(s => s.werte.map(v => v ?? 0)));
 
@@ -83,7 +81,13 @@ export function Chart({chartType, categories, series, unit, valueFormat = 'numbe
                 y2={y(tick)}
                 className={tick === 0 ? 'chart__axis' : 'chart__grid'}
               />
-              <text x={PAD.left - 10} y={y(tick)} className="chart__tick" textAnchor="end" dy="0.32em">
+              <text
+                x={PAD.left - 10}
+                y={y(tick)}
+                className="chart__tick"
+                textAnchor="end"
+                dy="0.32em"
+              >
                 {compact(tick, valueFormat)}
               </text>
             </g>

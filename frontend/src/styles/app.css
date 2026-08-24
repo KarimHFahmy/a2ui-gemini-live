@@ -185,6 +185,11 @@
   min-height: 0;
 }
 
+/* The preview has no transcript panel, so the stage takes the full width. */
+.session__body--preview {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .banner {
   padding: var(--space-3) var(--space-5);
   font-size: 14px;
@@ -209,11 +214,26 @@
 
 .stage__pinned {
   position: sticky;
-  top: 0;
+  /*
+   * Sticky insets are measured from the scrollport's padding edge, so `top: 0`
+   * would park the band a full `--space-5` below the visible top and let
+   * content scroll through the gap. Pulling it up by the same amount lands it
+   * flush against the header.
+   */
+  top: calc(var(--space-5) * -1);
   z-index: 2;
-  /* Fades the scrolling content out behind the pinned profile card. */
-  background: linear-gradient(var(--bg) 78%, transparent);
-  padding-bottom: var(--space-3);
+  /*
+   * Opaque, edge to edge. A gradient fading to transparent let the scrolling
+   * conversation show straight through the bottom of the profile card — the
+   * "Noch offen" list ended up printed over whatever was passing behind it.
+   *
+   * The negative margins pull the band out over the stage's own padding, so
+   * nothing can slip past it at the sides or above.
+   */
+  background: var(--bg);
+  margin: calc(var(--space-5) * -1) calc(var(--space-5) * -1) 0;
+  padding: var(--space-5) var(--space-5) var(--space-3);
+  box-shadow: 0 10px 12px -10px rgba(16, 21, 26, 0.28);
 }
 
 .stage__flow {
@@ -230,6 +250,13 @@
 
 .surface--pinned {
   max-width: 940px;
+  /*
+   * A long profile must not eat the stage. Past this it scrolls inside itself
+   * and the conversation keeps the room it needs.
+   */
+  max-height: 44vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 @keyframes surface-in {
@@ -542,6 +569,16 @@
 }
 
 @media (max-width: 720px) {
+  .stage__pinned {
+    top: calc(var(--space-3) * -1);
+    margin: calc(var(--space-3) * -1) calc(var(--space-3) * -1) 0;
+    padding: var(--space-3) var(--space-3) var(--space-2);
+  }
+
+  .surface--pinned {
+    max-height: 45vh;
+  }
+
   .dock {
     flex-wrap: wrap;
     gap: var(--space-3);
