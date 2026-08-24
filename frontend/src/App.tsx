@@ -9,8 +9,9 @@ import {useCallback, useEffect, useState} from 'react';
 
 import {A2uiHost} from './a2ui/A2uiHost';
 import {Landing, type JourneyOption} from './ui/Landing';
+import {ProfileAside} from './ui/ProfileAside';
 import {Stage} from './ui/Stage';
-import {TranscriptPanel} from './ui/TranscriptPanel';
+import {splitSurfaces} from './ui/surfaces';
 import {VoiceDock} from './ui/VoiceDock';
 import {useAdvisory} from './useAdvisory';
 
@@ -29,23 +30,6 @@ const FALLBACK_JOURNEYS: JourneyOption[] = [
     tagline: 'Von Reichweitenangst und Tarifdschungel zur passenden E-Mobilitätsentscheidung.',
   },
 ];
-
-function TranscriptIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="15"
-      height="15"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M4 7h16M4 12h10M4 17h13" />
-    </svg>
-  );
-}
 
 function RestartIcon() {
   return (
@@ -69,13 +53,6 @@ export default function App() {
   const [journeys, setJourneys] = useState<JourneyOption[]>(FALLBACK_JOURNEYS);
   const [active, setActive] = useState<JourneyOption | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
-  /**
-   * The transcript is off by default. Voice leads the experience and a live
-   * API needs no reading along, so the 340px it costs belongs to the advisory
-   * surfaces — but the briefing asks for a visible transcript, and it is worth
-   * being able to show one on demand.
-   */
-  const [showTranscript, setShowTranscript] = useState(false);
 
   const advisory = useAdvisory();
 
@@ -114,8 +91,10 @@ export default function App() {
   const handleRestart = useCallback(() => {
     advisory.stop();
     setActive(null);
-    setShowTranscript(false);
   }, [advisory]);
+
+  // The profile is context, not conversation: it gets its own column.
+  const {profile, flow} = splitSurfaces(advisory.surfaces);
 
   if (!active) {
     return (
@@ -139,17 +118,6 @@ export default function App() {
             <button
               type="button"
               className="session__control"
-              onClick={() => setShowTranscript(value => !value)}
-              aria-pressed={showTranscript}
-              title="Mitschrift des Gesprächs ein- oder ausblenden"
-            >
-              <TranscriptIcon />
-              Mitschrift
-            </button>
-
-            <button
-              type="button"
-              className="session__control"
               onClick={handleRestart}
               title="Beratung beenden und eine andere wählen"
             >
@@ -169,15 +137,14 @@ export default function App() {
           </div>
         ) : null}
 
-        <div className={`session__body${showTranscript ? '' : ' session__body--solo'}`}>
+        <div className={`session__body${profile ? '' : ' session__body--solo'}`}>
           <Stage
-            surfaces={advisory.surfaces}
+            surfaces={flow}
             titles={advisory.surfaceTitles}
             journeyLabel={active.label}
+            hasAnySurface={advisory.surfaces.length > 0}
           />
-          {showTranscript ? (
-            <TranscriptPanel entries={advisory.transcript} busyTool={advisory.busyTool} />
-          ) : null}
+          {profile ? <ProfileAside surface={profile} /> : null}
         </div>
 
         <VoiceDock

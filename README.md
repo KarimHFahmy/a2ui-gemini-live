@@ -58,7 +58,7 @@ Browser                        Cloud Run (one container)                Google C
 │   basic catalog    │       │            │                 │
 │   + chart, table   │       │   ADK FunctionTool           │
 │                    │──────>│      └ Domain calc (no LLM)  │
-│ transcript + dock  │action │      └ Composer → A2UI       │
+│ profile + dock     │action │      └ Composer → A2UI       │
 └────────────────────┘       └──────────────────────────────┘
 ```
 
@@ -255,7 +255,7 @@ frontend/
     live/
       audio.ts            Capture (16 kHz) and playback (24 kHz) with barge-in
       session.ts          WebSocket client
-    ui/                   Landing, Stage, TranscriptPanel, VoiceDock
+    ui/                   Landing, Stage, ProfileAside, VoiceDock
     useAdvisory.ts        Ties socket, audio and MessageProcessor together
     preview/              Offline catalog preview
   scripts/check-catalog.mjs
