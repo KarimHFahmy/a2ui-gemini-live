@@ -13,7 +13,7 @@ import type {ReactComponentImplementation} from '@a2ui/react/v0_9';
 
 import {CATALOGS} from './a2ui/catalog';
 import {MicrophoneCapture, SpeechPlayer} from './live/audio';
-import {AdvisorySocket, type ConnectionState, type TranscriptEntry} from './live/session';
+import {AdvisorySocket, type ConnectionState} from './live/session';
 
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
@@ -23,7 +23,6 @@ export interface AdvisoryController {
   error: string | null;
   surfaces: SurfaceModel<ReactComponentImplementation>[];
   surfaceTitles: Map<string, string>;
-  transcript: TranscriptEntry[];
   micActive: boolean;
   micLevel: number;
   agentLevel: number;
@@ -41,7 +40,6 @@ export function useAdvisory(): AdvisoryController {
   const [error, setError] = useState<string | null>(null);
   const [surfaces, setSurfaces] = useState<SurfaceModel<ReactComponentImplementation>[]>([]);
   const [surfaceTitles, setSurfaceTitles] = useState<Map<string, string>>(new Map());
-  const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [micActive, setMicActive] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const [agentLevel, setAgentLevel] = useState(0);
@@ -52,13 +50,6 @@ export function useAdvisory(): AdvisoryController {
   const micRef = useRef<MicrophoneCapture | null>(null);
   const playerRef = useRef<SpeechPlayer | null>(null);
   const toolTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  /**
-   * Transcript chunks arrive as partial text within a turn. Appending to the
-   * open entry of the same role — rather than pushing a new one per chunk —
-   * is what makes the panel read like a conversation.
-   */
-  const openTurn = useRef<{role: 'user' | 'agent'; id: string} | null>(null);
 
   const processor = useMemo(
     () =>
@@ -85,27 +76,10 @@ export function useAdvisory(): AdvisoryController {
     };
   }, [processor, syncSurfaces]);
 
-  const appendTranscript = useCallback((role: 'user' | 'agent', text: string) => {
-    if (!text) return;
-    setTranscript(previous => {
-      const open = openTurn.current;
-      if (open && open.role === role) {
-        return previous.map(entry =>
-          entry.id === open.id ? {...entry, text: entry.text + text} : entry,
-        );
-      }
-      const id = `${role}-${Date.now()}-${previous.length}`;
-      openTurn.current = {role, id};
-      return [...previous, {id, role, text}];
-    });
-  }, []);
-
   const start = useCallback(
     async (journeyId: string) => {
       setError(null);
       setHandover(null);
-      setTranscript([]);
-      openTurn.current = null;
 
       const player = new SpeechPlayer(OUTPUT_SAMPLE_RATE, setAgentLevel);
       playerRef.current = player;
@@ -113,14 +87,8 @@ export function useAdvisory(): AdvisoryController {
       const socket = new AdvisorySocket({
         onState: next => setState(next),
         onAudio: chunk => player.enqueue(chunk),
-        onInterrupted: () => {
-          player.interrupt();
-          openTurn.current = null;
-        },
-        onTranscript: appendTranscript,
-        onTurnComplete: () => {
-          openTurn.current = null;
-        },
+        onInterrupted: () => player.interrupt(),
+        onTurnComplete: () => {},
         onA2ui: message => {
           try {
             processor.processMessages([message]);
@@ -158,7 +126,7 @@ export function useAdvisory(): AdvisoryController {
         setError('Ohne Mikrofonfreigabe kann ich Sie nicht hören. Sie können trotzdem tippen.');
       }
     },
-    [appendTranscript, processor, syncSurfaces],
+    [processor, syncSurfaces],
   );
 
   const stop = useCallback(() => {
@@ -182,15 +150,10 @@ export function useAdvisory(): AdvisoryController {
     setMicActive(next);
   }, [micActive]);
 
-  const sendText = useCallback(
-    (text: string) => {
-      if (!text.trim()) return;
-      socketRef.current?.sendText(text);
-      appendTranscript('user', text);
-      openTurn.current = null;
-    },
-    [appendTranscript],
-  );
+  const sendText = useCallback((text: string) => {
+    if (!text.trim()) return;
+    socketRef.current?.sendText(text);
+  }, []);
 
   useEffect(() => () => stop(), [stop]);
 
@@ -199,7 +162,6 @@ export function useAdvisory(): AdvisoryController {
     error,
     surfaces,
     surfaceTitles,
-    transcript,
     micActive,
     micLevel,
     agentLevel,

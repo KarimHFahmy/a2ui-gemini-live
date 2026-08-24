@@ -140,10 +140,16 @@ sends `createSurface` + `updateDataModel` + `updateComponents`; every later call
 to the same tool sends only the two updates, so the card the client is already
 reading changes in place instead of a near-duplicate appearing below it.
 
-The profile surface is pinned at the top of the stage and updated on every
-turn; everything else stacks in creation order. That is the briefing's
-progressive disclosure: the screen grows with the conversation rather than
-presenting a dashboard up front.
+The profile surface lives in its own column beside the conversation and is
+updated on every turn; everything else stacks in the stage in creation order.
+That split is the point: the profile is context — what the agent currently
+believes about the client — while the stage is the conversation, and the
+screen grows with it rather than presenting a dashboard up front.
+
+There is no transcript. A live voice API answers by speaking, and the column
+it used to occupy is worth more to the advice than to a reading-along panel.
+The backend still transcribes both sides for the handover payload and the
+logs; the client simply renders none of it.
 
 ### Interactions are conversational turns
 
@@ -176,6 +182,29 @@ out. Browsers give Float32 at whatever the device runs.
 Audio travels as binary WebSocket frames and everything else as JSON text
 frames on the same socket, so ordering between "the agent said this" and "the
 agent showed this" is preserved by the transport.
+
+## Theming the official components
+
+The basic catalog's components carry their own inline styles, built from
+`--a2ui-*` custom properties: `--a2ui-card-padding`, `--a2ui-column-gap`,
+`--a2ui-modal-padding`, `--a2ui-text-caption-color` and so on. Those are the
+supported way to restyle them — a stylesheet rule targeting `.a2ui-card` loses
+to the inline `var()` it reads.
+
+`theme.css` maps the whole set onto this demo's tokens once, and a context like
+the profile column narrows them locally:
+
+```css
+.aside {
+  --a2ui-card-padding: 0;
+  --a2ui-card-border: none;
+  --a2ui-card-background: transparent;
+}
+```
+
+The exceptions are `Button`, `TextField` and `ChoicePicker`, which expose no
+variables and ship without their class names (see the packaging note in the
+README). Those are styled by element, in one marked section of `blocks.css`.
 
 ## Guardrails
 

@@ -19,7 +19,9 @@ import type {ReactComponentImplementation} from '@a2ui/react/v0_9';
 
 import {A2uiHost} from '../a2ui/A2uiHost';
 import {CATALOGS} from '../a2ui/catalog';
+import {ProfileAside} from '../ui/ProfileAside';
 import {Stage} from '../ui/Stage';
+import {splitSurfaces} from '../ui/surfaces';
 import fixtures from '../../fixtures.json';
 
 type Fixtures = Record<string, unknown[]>;
@@ -45,6 +47,8 @@ export default function Preview() {
     };
   }, [active]);
 
+  const {profile, flow} = splitSurfaces(surfaces);
+
   return (
     <A2uiHost>
       <div className="session">
@@ -64,12 +68,14 @@ export default function Preview() {
           <span className="session__demo-badge">Demo-Daten</span>
         </header>
 
-        <div className="session__body session__body--preview">
+        <div className={`session__body${profile ? '' : ' session__body--solo'}`}>
           <Stage
-            surfaces={surfaces}
+            surfaces={flow}
             titles={titles}
             journeyLabel={JOURNEY_LABELS[active] ?? active}
+            hasAnySurface={surfaces.length > 0}
           />
+          {profile ? <ProfileAside surface={profile} /> : null}
         </div>
       </div>
     </A2uiHost>

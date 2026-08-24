@@ -1,4 +1,4 @@
-/* Application shell: landing page, session layout, voice dock, transcript. */
+/* Application shell: landing page, session layout, profile aside, voice dock. */
 
 /* ---------- Landing ---------- */
 
@@ -195,17 +195,16 @@
 .session__body {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  /* Conversation left, "Das habe ich verstanden" right. */
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 22vw);
   min-height: 0;
 }
 
-/* Voice leads, so the transcript is off by default and the stage takes it all. */
+/*
+ * The profile column only exists once the agent has understood something, so
+ * before that the stage takes the full width.
+ */
 .session__body--solo {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-/* The preview has no transcript panel, so the stage takes the full width. */
-.session__body--preview {
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -257,35 +256,11 @@
   gap: var(--space-5);
 }
 
-.stage__pinned {
-  position: sticky;
-  /*
-   * Sticky insets are measured from the scrollport's padding edge, so `top: 0`
-   * would park the band a full `--space-5` below the visible top and let
-   * content scroll through the gap. Pulling it up by the same amount lands it
-   * flush against the header.
-   */
-  top: calc(var(--space-5) * -1);
-  z-index: 2;
-  /*
-   * Opaque, edge to edge. A gradient fading to transparent let the scrolling
-   * conversation show straight through the bottom of the profile card — the
-   * "Noch offen" list ended up printed over whatever was passing behind it.
-   *
-   * The negative margins pull the band out over the stage's own padding, so
-   * nothing can slip past it at the sides or above.
-   */
-  background: var(--bg);
-  margin: calc(var(--space-5) * -1) calc(var(--space-5) * -1) 0;
-  padding: var(--space-5) var(--space-5) var(--space-3);
-  box-shadow: 0 10px 12px -10px rgba(16, 21, 26, 0.28);
-}
-
 .stage__flow {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-  /* A comfortable reading measure, centred once the transcript is hidden. */
+  /* A comfortable reading measure, centred in whatever width is left. */
   max-width: 940px;
   width: 100%;
   margin-inline: auto;
@@ -293,18 +268,6 @@
 
 .surface {
   animation: surface-in 0.34s cubic-bezier(0.2, 0.7, 0.3, 1);
-}
-
-.surface--pinned {
-  max-width: 940px;
-  margin-inline: auto;
-  /*
-   * A long profile must not eat the stage. Past this it scrolls inside itself
-   * and the conversation keeps the room it needs.
-   */
-  max-height: 44vh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 @keyframes surface-in {
@@ -348,105 +311,29 @@
   font-size: 15px;
 }
 
-/* ---------- Transcript ---------- */
+/* ---------- Profile aside ---------- */
 
-.transcript {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  border-left: 1px solid var(--line);
-  background: var(--bg-elevated);
-}
-
-.transcript__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: var(--space-4) var(--space-4) var(--space-3);
-  border-bottom: 1px solid var(--line);
-}
-
-.transcript__head h2 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.transcript__hint {
-  font-size: 11px;
-  color: var(--text-faint);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.transcript__scroll {
-  flex: 1;
+.aside {
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  padding: var(--space-5) var(--space-5) var(--space-5) 0;
+  border-left: 1px solid var(--line);
+  background: var(--bg);
+
+  /*
+   * Context, not a content card: the column itself is the container, so the
+   * card inside it gives up its chrome and its padding.
+   */
+  --a2ui-card-padding: 0;
+  --a2ui-card-border: none;
+  --a2ui-card-background: transparent;
+  --a2ui-card-box-shadow: none;
+  --a2ui-column-gap: var(--space-3);
+  --a2ui-list-gap: var(--space-3);
 }
 
-.transcript__empty {
-  margin: 0;
-  color: var(--text-faint);
-  font-size: 13.5px;
-}
-
-.turn {
-  display: grid;
-  gap: 3px;
-}
-
-.turn__who {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-faint);
-}
-
-.turn--agent .turn__who {
-  color: var(--brand-accent);
-}
-
-.turn__text {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text);
-}
-
-.turn--tool {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-m);
-  background: var(--bg-sunken);
-}
-
-.turn--tool .turn__text {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.turn__spinner {
-  width: 12px;
-  height: 12px;
-  flex: none;
-  border-radius: 50%;
-  border: 2px solid var(--line-strong);
-  border-top-color: var(--brand-accent);
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.aside__inner {
+  padding-left: var(--space-5);
 }
 
 /* ---------- Voice dock ---------- */
@@ -614,33 +501,40 @@
 /* ---------- Responsive ---------- */
 
 @media (max-width: 1080px) {
+  /*
+   * Too narrow for two columns. The profile goes above the conversation
+   * rather than below it — it is context for what follows — and gives up its
+   * own scroll so the page scrolls as one.
+   */
   .session__body {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .session__journey {
     display: none;
   }
 
-  .transcript {
+  .aside {
+    grid-row: 1;
+    overflow: visible;
     border-left: none;
-    border-top: 1px solid var(--line);
-    max-height: 34vh;
+    border-bottom: 1px solid var(--line);
+    padding: var(--space-4) var(--space-4) 0;
+    max-height: 40vh;
+    overflow-y: auto;
+  }
+
+  .aside__inner {
+    padding-left: 0;
+  }
+
+  .stage {
+    grid-row: 2;
   }
 }
 
 @media (max-width: 720px) {
-  .stage__pinned {
-    top: calc(var(--space-3) * -1);
-    margin: calc(var(--space-3) * -1) calc(var(--space-3) * -1) 0;
-    padding: var(--space-3) var(--space-3) var(--space-2);
-  }
-
-  .surface--pinned {
-    max-height: 45vh;
-  }
-
   .dock {
     flex-wrap: wrap;
     gap: var(--space-3);

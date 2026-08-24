@@ -117,6 +117,30 @@
   --a2ui-spacing-m: var(--space-3);
   --a2ui-spacing-l: var(--space-4);
   --a2ui-spacing-xl: var(--space-5);
+
+  /*
+   * Per-component hooks. The basic catalog's components carry their own
+   * inline styles built from these, which is why they are the way to restyle
+   * them — a stylesheet rule would lose to the inline `var()` it reads.
+   */
+  --a2ui-card-padding: var(--space-5);
+  --a2ui-card-margin: 0;
+  --a2ui-card-border: 1px solid var(--line);
+  --a2ui-card-border-radius: var(--radius-l);
+  --a2ui-card-background: var(--bg-elevated);
+  --a2ui-card-box-shadow: var(--shadow-card);
+
+  --a2ui-column-gap: var(--space-4);
+  --a2ui-row-gap: var(--space-4);
+  --a2ui-list-gap: var(--space-3);
+  --a2ui-list-padding: 0;
+
+  --a2ui-modal-padding: var(--space-5);
+  --a2ui-modal-border-radius: var(--radius-l);
+  --a2ui-modal-overlay-color: rgba(16, 21, 26, 0.45);
+
+  --a2ui-text-caption-color: var(--text-faint);
+  --a2ui-divider-spacing: var(--space-3);
 }
 
 @media (prefers-color-scheme: dark) {

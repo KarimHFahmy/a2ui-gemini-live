@@ -52,9 +52,10 @@ export function VoiceDock({
   return (
     <div className="dock">
       {/*
-        With the transcript hidden this is the only place the client learns
-        that something is happening, so tool activity takes precedence over
-        the connection state.
+        Nothing else on screen reports progress, so this is where the client
+        learns that something is happening between "I understand" and a
+        surface appearing. Tool activity takes precedence over connection
+        state.
       */}
       <div className="dock__status" aria-live="polite">
         {busyTool ? (

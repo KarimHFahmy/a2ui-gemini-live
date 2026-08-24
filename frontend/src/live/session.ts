@@ -11,12 +11,6 @@ import type {A2uiMessage} from '@a2ui/web_core/v0_9';
 
 export type ConnectionState = 'idle' | 'connecting' | 'live' | 'closed' | 'error';
 
-export interface TranscriptEntry {
-  id: string;
-  role: 'user' | 'agent';
-  text: string;
-}
-
 export interface SurfaceMeta {
   surfaceId: string;
   title: string;
@@ -26,7 +20,6 @@ export interface SessionCallbacks {
   onState: (state: ConnectionState, detail?: string) => void;
   onAudio: (pcm16: ArrayBuffer) => void;
   onInterrupted: () => void;
-  onTranscript: (role: 'user' | 'agent', text: string) => void;
   onTurnComplete: () => void;
   onA2ui: (message: A2uiMessage) => void;
   onSurfaceMeta: (meta: SurfaceMeta & {isNew: boolean}) => void;
@@ -87,10 +80,9 @@ export class AdvisorySocket {
         this.callbacks.onA2ui(event.payload as A2uiMessage);
         break;
       case 'transcript':
-        this.callbacks.onTranscript(
-          event.role === 'user' ? 'user' : 'agent',
-          String(event.text ?? ''),
-        );
+        // The backend transcribes both sides — it is useful in logs and in the
+        // handover payload — but the client renders none of it. This is a
+        // voice experience; the agent answers by speaking.
         break;
       case 'turn_complete':
         this.callbacks.onTurnComplete();

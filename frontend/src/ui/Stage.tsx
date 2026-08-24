@@ -1,27 +1,26 @@
 /**
- * Where the agent-generated interface appears.
+ * Where the agent-generated conversation appears.
  *
- * Each A2UI surface is one advisory building block, rendered by the official
- * `A2uiSurface`. Surfaces stack in the order the agent created them, which is
- * the progressive disclosure the briefing asks for: the screen grows with the
- * conversation instead of presenting a dashboard up front.
+ * Each A2UI surface is one advisory building block. They stack in the order
+ * the agent created them, which is the progressive disclosure the briefing
+ * asks for: the screen grows with the conversation rather than presenting a
+ * dashboard up front. The profile is not here — see `ProfileAside`.
  */
 
 import {useEffect, useRef} from 'react';
 import {A2uiSurface} from '@a2ui/react/v0_9';
-import type {ReactComponentImplementation} from '@a2ui/react/v0_9';
-import type {SurfaceModel} from '@a2ui/web_core/v0_9';
+
+import type {Surface} from './surfaces';
 
 interface StageProps {
-  surfaces: SurfaceModel<ReactComponentImplementation>[];
+  surfaces: Surface[];
   titles: Map<string, string>;
   journeyLabel: string;
+  /** True once anything at all has arrived, including the profile. */
+  hasAnySurface: boolean;
 }
 
-/** The profile summary stays pinned at the top; everything else stacks below. */
-const PINNED_SURFACE = 'profil';
-
-export function Stage({surfaces, titles, journeyLabel}: StageProps) {
+export function Stage({surfaces, titles, journeyLabel, hasAnySurface}: StageProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const previousCount = useRef(0);
 
@@ -34,22 +33,9 @@ export function Stage({surfaces, titles, journeyLabel}: StageProps) {
     previousCount.current = surfaces.length;
   }, [surfaces.length]);
 
-  const pinned = surfaces.filter(surface => surface.id === PINNED_SURFACE);
-  const rest = surfaces.filter(surface => surface.id !== PINNED_SURFACE);
-
   return (
     <main className="stage">
-      {pinned.length > 0 ? (
-        <div className="stage__pinned">
-          {pinned.map(surface => (
-            <div className="surface surface--pinned" key={surface.id} data-surface-id={surface.id}>
-              <A2uiSurface surface={surface} />
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      {surfaces.length === 0 ? (
+      {!hasAnySurface ? (
         <div className="stage__empty">
           <span className="stage__empty-badge">{journeyLabel}</span>
           <h2>Ich höre zu.</h2>
@@ -61,7 +47,7 @@ export function Stage({surfaces, titles, journeyLabel}: StageProps) {
       ) : null}
 
       <div className="stage__flow">
-        {rest.map(surface => (
+        {surfaces.map(surface => (
           <section
             className="surface"
             key={surface.id}
