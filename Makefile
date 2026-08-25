@@ -13,7 +13,8 @@ SERVICE ?= adaptive-advisory
 PROJECT ?= $(shell gcloud config get-value project 2>/dev/null)
 
 .PHONY: help install install-backend install-frontend dev dev-backend dev-frontend \
-        build fixtures test test-backend test-frontend check-catalog preview preview-happy \
+        build fixtures test test-backend test-frontend check-catalog check-session \
+        preview preview-happy \
         docker-build docker-run deploy clean
 
 help:
@@ -55,7 +56,7 @@ preview: build ## Open the offline catalog preview
 	@echo "Serving http://localhost:8080/preview.html"
 	cd backend && $(PY) -m uvicorn app.main:app --port 8080
 
-test: test-backend test-frontend check-catalog ## Run everything
+test: test-backend test-frontend check-catalog check-session ## Run everything
 
 test-backend: ## Backend unit tests
 	cd backend && $(PY) -m pytest -q
@@ -65,6 +66,9 @@ test-frontend: ## TypeScript typecheck and formatting
 
 check-catalog: build ## Render every surface in a browser and check for gaps
 	cd frontend && npm run check:catalog
+
+check-session: build ## Drive the shell through restart and check the screen clears
+	cd frontend && npm run check:session
 
 docker-build: ## Build the container image
 	docker build -t $(SERVICE):local .

@@ -70,6 +70,27 @@ export function useAdvisory(): AdvisoryController {
     setSurfaces(Array.from(processor.model.surfacesMap.values()));
   }, [processor]);
 
+  /**
+   * Empties the screen of the previous conversation.
+   *
+   * The MessageProcessor outlives any one session — it holds the catalogs and
+   * the action handler — so surfaces from a finished conversation stay in it
+   * unless they are taken out. The renderer then *rejects* the next session's
+   * `createSurface` for an id it already has, the `updateComponents` behind it
+   * lands in the old surface, and everything the new conversation has not
+   * reached yet is still the last person's advice on screen.
+   *
+   * `deleteSurface` is the protocol's own way to say this, and it disposes each
+   * surface's signal graph on the way out.
+   */
+  const clearSurfaces = useCallback(() => {
+    for (const id of Array.from(processor.model.surfacesMap.keys())) {
+      processor.model.deleteSurface(id);
+    }
+    setSurfaceTitles(new Map());
+    syncSurfaces();
+  }, [processor, syncSurfaces]);
+
   useEffect(() => {
     const created = processor.onSurfaceCreated(syncSurfaces);
     const deleted = processor.onSurfaceDeleted(syncSurfaces);
@@ -84,6 +105,10 @@ export function useAdvisory(): AdvisoryController {
       setError(null);
       setHandover(null);
       setSteps([]);
+      setBusyTool(null);
+      // A new conversation starts on an empty screen, whatever ended the last
+      // one — the restart button, a dropped socket, or an error.
+      clearSurfaces();
 
       const player = new SpeechPlayer(OUTPUT_SAMPLE_RATE, setAgentLevel);
       playerRef.current = player;
@@ -131,7 +156,7 @@ export function useAdvisory(): AdvisoryController {
         setError('Ohne Mikrofonfreigabe kann ich Sie nicht hören. Sie können trotzdem tippen.');
       }
     },
-    [processor, syncSurfaces],
+    [clearSurfaces, processor, syncSurfaces],
   );
 
   const stop = useCallback(() => {
@@ -141,11 +166,15 @@ export function useAdvisory(): AdvisoryController {
     micRef.current = null;
     void playerRef.current?.close();
     playerRef.current = null;
+    if (toolTimer.current) clearTimeout(toolTimer.current);
+    clearSurfaces();
     setMicActive(false);
     setMicLevel(0);
     setAgentLevel(0);
+    setBusyTool(null);
+    setSteps([]);
     setState('closed');
-  }, []);
+  }, [clearSurfaces]);
 
   const toggleMic = useCallback(() => {
     const mic = micRef.current;
