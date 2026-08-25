@@ -16,6 +16,12 @@ export interface SurfaceMeta {
   title: string;
 }
 
+/** One station of the advisory arc, as the backend defines it. */
+export interface JourneyStep {
+  surfaceId: string;
+  label: string;
+}
+
 export interface SessionCallbacks {
   onState: (state: ConnectionState, detail?: string) => void;
   onAudio: (pcm16: ArrayBuffer) => void;
@@ -23,6 +29,7 @@ export interface SessionCallbacks {
   onTurnComplete: () => void;
   onA2ui: (message: A2uiMessage) => void;
   onSurfaceMeta: (meta: SurfaceMeta & {isNew: boolean}) => void;
+  onSteps: (steps: JourneyStep[]) => void;
   onTool: (name: string) => void;
   onHandover: (summary: unknown) => void;
   onError: (message: string) => void;
@@ -106,8 +113,14 @@ export class AdvisorySocket {
       case 'error':
         this.callbacks.onError(String(event.message ?? 'Unbekannter Fehler'));
         break;
+      case 'session': {
+        // The advisory arc arrives with the session, so the client never has
+        // to guess which surfaces are steps and which are asides.
+        const journey = event.journey as {steps?: JourneyStep[]} | undefined;
+        this.callbacks.onSteps(journey?.steps ?? []);
+        break;
+      }
       case 'status':
-      case 'session':
         break;
       default:
         console.debug('Unhandled backend event', event.type);

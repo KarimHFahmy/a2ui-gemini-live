@@ -14,7 +14,7 @@
  */
 
 import {Catalog} from '@a2ui/web_core/v0_9';
-import {BASIC_FUNCTIONS} from '@a2ui/web_core/v0_9/basic_catalog';
+import {createBasicCatalogFunctions} from '@a2ui/web_core/v0_9/basic_catalog';
 import {basicCatalog} from '@a2ui/react/v0_9';
 import type {ReactComponentImplementation} from '@a2ui/react/v0_9';
 
@@ -23,12 +23,22 @@ import {ADVISORY_COMPONENTS} from './components/blocks';
 /** Must match `ADVISORY_CATALOG_ID` in `backend/app/a2ui/protocol.py`. */
 export const ADVISORY_CATALOG_ID = 'urn:a2ui:catalog:adaptive-advisory:1.0';
 
+/**
+ * The catalog's functions run in the browser, and some of them format numbers.
+ *
+ * The default set closes over the *viewer's* locale, which would print a
+ * German advisory figure as "€1,234.00" on an English browser. This is a German
+ * experience end to end, so the locale is pinned rather than inherited — the
+ * same reason the surfaces are composed in German server-side.
+ */
+const ADVISORY_FUNCTIONS = createBasicCatalogFunctions({locale: 'de-DE'});
+
 const BASIC_COMPONENTS = Array.from(basicCatalog.components.values());
 
 export const advisoryCatalog = new Catalog<ReactComponentImplementation>(
   ADVISORY_CATALOG_ID,
   [...BASIC_COMPONENTS, ...ADVISORY_COMPONENTS],
-  BASIC_FUNCTIONS,
+  ADVISORY_FUNCTIONS,
 );
 
 /**

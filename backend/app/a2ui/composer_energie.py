@@ -10,7 +10,7 @@ from typing import Any
 
 from ..domain import demo_data as dd
 from ..domain import energie as calc
-from .builder import SurfaceBuilder, bind
+from .builder import SurfaceBuilder, bind, minus, money, over, plus, times
 from .surface import Surface
 
 _HEIZUNG_LABEL = {
@@ -472,5 +472,148 @@ def foerderung_surface(
                     "dauer": "4–8 Wochen",
                 },
             ]
+        }
+    )
+
+
+def stellschrauben_surface(
+    profil: calc.Gebaeudeprofil,
+    bestand: calc.Szenario,
+    fokus: calc.Szenario,
+) -> Surface:
+    """„Was wäre wenn?“ — die Beratung rechnet mit den Annahmen des Kunden.
+
+    Die zwei Preise, an denen die ganze Wirtschaftlichkeit hängt, kennt niemand.
+    Jede Beratung setzt hier eine Annahme, und genau daran scheitert das
+    Vertrauen: „Ihr rechnet euch das schön.“ Also übergeben wir den Regler.
+
+    Die Zahlen darunter rechnen im Browser mit, ohne Umweg über den Agenten —
+    aus Koeffizienten, die :func:`app.domain.energie.stellschrauben` geliefert
+    hat. Erst der Knopf macht die Annahme verbindlich für die ganze Beratung.
+    """
+    werte = calc.stellschrauben(profil, bestand, fokus)
+
+    # Die Rechnung, wie sie im Browser steht. Jede Zeile liest die Regler und
+    # rechnet neu, sobald sich einer bewegt.
+    kosten_alt = plus(
+        times(bind("/basis/eur_je_ct_alt"), bind("/wenn/preis_alt_ct")),
+        bind("/basis/wartung_alt"),
+    )
+    kosten_neu = plus(
+        times(bind("/basis/eur_je_ct_neu"), bind("/wenn/preis_strom_ct")),
+        bind("/basis/wartung_neu"),
+    )
+    ersparnis = minus(kosten_alt, kosten_neu)
+
+    b = SurfaceBuilder("stellschrauben", "Was wäre wenn")
+    b.root(
+        b.column(
+            [
+                b.heading(
+                    "Was wäre wenn",
+                    "Rechnen Sie mit Ihren eigenen Preisen",
+                    "Niemand kennt die Energiepreise der nächsten zwanzig Jahre – "
+                    "auch ich nicht. Stellen Sie ein, was Sie für realistisch "
+                    "halten. Die Zahlen unten rechnen sofort mit.",
+                ),
+                b.card(
+                    b.column(
+                        [
+                            b.text("Ihre Annahmen", variant="h3"),
+                            b.slider(
+                                label=f"{werte['traeger']}preis in Cent je kWh",
+                                value_path="/wenn/preis_alt_ct",
+                                minimum=werte["preis_alt_min_ct"],
+                                maximum=werte["preis_alt_max_ct"],
+                            ),
+                            b.slider(
+                                label="Strompreis für die Wärmepumpe in Cent je kWh",
+                                value_path="/wenn/preis_strom_ct",
+                                minimum=werte["preis_strom_min_ct"],
+                                maximum=werte["preis_strom_max_ct"],
+                            ),
+                        ]
+                    )
+                ),
+                b.row(
+                    [
+                        b.live_stat(
+                            label=f"Heute mit {_HEIZUNG_LABEL[profil.heizung]}",
+                            value=money(kosten_alt),
+                            hint="pro Jahr, mit Wartung",
+                        ),
+                        b.live_stat(
+                            label=f"Mit {fokus.label}",
+                            value=money(kosten_neu),
+                            hint="pro Jahr, mit Wartung",
+                        ),
+                        b.live_stat(
+                            label="Unterschied",
+                            value=money(over(ersparnis, 12)),
+                            hint="pro Monat",
+                        ),
+                        b.live_stat(
+                            label="Nach 20 Jahren",
+                            value=money(
+                                minus(times(ersparnis, 20), bind("/basis/eigenanteil_eur"))
+                            ),
+                            hint=f"nach Ihrem Eigenanteil von {_euro(werte['eigenanteil_eur'])}",
+                        ),
+                    ]
+                ),
+                b.card(
+                    b.column(
+                        [
+                            b.text("Sollen wir so weiterrechnen?", variant="h3"),
+                            b.text(
+                                "Bisher rechne ich mit den Demo-Preisen. Übernehmen Sie "
+                                "Ihre Einstellung, gilt sie für die ganze Beratung – "
+                                "Vergleich, Wirtschaftlichkeit und Empfehlung."
+                            ),
+                            b.button(
+                                "Mit diesen Preisen weiterrechnen",
+                                event="annahmen_uebernehmen",
+                                context={
+                                    "preis_alt_ct": bind("/wenn/preis_alt_ct"),
+                                    "preis_strom_ct": bind("/wenn/preis_strom_ct"),
+                                },
+                                variant="primary",
+                            ),
+                        ]
+                    )
+                ),
+                b.assumptions(
+                    [
+                        f"Wärmebedarf {werte['bedarf_kwh_a']:,.0f} kWh/a".replace(",", "."),
+                        f"Daraus {werte['kwh_alt']:,.0f} kWh {werte['traeger']} heute "
+                        f"gegenüber {werte['kwh_neu']:,.0f} kWh Strom danach".replace(
+                            ",", "."
+                        ),
+                        "Die Regler verändern nur die beiden Preise – Bedarf, "
+                        "Jahresarbeitszahl und Investition bleiben, wie berechnet.",
+                        "Preissteigerungen sind hier bewusst nicht enthalten: Sie "
+                        "stellen den Preis ein, der über die Laufzeit im Mittel gelten soll.",
+                        dd.DISCLAIMER,
+                    ],
+                    source=dd.QUELLE_ENERGIE,
+                    as_of=dd.STAND,
+                ),
+            ]
+        )
+    )
+
+    return b.finish(
+        {
+            "wenn": {
+                "preis_alt_ct": werte["preis_alt_ct"],
+                "preis_strom_ct": werte["preis_strom_ct"],
+            },
+            "basis": {
+                "eur_je_ct_alt": werte["eur_je_ct_alt"],
+                "eur_je_ct_neu": werte["eur_je_ct_neu"],
+                "wartung_alt": werte["wartung_alt"],
+                "wartung_neu": werte["wartung_neu"],
+                "eigenanteil_eur": werte["eigenanteil_eur"],
+            },
         }
     )

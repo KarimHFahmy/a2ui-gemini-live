@@ -124,7 +124,7 @@ class TestJourney:
                 for component in components:
                     for prop, value in component.items():
                         for path in _absolute_paths(value):
-                            assert path.lstrip("/") in data, (
+                            assert _resolves(data, path), (
                                 f"{name}/{tool.__name__}: {component['id']}.{prop} "
                                 f"binds to {path}, which the data model lacks"
                             )
@@ -161,6 +161,26 @@ class TestJourneyRegistry:
     def test_journeys_are_cached(self):
         """Building an Agent is not free, and every connection asks for one."""
         assert get_journey("energie") is get_journey("energie")
+
+
+def _resolves(data: object, pointer: str) -> bool:
+    """Whether a JSON Pointer actually leads somewhere in the data model.
+
+    Nested, because the interactive surfaces keep the sliders under `/wenn`
+    and the coefficients they multiply under `/basis` — a flat key check would
+    wave those through and the client would render blanks.
+    """
+    current = data
+    for segment in pointer.strip("/").split("/"):
+        if isinstance(current, list) and segment.isdigit():
+            if int(segment) >= len(current):
+                return False
+            current = current[int(segment)]
+        elif isinstance(current, dict) and segment in current:
+            current = current[segment]
+        else:
+            return False
+    return True
 
 
 def _absolute_paths(value: object) -> list[str]:

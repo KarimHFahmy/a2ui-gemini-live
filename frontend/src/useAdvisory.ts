@@ -13,7 +13,7 @@ import type {ReactComponentImplementation} from '@a2ui/react/v0_9';
 
 import {CATALOGS} from './a2ui/catalog';
 import {MicrophoneCapture, SpeechPlayer} from './live/audio';
-import {AdvisorySocket, type ConnectionState} from './live/session';
+import {AdvisorySocket, type ConnectionState, type JourneyStep} from './live/session';
 
 const INPUT_SAMPLE_RATE = 16000;
 const OUTPUT_SAMPLE_RATE = 24000;
@@ -23,6 +23,8 @@ export interface AdvisoryController {
   error: string | null;
   surfaces: SurfaceModel<ReactComponentImplementation>[];
   surfaceTitles: Map<string, string>;
+  /** The advisory arc, in order, as the backend defines it. */
+  steps: JourneyStep[];
   micActive: boolean;
   micLevel: number;
   agentLevel: number;
@@ -40,6 +42,7 @@ export function useAdvisory(): AdvisoryController {
   const [error, setError] = useState<string | null>(null);
   const [surfaces, setSurfaces] = useState<SurfaceModel<ReactComponentImplementation>[]>([]);
   const [surfaceTitles, setSurfaceTitles] = useState<Map<string, string>>(new Map());
+  const [steps, setSteps] = useState<JourneyStep[]>([]);
   const [micActive, setMicActive] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const [agentLevel, setAgentLevel] = useState(0);
@@ -80,6 +83,7 @@ export function useAdvisory(): AdvisoryController {
     async (journeyId: string) => {
       setError(null);
       setHandover(null);
+      setSteps([]);
 
       const player = new SpeechPlayer(OUTPUT_SAMPLE_RATE, setAgentLevel);
       playerRef.current = player;
@@ -101,6 +105,7 @@ export function useAdvisory(): AdvisoryController {
           setSurfaceTitles(previous => new Map(previous).set(meta.surfaceId, meta.title));
           syncSurfaces();
         },
+        onSteps: next => setSteps(next),
         onTool: name => {
           setBusyTool(name);
           if (toolTimer.current) clearTimeout(toolTimer.current);
@@ -162,6 +167,7 @@ export function useAdvisory(): AdvisoryController {
     error,
     surfaces,
     surfaceTitles,
+    steps,
     micActive,
     micLevel,
     agentLevel,

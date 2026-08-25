@@ -19,12 +19,15 @@ import type {ReactComponentImplementation} from '@a2ui/react/v0_9';
 
 import {A2uiHost} from '../a2ui/A2uiHost';
 import {CATALOGS} from '../a2ui/catalog';
-import {ProfileAside} from '../ui/ProfileAside';
+import {ContextAside} from '../ui/ContextAside';
 import {Stage} from '../ui/Stage';
 import {splitSurfaces} from '../ui/surfaces';
 import fixtures from '../../fixtures.json';
 
-type Fixtures = Record<string, unknown[]>;
+import type {JourneyStep} from '../live/session';
+
+type Capture = {steps: JourneyStep[]; messages: unknown[]};
+type Fixtures = Record<string, Capture>;
 
 const JOURNEY_LABELS: Record<string, string> = {
   energie: 'Mein Zuhause',
@@ -35,19 +38,22 @@ export default function Preview() {
   const journeys = Object.keys(fixtures as Fixtures);
   const [active, setActive] = useState(journeys[0]);
 
-  const {surfaces, titles} = useMemo(() => {
+  const {surfaces, titles, steps} = useMemo(() => {
     const processor = new MessageProcessor<ReactComponentImplementation>(CATALOGS, action =>
       console.info('action dispatched:', action),
     );
-    processor.processMessages((fixtures as Fixtures)[active] as never);
+    const capture = (fixtures as Fixtures)[active];
+    processor.processMessages(capture.messages as never);
     const list = Array.from(processor.model.surfacesMap.values());
     return {
       surfaces: list,
       titles: new Map(list.map(surface => [surface.id, surface.id])),
+      steps: capture.steps,
     };
   }, [active]);
 
   const {profile, flow} = splitSurfaces(surfaces);
+  const present = new Set(surfaces.map(surface => surface.id));
 
   return (
     <A2uiHost>
@@ -65,17 +71,17 @@ export default function Preview() {
               {JOURNEY_LABELS[journey] ?? journey}
             </button>
           ))}
-          <span className="session__demo-badge">Demo-Daten</span>
+          <span className="session__badge">Demo-Daten</span>
         </header>
 
-        <div className={`session__body${profile ? '' : ' session__body--solo'}`}>
+        <div className="session__body">
           <Stage
             surfaces={flow}
             titles={titles}
             journeyLabel={JOURNEY_LABELS[active] ?? active}
             hasAnySurface={surfaces.length > 0}
           />
-          {profile ? <ProfileAside surface={profile} /> : null}
+          <ContextAside profile={profile} steps={steps} present={present} />
         </div>
       </div>
     </A2uiHost>

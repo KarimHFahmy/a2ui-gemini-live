@@ -106,15 +106,20 @@ class AdvisorySession:
     def push_renderer_action(self, action: dict[str, Any]) -> None:
         """Feeds a UI interaction back into the conversation.
 
-        A click on a scenario card is a turn in the dialogue, not a side
-        channel: the agent reacts to it in speech the same way it reacts to a
-        spoken sentence.
+        A tap on a card is a turn in the dialogue, not a side channel: the
+        agent reacts to it in speech the same way it reacts to a spoken
+        sentence. The values a control carries are spelled out rather than
+        dumped as a dict, because they are usually exactly the arguments the
+        matching tool needs — a slider the person has just dragged into place.
         """
+        context = action.get("context") or {}
+        werte = ", ".join(f"{key} = {value}" for key, value in context.items())
         self.push_text(
             "[Interaktion auf dem Bildschirm] Die Person hat "
-            f"'{action.get('name', '')}' ausgelöst. "
-            f"Kontext: {action.get('context') or {}}. "
-            "Reagiere kurz und passend darauf."
+            f"„{action.get('name', '')}“ ausgelöst"
+            + (f" mit diesen Werten: {werte}." if werte else ".")
+            + " Reagiere kurz und passend darauf. Wenn ein Werkzeug genau diese "
+            "Werte entgegennimmt, rufe es mit ihnen auf – unverändert."
         )
 
     def close(self) -> None:
@@ -161,6 +166,7 @@ class AdvisorySession:
 
     async def _handle_event(self, event: Event) -> None:
         """Translates one ADK event into what the browser needs."""
+        await self._announce_tools(event)
         await self._forward_surfaces(event)
 
         if event.content and event.content.parts:
@@ -196,6 +202,17 @@ class AdvisorySession:
         if event.error_message:
             logger.error("ADK event error: %s", event.error_message)
 
+    async def _announce_tools(self, event: Event) -> None:
+        """Tells the browser which tool is running, by name.
+
+        A tool call is the one moment where the person waits without hearing
+        anything — the model has stopped speaking and the surface has not
+        arrived yet. The name lets the client say what is being worked on
+        instead of showing a bare spinner.
+        """
+        for call in event.get_function_calls() or []:
+            await self._event_sink({"type": "tool", "name": call.name})
+
     async def _forward_surfaces(self, event: Event) -> None:
         """Forwards the A2UI widgets a tool attached to this event.
 
@@ -219,9 +236,4 @@ class AdvisorySession:
                     "title": payload.get("title", ""),
                     "isNew": bool(payload.get("isNew")),
                 }
-            )
-
-        if widgets:
-            await self._event_sink(
-                {"type": "tool", "surfaces": [w.id for w in widgets]}
             )

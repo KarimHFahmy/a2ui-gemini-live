@@ -135,6 +135,17 @@
   --a2ui-list-gap: var(--space-3);
   --a2ui-list-padding: 0;
 
+  /*
+   * Slider: the one control the client actually manipulates, so it gets the
+   * brand accent. `accent-color` styles both the track fill and the thumb in
+   * every current browser, which is why there is no per-part CSS here.
+   */
+  --a2ui-slider-margin: 0;
+  --a2ui-slider-label-font-size: 13.5px;
+  --a2ui-slider-label-font-weight: 600;
+  --a2ui-slider-thumb-color: var(--brand-accent);
+  --a2ui-slider-track-color: var(--bg-sunken);
+
   --a2ui-modal-padding: var(--space-5);
   --a2ui-modal-border-radius: var(--radius-l);
   --a2ui-modal-overlay-color: rgba(16, 21, 26, 0.45);

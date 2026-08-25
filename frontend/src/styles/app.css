@@ -181,7 +181,7 @@
   gap: var(--space-2);
 }
 
-.session__demo-badge {
+.session__badge {
   padding: 3px 10px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line-strong);
@@ -190,19 +190,45 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/*
+ * "You are talking to an AI" is not a disclaimer to be buried in a footer.
+ * It is marked with the brand accent rather than a warning colour: it is a
+ * fact about the product, not a hazard.
+ */
+.session__badge--ai {
+  border-color: var(--brand-accent);
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+
+/* Restarting throws the conversation away, so it asks first. */
+.session__confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.session__confirm-text {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
 }
 
 .session__body {
   flex: 1;
   display: grid;
-  /* Conversation left, "Das habe ich verstanden" right. */
+  /* Conversation left, context right. */
   grid-template-columns: minmax(0, 1fr) minmax(280px, 22vw);
   min-height: 0;
 }
 
 /*
- * The profile column only exists once the agent has understood something, so
- * before that the stage takes the full width.
+ * There is a moment before the session frame lands where there is no context
+ * to show. The stage takes the whole width rather than sitting next to an
+ * empty bordered column.
  */
 .session__body--solo {
   grid-template-columns: minmax(0, 1fr);
@@ -232,6 +258,25 @@
   color: var(--brand-accent);
   border-color: var(--brand-accent);
   background: var(--brand-accent-soft);
+}
+
+/*
+ * The confirm, and it has to look like the answer to the question next to it.
+ * Defined after `.session__control` on purpose: same specificity, so the quiet
+ * muted treatment would otherwise win on source order and the destructive
+ * choice would read as the disabled one.
+ */
+.session__control--danger {
+  color: var(--tone-caution);
+  border-color: var(--tone-caution);
+  background: var(--tone-caution-bg);
+  font-weight: 600;
+}
+
+.session__control--danger:hover {
+  color: var(--text-inverse);
+  background: var(--tone-caution);
+  border-color: var(--tone-caution);
 }
 
 .banner {
@@ -334,6 +379,100 @@
 
 .aside__inner {
   padding-left: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ---------- Journey progress ---------- */
+
+/*
+ * Quiet by design: orientation, not a checklist to work through. It sits
+ * above "Das habe ich verstanden" because both answer the same question —
+ * where are we — at different scales.
+ */
+.progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.progress__steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.progress__step {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: 13px;
+  color: var(--text-faint);
+  position: relative;
+}
+
+/* The rail between the dots, drawn from each step to the next. */
+.progress__step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 14px;
+  bottom: -10px;
+  width: 1px;
+  background: var(--line);
+}
+
+.progress__step[data-state='done']:not(:last-child)::before {
+  background: var(--brand-accent);
+}
+
+.progress__dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-strong);
+  background: var(--bg);
+  z-index: 1;
+}
+
+.progress__step[data-state='done'] {
+  color: var(--text-muted);
+}
+
+.progress__step[data-state='done'] .progress__dot {
+  border-color: var(--brand-accent);
+  background: var(--brand-accent);
+}
+
+.progress__step[data-state='next'] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.progress__step[data-state='next'] .progress__dot {
+  border-color: var(--brand-accent);
+  box-shadow: 0 0 0 3px var(--brand-accent-soft);
+}
+
+.progress__caption {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.progress__count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Voice dock ---------- */

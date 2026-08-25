@@ -151,11 +151,19 @@ class Journey:
         instruction: str,
         tools: list[Any],
         model: str,
+        steps: list[tuple[str, str]],
     ) -> None:
         self.id = journey_id
         self.label = label
         self.tagline = tagline
         self.opener = opener
+        #: The advisory arc as (surface id, label) pairs, in order. The client
+        #: marks a step done when its surface has arrived, which is why these
+        #: are surface ids and not tool names: a step counts once the person
+        #: can actually see it. Surfaces that answer a question rather than
+        #: advance the conversation — a concern, the what-if view — are
+        #: deliberately not steps.
+        self.steps = steps
         self.agent = Agent(
             name=f"berater_{journey_id}",
             description=tagline,

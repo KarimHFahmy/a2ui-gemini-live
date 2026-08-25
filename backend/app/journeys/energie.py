@@ -240,6 +240,99 @@ def foerderung_und_fahrplan_zeigen(
     }
 
 
+def stellschrauben_zeigen(tool_context: ToolContext) -> dict[str, Any]:
+    """Übergibt der Person die zwei Preisannahmen, an denen alles hängt.
+
+    Zeigt zwei Regler — Preis des heutigen Brennstoffs und Strompreis der
+    Wärmepumpe — und rechnet Heizkosten, monatlichen Unterschied und die Bilanz
+    nach 20 Jahren live mit, während die Person zieht.
+
+    Rufe das auf, sobald jemand die Zahlen anzweifelt („da rechnet ihr euch das
+    schön", „und wenn der Strompreis steigt?"), oder nach
+    `wirtschaftlichkeit_zeigen`, um die Rechnung überprüfbar zu machen. Sag
+    danach in einem Satz, dass die Person selbst am Regler ziehen kann.
+    """
+    profil = _profil(tool_context)
+    szenarien = _szenarien(tool_context)
+    fokus_id = _gewaehlt(tool_context, None)
+    if fokus_id not in {s.id for s in szenarien}:
+        fokus_id = "waermepumpe"
+
+    bestand = next(s for s in szenarien if s.id == "bestand")
+    fokus = next(s for s in szenarien if s.id == fokus_id)
+
+    push(tool_context, compose.stellschrauben_surface(profil, bestand, fokus))
+    werte = calc.stellschrauben(profil, bestand, fokus)
+    return {
+        "szenario": fokus.label,
+        "preis_alt_ct": werte["preis_alt_ct"],
+        "preis_strom_ct": werte["preis_strom_ct"],
+        "hinweis": (
+            "Die Person kann die Regler selbst bewegen. Lade sie dazu ein, "
+            "statt Zahlen vorzulesen."
+        ),
+    }
+
+
+def annahmen_uebernehmen(
+    tool_context: ToolContext,
+    preis_alt_ct: float,
+    preis_strom_ct: float,
+) -> dict[str, Any]:
+    """Macht die eingestellten Preise für die ganze Beratung verbindlich.
+
+    Danach rechnen alle Ansichten mit diesen Preisen, und die Annahmenliste
+    weist sie als die Annahmen der Person aus. Rufe das auf, wenn die Person
+    „Mit diesen Preisen weiterrechnen" ausgelöst oder im Gespräch eigene Preise
+    genannt hat.
+
+    Args:
+        preis_alt_ct: Preis des heutigen Brennstoffs in Cent je Kilowattstunde.
+        preis_strom_ct: Strompreis der Wärmepumpe in Cent je Kilowattstunde.
+    """
+    # Auf ganze Cent gerundet: die Regler springen in Einerschritten, und ein
+    # Preis dazwischen ließe Reglerstellung und Rechnung auseinanderlaufen.
+    preis_alt_ct = float(round(preis_alt_ct))
+    preis_strom_ct = float(round(preis_strom_ct))
+
+    profil = apply(
+        _profil(tool_context),
+        preis_alt_ct=preis_alt_ct,
+        preis_strom_ct=preis_strom_ct,
+    )
+    save_profile(tool_context, profil)
+
+    # Alles, was schon auf dem Schirm steht, rechnet mit den alten Preisen —
+    # also neu aufbauen, damit nichts Widersprüchliches stehen bleibt.
+    szenarien = _szenarien(tool_context)
+    fokus_id = _gewaehlt(tool_context, None)
+    if fokus_id not in {s.id for s in szenarien}:
+        fokus_id = "waermepumpe"
+    bestand = next(s for s in szenarien if s.id == "bestand")
+    fokus = next(s for s in szenarien if s.id == fokus_id)
+
+    push(tool_context, compose.stellschrauben_surface(profil, bestand, fokus))
+    push(tool_context, compose.szenarien_surface(profil, szenarien, empfohlen_id=fokus_id))
+    push(
+        tool_context,
+        compose.wirtschaftlichkeit_surface(profil, szenarien, fokus_id=fokus_id),
+    )
+
+    amort = calc.amortisation(bestand, fokus)
+    return {
+        "uebernommen": {"preis_alt_ct": preis_alt_ct, "preis_strom_ct": preis_strom_ct},
+        "ersparnis_eur_a": round(
+            bestand.betriebskosten_eur_a - fokus.betriebskosten_eur_a
+        ),
+        "break_even_jahre": amort["jahre"],
+        "break_even_erreichbar": amort["erreichbar"],
+        "hinweis": (
+            "Bestätige kurz, dass ab jetzt mit den Preisen der Person gerechnet "
+            "wird, und nenne, was sich dadurch verschoben hat."
+        ),
+    }
+
+
 def bedenken_adressieren(
     tool_context: ToolContext,
     titel: str,
@@ -352,6 +445,8 @@ TOOLS = [
     szenarien_vergleichen,
     wirtschaftlichkeit_zeigen,
     foerderung_und_fahrplan_zeigen,
+    stellschrauben_zeigen,
+    annahmen_uebernehmen,
     bedenken_adressieren,
     naechsten_schritt_anbieten,
 ]
@@ -380,8 +475,11 @@ verständliches Zukunftsbild zu machen.
    ob das Haus geeignet ist. Das ist fast immer die eigentliche Frage.
 4. **Wege zeigen.** `szenarien_vergleichen` stellt die Optionen nebeneinander.
 5. **Rechnen.** `wirtschaftlichkeit_zeigen` für den gewählten Weg.
-6. **Förderung und Reihenfolge.** `foerderung_und_fahrplan_zeigen`.
-7. **Abschluss.** `naechsten_schritt_anbieten` fasst zusammen und übergibt.
+6. **Nachvollziehbar machen.** `stellschrauben_zeigen` gibt die zwei
+   Preisannahmen an die Person ab. Nutze das, sobald jemand zweifelt — und
+   sag dazu, dass sie selbst ziehen darf.
+7. **Förderung und Reihenfolge.** `foerderung_und_fahrplan_zeigen`.
+8. **Abschluss.** `naechsten_schritt_anbieten` fasst zusammen und übergibt.
 
 Du musst diese Reihenfolge nicht erzwingen. Wenn jemand direkt nach Kosten
 fragt, geh dorthin. Aber lass keinen Schritt weg, den die Person braucht.
@@ -396,6 +494,14 @@ fragt, geh dorthin. Aber lass keinen Schritt weg, den die Person braucht.
   die Heiztechnik. Sag das offen, auch wenn es die teurere Antwort ist.
 - Die Förderung setzt voraus, dass der Antrag **vor** der Beauftragung gestellt
   wird. Dieser Hinweis gehört in jede Beratung.
+
+## Wenn die Person am Bildschirm etwas einstellt
+
+Löst sie „Mit diesen Preisen weiterrechnen" aus, bekommst du die eingestellten
+Werte als Interaktion gemeldet. Rufe dann `annahmen_uebernehmen` mit genau
+diesen Werten auf — nicht mit eigenen. Danach gilt ihre Annahme, nicht meine.
+Nennt sie im Gespräch selbst einen Preis („bei uns kostet Gas eher 20 Cent"),
+gilt dasselbe.
 
 ## Eröffnung
 
@@ -419,4 +525,12 @@ def build() -> Journey:
         instruction=INSTRUCTION,
         tools=TOOLS,
         model=get_settings().model,
+        steps=[
+            ("profil", "Ihre Situation"),
+            ("eignung", "Eignung"),
+            ("szenarien", "Wege"),
+            ("wirtschaftlichkeit", "Wirtschaftlichkeit"),
+            ("foerderung", "Förderung"),
+            ("naechster_schritt", "Nächster Schritt"),
+        ],
     )

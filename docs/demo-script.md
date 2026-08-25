@@ -17,8 +17,9 @@ Pick **Mein Zuhause**. The agent greets and asks one open question.
 > Gas und die Heizung ist alt. Ich habe Sorge, dass eine Wärmepumpe im Winter
 > nicht reicht und sich die Investition nicht lohnt."
 
-The profile card appears at the top with the estimated heat demand marked as
-estimated. The agent asks about the radiators — large and flat, or narrow and
+„Das habe ich verstanden" fills in on the right, with the estimated heat demand
+marked as estimated and the progress above it moving to step one. The agent
+asks about the radiators — large and flat, or narrow and
 old — because that, not the outside temperature, decides the answer.
 
 **Say:**
@@ -36,6 +37,25 @@ in Ihren Heizkörpern sein muss.*
 marked. Click a different scenario card: the comparison table re-highlights
 instantly and the agent picks the change up in speech a moment later. That is
 worth pointing out — the UI does not wait for the model.
+
+**Say — and say it sceptically:**
+> „Naja, das rechnet ihr euch doch schön. Was, wenn der Strompreis steigt?"
+
+→ **Was wäre wenn.** The advice hands over the controls: a slider for the gas
+price and one for the heat-pump electricity price. **Drag them while you talk.**
+The heating costs, the monthly difference and the twenty-year balance move with
+your hand — no spinner, no pause, nothing sent to the model. Push electricity
+to 45 cents and watch the case get thin; that honesty is the point.
+
+Then tap **Mit diesen Preisen weiterrechnen**. The agent confirms out loud that
+it is now calculating with *their* prices, and the earlier surfaces rebuild
+behind it. Open the assumptions afterwards: they now read „Ihre eigenen
+Annahmen".
+
+This is the moment to name what is happening technically, if the room is
+technical: the sliders and the figures are bound to the same A2UI data model,
+the arithmetic runs in the browser, and the backend only shipped the
+coefficients. Instant preview, authoritative commit.
 
 **Say:**
 > „Gibt es dafür Förderung?"
@@ -77,6 +97,18 @@ client's current setup, and says so. Let that land. A demo that admits an
 unfavourable answer is the one people believe.
 
 **Say:**
+> „Naja, 55 Kilometer ist geschätzt. Und ich könnte schon öfter zu Hause laden."
+
+→ **Was wäre wenn.** Two sliders: kilometres on a typical day, and the share
+charged at home. Drag the home share from 0 to 80 % and watch the electricity
+figure fall past the petrol figure in real time. This is the whole argument of
+the journey in one gesture — *where you charge decides it, not which car you
+buy* — and the client makes it themselves.
+
+Tap **Mit diesen Werten weiterrechnen** and the cost comparison rebuilds on
+their numbers.
+
+**Say:**
 > „Und wenn ich doch eine Wallbox bekomme?"
 
 The agent updates the profile, recomputes, and the picture flips.
@@ -86,6 +118,104 @@ The agent updates the profile, recomputes, and the picture flips.
 
 → Ladecheck as the next step, not a test drive. The recommendation follows the
 numbers.
+
+---
+
+## The happy path
+
+The two runs above are built to be *credible*: the mobility one deliberately
+lands on "das rechnet sich für Sie heute nicht". That is the right demo for a
+sceptical room, and the wrong one when you want to show the experience at its
+best in three minutes — to a client, at a stand, on a screen behind you.
+
+These two profiles make every number come out well while staying plausible.
+Both are chosen so the advice is genuinely positive, not so the model is
+steered: say these things and the arithmetic does the rest.
+
+### Mein Zuhause — the well-suited house
+
+The trick is that a heat pump's economics improve with the *size* of the heat
+bill and the *lowness* of the flow temperature. A large, older, gas-heated house
+with generously sized radiators is the case where everything lines up.
+
+**Say:**
+> „Wir haben ein Einfamilienhaus von 1985, gut 200 Quadratmeter, vier Personen.
+> Gasheizung, die ist jetzt bald vierzig Jahre alt. Fenster und Dach haben wir
+> vor ein paar Jahren machen lassen."
+
+**Then, when it asks about the radiators:**
+> „Große flache Heizkörper. Die waren damals ziemlich großzügig ausgelegt."
+
+That is the sentence that decides it. Expect:
+
+| | |
+|---|---|
+| Vorlauftemperatur | **45 °C** → JAZ 3,8, Eignung **90/100, „gut geeignet"** |
+| Heizkosten heute | 3.929 € im Jahr |
+| Mit Wärmepumpe | 2.193 € im Jahr — rund **1.700 € weniger** |
+| Investition | 33.200 €, davon **15.000 € Förderung** (30 % Grund + 20 % Klimageschwindigkeit) |
+| Eigenanteil | 18.200 € |
+| Break-even | **9 Jahre** |
+| CO₂ | 6,2 t → 2,7 t im Jahr |
+
+**Then ask for money, then funding, then close:**
+> „Und was kostet mich das?" … „Gibt es Förderung?" … „Was wäre mein nächster Schritt?"
+
+**The what-if, if you have time.** Say „Und wenn der Gaspreis weiter steigt?"
+Push the gas slider from 12 to 20 Cent: the monthly difference goes from 145 €
+to 351 € and the twenty-year balance from 16.522 € to 65.976 €. Then be fair and
+push electricity to 40 Cent as well — 273 €/Monat, still clearly positive. The
+honest end of the range is gas at 8 and electricity at 45, where it turns
+*negative*; showing that is what makes the rest believable.
+
+### Meine Mobilität — the commuter with a wallbox
+
+The EV case is carried by mileage and by charging at home. Eighty kilometres a
+day with a wallbox is an ordinary German commute and a comfortable win.
+
+**Say:**
+> „Ich pendle jeden Tag rund 80 Kilometer, fünf Tage die Woche. Ein-, zweimal im
+> Monat fahren wir 350 Kilometer zu meinen Eltern. Wir haben eine eigene Garage
+> mit Wallbox. Das Auto würde ich sechs, sieben Jahre fahren."
+
+Expect:
+
+| | |
+|---|---|
+| Fahrleistung | 29.300 km im Jahr |
+| Winterreichweite | 258 km — **3,2× Ihres Tagesbedarfs** |
+| Autobahn im Winter | 208 km (der ehrlichste Wert) |
+| Die 350-km-Fahrt | 2 Ladestopps, **60 Minuten** mehr als mit dem Verbrenner |
+| Energie | **6,53 € je 100 km** gegen 11,39 € Benzin |
+| Gesamtkosten über 6 Jahre | 50.635 € gegen 54.377 € — **3.742 € Vorteil, 52 € im Monat** |
+| CO₂ | **− 2,3 t** im Jahr |
+
+**The what-if.** Say „Ich lade eigentlich fast immer zu Hause." Drag the
+home-charging slider from 80 to 100 %: the energy advantage goes from 111 € to
+139 € a month. Drag it *down* to 50 % and it falls to 70 € — the point of the
+journey, in one gesture: der Ladeort entscheidet, nicht das Modell.
+
+**Close:**
+> „Welches Auto würden Sie mir empfehlen?"
+
+→ Mittelklasse/Limousine, Passung 92/100, 306 km im Winter, ein Ladestopp auf
+der Langstrecke, ab 489 € im Monat — with its trade-offs named.
+
+### Without a voice session
+
+`make preview-happy` captures exactly these two runs and serves them at
+`/preview.html`, so you can click through the favourable version — sliders
+included — with no Vertex AI session at all. `make fixtures` puts the credible
+run back; that is the one the catalog check expects, so restore it before
+committing.
+
+### If you only have ninety seconds
+
+Run **Mein Zuhause**, say the two lines above, wait for the Wärmepumpen-Check
+and the twenty-year curve, then go straight to „Naja, das rechnet ihr euch doch
+schön" and drag the sliders while you talk. That single sequence carries the
+whole idea: the interface is built live, the numbers are the client's own, and
+the advice says the uncomfortable thing when the sliders call for it.
 
 ---
 
@@ -106,6 +236,16 @@ numbers.
 - **The chips and the table are one binding.** Clicking a scenario chip
   re-highlights the comparison table instantly, before the agent has said
   anything — that is A2UI's reactive data model, not a round trip.
+- **The sliders are the same idea, taken further.** The figures under them are
+  A2UI function calls over the data model, so they recompute at drag speed.
+  Nothing about that is bespoke code — it is what the protocol does.
+- **The consultation admits what it does not know.** Handing over the price
+  assumption is a stronger trust move than defending it, and it is the reason
+  the client believes the number they end up with: it is theirs.
+- **The column on the right says where you are.** Six steps, and one only
+  counts as done once its surface is actually on screen.
+- **It says it is an AI.** The `KI-Beratung` badge sits in the frame for the
+  whole session, next to `Demo-Daten`. Worth a sentence in a German room.
 
 ## If the room has no microphone
 

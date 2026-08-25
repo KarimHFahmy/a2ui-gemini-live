@@ -1,8 +1,8 @@
 """Composing A2UI surfaces from the official basic catalog.
 
 The renderer's catalog is Google's `@a2ui/react` basic catalog — Card, Column,
-Row, Text (Markdown), List, Button, ChoicePicker, Modal, Divider — plus exactly
-two additions that have no official equivalent: `MetricChart` and
+Row, Text (Markdown), List, Button, ChoicePicker, Slider, Modal, Divider — plus
+exactly two additions that have no official equivalent: `MetricChart` and
 `ComparisonTable`.
 
 A2UI wants a flat adjacency list where every component carries a unique id and
@@ -37,6 +37,63 @@ TONE_MARK: dict[str, str] = {"positive": "✓", "neutral": "→", "caution": "!"
 def bind(path: str) -> dict[str, str]:
     """A data binding the renderer resolves against the surface data model."""
     return {"path": path}
+
+
+# ---------------------------------------------------------------------------
+# Client-side expressions
+# ---------------------------------------------------------------------------
+#
+# A2UI function calls are evaluated *in the browser*, against the surface's own
+# data model, and the renderer re-evaluates them whenever any bound argument
+# changes. That is what lets a slider feel instant: dragging it writes a number
+# into the data model, and every figure derived from it recomputes without a
+# round trip to the agent.
+#
+# The rule the composers follow: the *coefficients* are computed server-side by
+# the domain modules and travel in the data model; the browser only ever
+# performs the arithmetic those coefficients were designed for. So a dragged
+# slider can never produce a number the backend would not have produced.
+
+
+def call(name: str, *, returns: str = "number", **args: Dynamic) -> dict[str, Any]:
+    """A call to a function from the surface's catalog, evaluated client-side."""
+    return {"call": name, "args": args, "returnType": returns}
+
+
+def plus(a: Dynamic, b: Dynamic) -> dict[str, Any]:
+    return call("add", a=a, b=b)
+
+
+def minus(a: Dynamic, b: Dynamic) -> dict[str, Any]:
+    return call("subtract", a=a, b=b)
+
+
+def times(a: Dynamic, b: Dynamic) -> dict[str, Any]:
+    return call("multiply", a=a, b=b)
+
+
+def over(a: Dynamic, b: Dynamic) -> dict[str, Any]:
+    return call("divide", a=a, b=b)
+
+
+def money(value: Dynamic, *, decimals: int = 0) -> dict[str, Any]:
+    """Formats a computed number as euros, in the renderer's German locale."""
+    return call(
+        "formatCurrency", returns="string", value=value, currency="EUR", decimals=decimals
+    )
+
+
+def number(value: Dynamic, *, decimals: int = 0) -> dict[str, Any]:
+    return call("formatNumber", returns="string", value=value, decimals=decimals)
+
+
+def template(text: str) -> dict[str, Any]:
+    """A string with ``${…}`` expressions the renderer resolves and re-resolves.
+
+    Paths and nested calls both work: ``"${/wenn/km} km"`` or
+    ``"${formatNumber(value: /wenn/km, decimals: 0)} km"``.
+    """
+    return call("formatString", returns="string", value=text)
 
 
 class SurfaceBuilder:
@@ -205,6 +262,30 @@ class SurfaceBuilder:
             }
         )
 
+    def slider(
+        self,
+        *,
+        label: Dynamic,
+        value_path: str,
+        minimum: int,
+        maximum: int,
+    ) -> str:
+        """A Slider bound two-way to a number in the data model.
+
+        Everything else bound to the same path — including function calls that
+        read it — recomputes as the client drags, in the browser, with no round
+        trip. The label carries the unit; the renderer shows the raw value.
+        """
+        return self._add(
+            {
+                "component": "Slider",
+                "label": label,
+                "min": minimum,
+                "max": maximum,
+                "value": bind(value_path),
+            }
+        )
+
     def modal(self, trigger: str, content: str) -> str:
         return self._add({"component": "Modal", "trigger": trigger, "content": content})
 
@@ -296,6 +377,24 @@ class SurfaceBuilder:
             if metric_label:
                 children.append(self.text(metric_label, variant="caption"))
         children.append(self.text(body))
+        return self.card(self.column(children), weight=weight)
+
+    def live_stat(
+        self,
+        *,
+        label: Dynamic,
+        value: Dynamic,
+        hint: Dynamic | None = None,
+        weight: float | None = 1,
+    ) -> str:
+        """One figure that recomputes as the client drags a slider.
+
+        Same shape as :meth:`stat_card`, but the value is a client-side
+        expression rather than a string the agent already knows.
+        """
+        children = [self.text(label, variant="h4"), self.text(value, variant="h1")]
+        if hint is not None:
+            children.append(self.text(hint, variant="caption"))
         return self.card(self.column(children), weight=weight)
 
     def bullets(self, items: Sequence[str], *, heading: Dynamic | None = None) -> str:

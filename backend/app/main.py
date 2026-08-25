@@ -166,6 +166,12 @@ async def advisory_socket(
                 "id": selected.id,
                 "label": selected.label,
                 "tagline": selected.tagline,
+                # The advisory arc, so the client can show where the
+                # conversation stands without guessing at surface ids.
+                "steps": [
+                    {"surfaceId": surface_id, "label": label}
+                    for surface_id, label in selected.steps
+                ],
             },
             "audio": {
                 "inputSampleRate": settings.input_sample_rate,

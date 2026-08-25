@@ -188,6 +188,77 @@ def kosten_vergleichen(tool_context: ToolContext) -> dict[str, Any]:
     }
 
 
+def stellschrauben_zeigen(tool_context: ToolContext) -> dict[str, Any]:
+    """Übergibt der Person die zwei Zahlen, bei denen sie bisher geschätzt hat.
+
+    Zeigt zwei Regler — Kilometer an einem typischen Tag und Anteil, den sie zu
+    Hause lädt — und rechnet Jahresfahrleistung, Strom- und Kraftstoffkosten
+    live mit, während sie zieht.
+
+    Rufe das auf, wenn jemand bei der Tagesstrecke oder beim Ladeort unsicher
+    ist („so ungefähr", „mal so, mal so"), oder nachdem du die Kosten gezeigt
+    hast. Sag danach in einem Satz, dass die Person selbst ziehen kann.
+    """
+    profil = _profil(tool_context)
+    push(tool_context, compose.stellschrauben_surface(profil))
+    werte = calc.stellschrauben(profil)
+    return {
+        "taeglich_km": werte["taeglich_km"],
+        "anteil_zuhause": werte["anteil_zuhause"],
+        "hinweis": (
+            "Die Person kann die Regler selbst bewegen. Lade sie dazu ein, "
+            "statt Zahlen vorzulesen."
+        ),
+    }
+
+
+def annahmen_uebernehmen(
+    tool_context: ToolContext,
+    taeglich_km: float,
+    anteil_zuhause: float,
+) -> dict[str, Any]:
+    """Macht die eingestellte Strecke und Ladequote für die Beratung verbindlich.
+
+    Danach rechnen alle Ansichten damit, und die Annahmenliste weist die Quote
+    als die der Person aus. Rufe das auf, wenn die Person „Mit diesen Werten
+    weiterrechnen" ausgelöst oder im Gespräch eigene Werte genannt hat.
+
+    Args:
+        taeglich_km: Kilometer an einem typischen Tag.
+        anteil_zuhause: Anteil der Ladeenergie zu Hause, in Prozent.
+    """
+    # Auf ganze Einheiten gerundet: die Regler springen in Einerschritten, und
+    # ein Wert dazwischen ließe Reglerstellung und Rechnung auseinanderlaufen.
+    taeglich_km = float(round(taeglich_km))
+    anteil_zuhause = float(min(100, max(0, round(anteil_zuhause))))
+
+    profil = apply(
+        _profil(tool_context),
+        taeglich_km=taeglich_km,
+        anteil_zuhause_laden=anteil_zuhause,
+    )
+    save_profile(tool_context, profil)
+
+    # Alles, was schon auf dem Schirm steht, rechnet mit den alten Werten —
+    # also neu aufbauen, damit nichts Widersprüchliches stehen bleibt.
+    push(tool_context, compose.stellschrauben_surface(profil))
+    push(tool_context, compose.kosten_surface(profil))
+
+    k = calc.kostenvergleich(profil)
+    return {
+        "uebernommen": {"taeglich_km": taeglich_km, "anteil_zuhause": anteil_zuhause},
+        "jahres_km": profil.jahresfahrleistung_km(),
+        "mischpreis_eur_kwh": round(calc.mischpreis_eur_kwh(profil), 3),
+        "differenz_eur_monat": k["differenz_eur_monat"],
+        "elektro_guenstiger": k["differenz_eur"] > 0,
+        "hinweis": (
+            "Bestätige kurz, dass ab jetzt mit den Werten der Person gerechnet "
+            "wird, und nenne, was sich dadurch verschoben hat. Rufe danach "
+            "`profil_aktualisieren` auf, damit die Zusammenfassung stimmt."
+        ),
+    }
+
+
 def bedenken_adressieren(
     tool_context: ToolContext,
     titel: str,
@@ -297,6 +368,8 @@ TOOLS = [
     ladeloesungen_vergleichen,
     fahrzeuge_vorschlagen,
     kosten_vergleichen,
+    stellschrauben_zeigen,
+    annahmen_uebernehmen,
     bedenken_adressieren,
     naechsten_schritt_anbieten,
 ]
@@ -332,7 +405,10 @@ eben nicht.
 5. **Fahrzeuge.** `fahrzeuge_vorschlagen` zeigt passende Klassen mit offenen
    Trade-offs.
 6. **Kosten.** `kosten_vergleichen` stellt Elektro und Verbrenner gegenüber.
-7. **Abschluss.** `naechsten_schritt_anbieten`.
+7. **Nachvollziehbar machen.** `stellschrauben_zeigen` gibt Tagesstrecke und
+   Ladequote an die Person ab. Nutze das, sobald sie bei einer der beiden
+   Zahlen unsicher ist — und sag dazu, dass sie selbst ziehen darf.
+8. **Abschluss.** `naechsten_schritt_anbieten`.
 
 ## Fachliches
 
@@ -347,6 +423,13 @@ eben nicht.
   erwarten.
 - Sprich über Ladestopps als Pausen, nicht als Wartezeit — aber nur, wenn es
   ehrlich bleibt.
+
+## Wenn die Person am Bildschirm etwas einstellt
+
+Löst sie „Mit diesen Werten weiterrechnen" aus, bekommst du die eingestellten
+Werte als Interaktion gemeldet. Rufe dann `annahmen_uebernehmen` mit genau
+diesen Werten auf — nicht mit eigenen. Nennt sie im Gespräch selbst eine
+Strecke oder eine Ladequote, gilt dasselbe.
 
 ## Eröffnung
 
@@ -370,4 +453,12 @@ def build() -> Journey:
         instruction=INSTRUCTION,
         tools=TOOLS,
         model=get_settings().model,
+        steps=[
+            ("profil", "Ihr Alltag"),
+            ("alltag", "Reichweite"),
+            ("laden", "Laden"),
+            ("fahrzeuge", "Fahrzeuge"),
+            ("kosten", "Kosten"),
+            ("naechster_schritt", "Nächster Schritt"),
+        ],
     )
