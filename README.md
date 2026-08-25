@@ -280,6 +280,24 @@ frontend/
 
 ---
 
+## Design
+
+The visual direction is **Messwerte** — readings: technical stock, print-black
+type, instrument blue, and figures set the way a datasheet sets them. It comes
+out of the one job this product has, which is to make someone trust a number
+they did not calculate.
+
+The rule that matters most: **one hue, one meaning.** The accent means "you can
+act here" and nothing else; positive, caution and ink carry what a figure is
+worth. Type has two roles — IBM Plex Sans for prose, IBM Plex Mono for
+measurements — both self-hosted, because the previous stack silently fell back
+to Arial on any network that blocks Google Fonts.
+
+`docs/design.md` has the full token system, the signature element, and the
+critique pass that rejected copper, a second green, and numbered step markers.
+
+---
+
 ## Tests
 
 ```bash
@@ -317,7 +335,8 @@ make test
 
 **Rebrand.** The accent colour, wordmark and type stack are the only things a
 rebrand touches: `frontend/src/styles/theme.css` and `VITE_BRAND_NAME`. The
-demo ships deliberately brand-neutral.
+tone scale and the chart series are semantic and should survive one. See
+`docs/design.md` for the direction and what it deliberately rejected.
 
 **Change the numbers.** Everything lives in `backend/app/domain/demo_data.py`
 with a `STAND` date that is surfaced in the UI. Nothing else hardcodes a price.

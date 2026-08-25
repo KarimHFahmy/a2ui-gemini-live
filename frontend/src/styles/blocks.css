@@ -130,6 +130,20 @@
   flex: 1 1 220px;
 }
 
+/*
+ * The slider's value readout. The renderer draws it as an unclassed span
+ * beside the label (see the packaging note above), so it is reached
+ * structurally — the label is a <label>, so `> span` is the value and only the
+ * value. It is the most literal reading on the screen and set like one.
+ */
+.surface div:has(> input[type='range']) > div > span {
+  font-family: var(--font-mono);
+  font-size: 15px !important;
+  font-weight: 500;
+  color: var(--text) !important;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ChoicePicker chips. */
 .surface button.chip {
   border-radius: var(--radius-pill);
@@ -291,9 +305,10 @@
 }
 
 .stat__metric-label {
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   font-weight: 400;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   color: var(--text-faint);
   font-variant-numeric: normal;
 }
@@ -305,6 +320,62 @@
 
 .stat__body p + p {
   margin-top: var(--space-2);
+}
+
+/* ---------- The what-if panel ---------- */
+
+/*
+ * The one place this design raises its voice.
+ *
+ * Everything else on the stage is a card on paper. This surface is the only
+ * thing in the product nobody else has — figures that recompute under the
+ * client's hand, in the browser, with no round trip — so it is built as an
+ * instrument panel: recessed ground, a finer rule, flat components sitting
+ * *on* it rather than floating above it, and every live figure set in the mono
+ * as a readout. Restraint everywhere else is what lets this land.
+ */
+.surface[data-surface-id='stellschrauben'] {
+  --grid-line: rgba(19, 26, 33, 0.055);
+  --a2ui-card-box-shadow: none;
+  --a2ui-card-border: 1px solid var(--line);
+  --a2ui-card-background: var(--bg-elevated);
+
+  padding: var(--space-5);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-l);
+  background-color: var(--bg-sunken);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .surface[data-surface-id='stellschrauben'] {
+    --grid-line: rgba(228, 234, 239, 0.06);
+  }
+}
+
+/* Readouts, not headlines: they change while you watch them. */
+.surface[data-surface-id='stellschrauben'] .stat {
+  box-shadow: none;
+}
+
+/*
+ * Every figure in this panel is neutral by construction — they move as the
+ * client drags, so none of them claims anything — which makes a tone mark on
+ * each one four repetitions of "no opinion". The label behind it stays in the
+ * DOM for assistive tech.
+ */
+.surface[data-surface-id='stellschrauben'] .stat__mark {
+  display: none;
+}
+
+.surface[data-surface-id='stellschrauben'] .stat__metric {
+  font-family: var(--font-mono);
+  font-size: clamp(22px, 2.6vw, 28px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
 }
 
 /* ---------- MetricChart ---------- */
@@ -349,15 +420,16 @@
 .chart__tick,
 .chart__label {
   fill: var(--text-faint);
-  font-size: 11px;
-  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
 }
 
 .chart__threshold {
   fill: var(--text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  font-family: var(--font-mono);
 }
 
 .chart__legend {
@@ -384,6 +456,7 @@
 
 .chart__unit {
   margin-left: auto;
+  font-family: var(--font-mono);
   color: var(--text-faint);
 }
 
@@ -409,7 +482,8 @@
   width: 100%;
   margin-top: var(--space-3);
   border-collapse: collapse;
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -446,6 +520,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.compare__table td {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
 .compare__table th,
 .compare__table td {
   padding: var(--space-3);
@@ -463,6 +542,7 @@
 
 .compare__criterion {
   text-align: left !important;
+  font-family: var(--font-sans);
   font-weight: 500;
   color: var(--text-muted);
   white-space: normal;

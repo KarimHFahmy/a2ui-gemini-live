@@ -249,8 +249,9 @@ The basic catalog's components carry their own inline styles, built from
 supported way to restyle them — a stylesheet rule targeting `.a2ui-card` loses
 to the inline `var()` it reads.
 
-`theme.css` maps the whole set onto this demo's tokens once, and a context like
-the profile column narrows them locally:
+`theme.css` maps the whole set onto this demo's tokens once (see
+`docs/design.md` for what those tokens mean), and a context like the profile
+column narrows them locally:
 
 ```css
 .aside {

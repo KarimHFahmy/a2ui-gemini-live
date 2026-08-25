@@ -32,7 +32,22 @@ const SERIES_COLORS = [
 
 const WIDTH = 720;
 const HEIGHT = 300;
-const PAD = {top: 16, right: 16, bottom: 40, left: 64};
+const PAD = {top: 16, right: 16, bottom: 40};
+
+/**
+ * The value axis is set in the mono, so its width can be *computed* rather
+ * than guessed: every glyph in IBM Plex Mono advances 0.6 em, and the ticks
+ * render at 10.5 px. A fixed gutter clipped "125 Tsd. €" down to "25 Tsd. €",
+ * which is the kind of wrong that looks like a data error rather than a
+ * layout one.
+ */
+const TICK_CHAR_WIDTH = 10.5 * 0.62;
+const TICK_GAP = 12;
+
+function gutterFor(labels: string[]): number {
+  const widest = labels.reduce((max, label) => Math.max(max, label.length), 0);
+  return Math.max(40, Math.ceil(widest * TICK_CHAR_WIDTH) + TICK_GAP);
+}
 
 export function Chart({chartType, categories, series, unit, valueFormat = 'number'}: ChartProps) {
   const clean = series.filter(s => Array.isArray(s?.werte));
@@ -41,7 +56,6 @@ export function Chart({chartType, categories, series, unit, valueFormat = 'numbe
     return <p className="chart__empty">Noch keine Daten für dieses Diagramm.</p>;
   }
 
-  const plotWidth = WIDTH - PAD.left - PAD.right;
   const plotHeight = HEIGHT - PAD.top - PAD.bottom;
 
   /**
@@ -61,6 +75,10 @@ export function Chart({chartType, categories, series, unit, valueFormat = 'numbe
   const ticks: number[] = [];
   for (let tick = bottom; tick <= top + step / 2; tick += step) ticks.push(tick);
 
+  const tickLabels = ticks.map(tick => compact(tick, valueFormat));
+  const padLeft = gutterFor(tickLabels);
+  const plotWidth = WIDTH - padLeft - PAD.right;
+
   return (
     <figure className="chart__figure">
       <div className="chart__scroll">
@@ -72,23 +90,23 @@ export function Chart({chartType, categories, series, unit, valueFormat = 'numbe
           preserveAspectRatio="xMidYMid meet"
         >
           {/* Gridlines and value axis */}
-          {ticks.map(tick => (
+          {ticks.map((tick, index) => (
             <g key={tick}>
               <line
-                x1={PAD.left}
+                x1={padLeft}
                 x2={WIDTH - PAD.right}
                 y1={y(tick)}
                 y2={y(tick)}
                 className={tick === 0 ? 'chart__axis' : 'chart__grid'}
               />
               <text
-                x={PAD.left - 10}
+                x={padLeft - TICK_GAP + 2}
                 y={y(tick)}
                 className="chart__tick"
                 textAnchor="end"
                 dy="0.32em"
               >
-                {compact(tick, valueFormat)}
+                {tickLabels[index]}
               </text>
             </g>
           ))}
@@ -99,7 +117,7 @@ export function Chart({chartType, categories, series, unit, valueFormat = 'numbe
               categories={categories}
               y={y}
               plotWidth={plotWidth}
-              padLeft={PAD.left}
+              padLeft={padLeft}
             />
           ) : (
             <BarSeries
@@ -108,7 +126,7 @@ export function Chart({chartType, categories, series, unit, valueFormat = 'numbe
               categories={categories}
               y={y}
               plotWidth={plotWidth}
-              padLeft={PAD.left}
+              padLeft={padLeft}
               baseline={y(Math.max(bottom, 0))}
             />
           )}
@@ -119,7 +137,7 @@ export function Chart({chartType, categories, series, unit, valueFormat = 'numbe
           {categories.map((category, index) => (
             <text
               key={index}
-              x={categoryX(chartType, index, categories.length, plotWidth, PAD.left)}
+              x={categoryX(chartType, index, categories.length, plotWidth, padLeft)}
               y={HEIGHT - PAD.bottom + 20}
               className="chart__label"
               textAnchor={
