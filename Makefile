@@ -13,7 +13,7 @@ SERVICE ?= adaptive-advisory
 PROJECT ?= $(shell gcloud config get-value project 2>/dev/null)
 
 .PHONY: help install install-backend install-frontend dev dev-backend dev-frontend \
-        build fixtures test test-backend test-frontend check-catalog preview \
+        build fixtures test test-backend test-frontend check-catalog preview preview-happy \
         docker-build docker-run deploy clean
 
 help:
@@ -43,6 +43,13 @@ build: ## Build the SPA into backend/static
 
 fixtures: ## Recapture the A2UI fixtures that drive the offline preview
 	$(PY) backend/scripts/generate_fixtures.py
+
+preview-happy: ## Click through the favourable demo offline (see docs/demo-script.md)
+	@echo "Capturing the happy-path run — remember: make fixtures to restore."
+	$(PY) backend/scripts/generate_fixtures.py --happy
+	$(MAKE) build
+	@echo "Serving http://localhost:8080/preview.html"
+	cd backend && $(PY) -m uvicorn app.main:app --port 8080
 
 preview: build ## Open the offline catalog preview
 	@echo "Serving http://localhost:8080/preview.html"

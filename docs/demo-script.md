@@ -121,6 +121,104 @@ numbers.
 
 ---
 
+## The happy path
+
+The two runs above are built to be *credible*: the mobility one deliberately
+lands on "das rechnet sich für Sie heute nicht". That is the right demo for a
+sceptical room, and the wrong one when you want to show the experience at its
+best in three minutes — to a client, at a stand, on a screen behind you.
+
+These two profiles make every number come out well while staying plausible.
+Both are chosen so the advice is genuinely positive, not so the model is
+steered: say these things and the arithmetic does the rest.
+
+### Mein Zuhause — the well-suited house
+
+The trick is that a heat pump's economics improve with the *size* of the heat
+bill and the *lowness* of the flow temperature. A large, older, gas-heated house
+with generously sized radiators is the case where everything lines up.
+
+**Say:**
+> „Wir haben ein Einfamilienhaus von 1985, gut 200 Quadratmeter, vier Personen.
+> Gasheizung, die ist jetzt bald vierzig Jahre alt. Fenster und Dach haben wir
+> vor ein paar Jahren machen lassen."
+
+**Then, when it asks about the radiators:**
+> „Große flache Heizkörper. Die waren damals ziemlich großzügig ausgelegt."
+
+That is the sentence that decides it. Expect:
+
+| | |
+|---|---|
+| Vorlauftemperatur | **45 °C** → JAZ 3,8, Eignung **90/100, „gut geeignet"** |
+| Heizkosten heute | 3.929 € im Jahr |
+| Mit Wärmepumpe | 2.193 € im Jahr — rund **1.700 € weniger** |
+| Investition | 33.200 €, davon **15.000 € Förderung** (30 % Grund + 20 % Klimageschwindigkeit) |
+| Eigenanteil | 18.200 € |
+| Break-even | **9 Jahre** |
+| CO₂ | 6,2 t → 2,7 t im Jahr |
+
+**Then ask for money, then funding, then close:**
+> „Und was kostet mich das?" … „Gibt es Förderung?" … „Was wäre mein nächster Schritt?"
+
+**The what-if, if you have time.** Say „Und wenn der Gaspreis weiter steigt?"
+Push the gas slider from 12 to 20 Cent: the monthly difference goes from 145 €
+to 351 € and the twenty-year balance from 16.522 € to 65.976 €. Then be fair and
+push electricity to 40 Cent as well — 273 €/Monat, still clearly positive. The
+honest end of the range is gas at 8 and electricity at 45, where it turns
+*negative*; showing that is what makes the rest believable.
+
+### Meine Mobilität — the commuter with a wallbox
+
+The EV case is carried by mileage and by charging at home. Eighty kilometres a
+day with a wallbox is an ordinary German commute and a comfortable win.
+
+**Say:**
+> „Ich pendle jeden Tag rund 80 Kilometer, fünf Tage die Woche. Ein-, zweimal im
+> Monat fahren wir 350 Kilometer zu meinen Eltern. Wir haben eine eigene Garage
+> mit Wallbox. Das Auto würde ich sechs, sieben Jahre fahren."
+
+Expect:
+
+| | |
+|---|---|
+| Fahrleistung | 29.300 km im Jahr |
+| Winterreichweite | 258 km — **3,2× Ihres Tagesbedarfs** |
+| Autobahn im Winter | 208 km (der ehrlichste Wert) |
+| Die 350-km-Fahrt | 2 Ladestopps, **60 Minuten** mehr als mit dem Verbrenner |
+| Energie | **6,53 € je 100 km** gegen 11,39 € Benzin |
+| Gesamtkosten über 6 Jahre | 50.635 € gegen 54.377 € — **3.742 € Vorteil, 52 € im Monat** |
+| CO₂ | **− 2,3 t** im Jahr |
+
+**The what-if.** Say „Ich lade eigentlich fast immer zu Hause." Drag the
+home-charging slider from 80 to 100 %: the energy advantage goes from 111 € to
+139 € a month. Drag it *down* to 50 % and it falls to 70 € — the point of the
+journey, in one gesture: der Ladeort entscheidet, nicht das Modell.
+
+**Close:**
+> „Welches Auto würden Sie mir empfehlen?"
+
+→ Mittelklasse/Limousine, Passung 92/100, 306 km im Winter, ein Ladestopp auf
+der Langstrecke, ab 489 € im Monat — with its trade-offs named.
+
+### Without a voice session
+
+`make preview-happy` captures exactly these two runs and serves them at
+`/preview.html`, so you can click through the favourable version — sliders
+included — with no Vertex AI session at all. `make fixtures` puts the credible
+run back; that is the one the catalog check expects, so restore it before
+committing.
+
+### If you only have ninety seconds
+
+Run **Mein Zuhause**, say the two lines above, wait for the Wärmepumpen-Check
+and the twenty-year curve, then go straight to „Naja, das rechnet ihr euch doch
+schön" and drag the sliders while you talk. That single sequence carries the
+whole idea: the interface is built live, the numbers are the client's own, and
+the advice says the uncomfortable thing when the sliders call for it.
+
+---
+
 ## Points worth narrating
 
 - **The profile card is the trust anchor.** Estimated values are marked as

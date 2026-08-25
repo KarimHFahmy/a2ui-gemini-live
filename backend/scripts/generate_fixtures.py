@@ -5,10 +5,19 @@ without a Live API session. That makes the catalog reviewable and
 regression-testable offline, and gives the design work a fast loop.
 
     python backend/scripts/generate_fixtures.py
+    python backend/scripts/generate_fixtures.py --happy
+
+The default run is the *credible* one: it is what the catalog check renders, and
+the mobility journey deliberately lands on "das rechnet sich für Sie heute
+nicht". `--happy` captures the favourable profiles from `docs/demo-script.md`
+instead, for clicking through the good version of the demo without spending a
+voice session. Do not commit the `--happy` output — the check expects the
+default.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -210,7 +219,90 @@ SCRIPTS: dict[str, Script] = {
 }
 
 
-def capture() -> dict[str, dict[str, Any]]:
+#: The same two journeys run on the profiles that make every number come out
+#: well — see "The happy path" in `docs/demo-script.md`, which quotes the
+#: figures these produce. A large, older, gas-heated house with generously
+#: sized radiators, and an 80-km commuter with a wallbox.
+HAPPY_SCRIPTS: dict[str, Script] = {
+    "energie": [
+        (
+            energie.profil_aktualisieren,
+            {
+                "baujahr": 1985,
+                "wohnflaeche_qm": 200,
+                "heizung": "gas",
+                "sanierungsstand": "teilsaniert",
+                "waermesystem": "flaechenheizkoerper_gross",
+                "personen": 4,
+                "prioritaeten": ["Wirtschaftlichkeit", "Unabhängigkeit"],
+                "offene_punkte": ["Genauer Gasverbrauch der letzten Jahre"],
+            },
+        ),
+        (energie.waermepumpen_eignung_zeigen, {}),
+        (energie.szenarien_vergleichen, {"empfohlen": "waermepumpe"}),
+        (energie.wirtschaftlichkeit_zeigen, {"szenario": "waermepumpe"}),
+        (energie.stellschrauben_zeigen, {}),
+        (energie.foerderung_und_fahrplan_zeigen, {"szenario": "waermepumpe"}),
+        (
+            energie.naechsten_schritt_anbieten,
+            {
+                "empfehlung": (
+                    "Ihr Haus ist ein guter Fall für eine Wärmepumpe – die großen "
+                    "Heizkörper sind der Grund. Ich würde sie ohne Vorarbeiten "
+                    "einbauen lassen."
+                ),
+                "begruendung": [
+                    "45 °C Vorlauf reichen Ihnen – damit läuft eine Wärmepumpe effizient",
+                    "Rund 1.700 € weniger Betriebskosten im Jahr",
+                    "Nach neun Jahren sind Sie gegenüber der Gasheizung im Plus",
+                ],
+                "offene_punkte": ["Aufstellort für das Außengerät"],
+                "schritt": "vor_ort_check",
+            },
+        ),
+    ],
+    "mobilitaet": [
+        (
+            mobilitaet.profil_aktualisieren,
+            {
+                "taeglich_km": 80,
+                "pendeltage_pro_woche": 5,
+                "langstrecken_pro_monat": 2,
+                "langstrecke_km": 350,
+                "lademoeglichkeit": "wallbox_zuhause",
+                "stellplatz_vorhanden": True,
+                "fahrzeugklasse": "kompakt",
+                "haltedauer_jahre": 6,
+                "prioritaeten": ["Verlässlichkeit im Alltag"],
+            },
+        ),
+        (mobilitaet.alltagstauglichkeit_zeigen, {}),
+        (mobilitaet.ladeloesungen_vergleichen, {}),
+        (mobilitaet.fahrzeuge_vorschlagen, {}),
+        (mobilitaet.kosten_vergleichen, {}),
+        (mobilitaet.stellschrauben_zeigen, {}),
+        (
+            mobilitaet.naechsten_schritt_anbieten,
+            {
+                "empfehlung": (
+                    "Ein E-Auto passt zu Ihnen. Ihre Wallbox macht den Unterschied: "
+                    "die Energie kostet Sie gut die Hälfte dessen, was Sie heute "
+                    "tanken."
+                ),
+                "begruendung": [
+                    "258 km Winterreichweite gegen 80 km am Tag – reichlich Puffer",
+                    "6,53 € statt 11,39 € je 100 km",
+                    "Über sechs Jahre rund 3.700 € günstiger als der Verbrenner",
+                ],
+                "offene_punkte": ["Wunschmodell und Liefertermin"],
+                "schritt": "probefahrt",
+            },
+        ),
+    ],
+}
+
+
+def capture(scripts: dict[str, Script]) -> dict[str, dict[str, Any]]:
     """One entry per journey: its arc, and the A2UI stream a run produces.
 
     The arc travels with the fixtures so the preview renders the same context
@@ -225,7 +317,7 @@ def capture() -> dict[str, dict[str, Any]]:
     }
     fixtures: dict[str, dict[str, Any]] = {}
 
-    for journey_id, script in SCRIPTS.items():
+    for journey_id, script in scripts.items():
         context = CaptureContext()
         messages: list[dict[str, Any]] = []
 
@@ -239,7 +331,15 @@ def capture() -> dict[str, dict[str, Any]]:
 
 
 def main() -> None:
-    fixtures = capture()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--happy",
+        action="store_true",
+        help="capture the favourable profiles instead (do not commit the result)",
+    )
+    args = parser.parse_args()
+
+    fixtures = capture(HAPPY_SCRIPTS if args.happy else SCRIPTS)
     OUTPUT.write_text(
         json.dumps(fixtures, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
     )
