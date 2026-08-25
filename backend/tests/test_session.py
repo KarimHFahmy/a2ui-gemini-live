@@ -50,6 +50,35 @@ def a2ui_event(**payload: Any) -> Event:
     )
 
 
+class TestToolAnnouncements:
+    @pytest.mark.asyncio
+    async def test_a_function_call_is_announced_by_name(self, session):
+        """The client shows what is being worked on, so it needs the name.
+
+        This used to send surface ids under a `surfaces` key while the client
+        read `name`, so the busy indicator never appeared at all.
+        """
+        advisory, _, events = session
+
+        await advisory._handle_event(
+            Event(
+                author="berater_energie",
+                content=types.Content(
+                    role="model",
+                    parts=[
+                        types.Part(
+                            function_call=types.FunctionCall(
+                                name="wirtschaftlichkeit_zeigen", args={}
+                            )
+                        )
+                    ],
+                ),
+            )
+        )
+
+        assert events == [{"type": "tool", "name": "wirtschaftlichkeit_zeigen"}]
+
+
 class TestSurfaceForwarding:
     @pytest.mark.asyncio
     async def test_a2ui_widgets_become_a2ui_frames(self, session):
@@ -64,7 +93,7 @@ class TestSurfaceForwarding:
             )
         )
 
-        assert [e["type"] for e in events] == ["a2ui", "surface_meta", "tool"]
+        assert [e["type"] for e in events] == ["a2ui", "surface_meta"]
         assert events[0]["payload"]["createSurface"]["surfaceId"] == "profil"
         assert events[1] == {
             "type": "surface_meta",

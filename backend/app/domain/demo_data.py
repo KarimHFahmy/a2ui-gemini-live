@@ -30,12 +30,19 @@ DISCLAIMER: Final = (
 # Energiepreise (Brutto, Endkunde)
 # ---------------------------------------------------------------------------
 
+#: Whole cents per kilowatt-hour, deliberately.
+#:
+#: These are the prices the client can take over from the advisory view and
+#: adjust for themselves, and the A2UI `Slider` steps in ones — so a price that
+#: is not a whole number of cents would put the thumb half a step away from the
+#: figure the rest of the advice is built on. They are demo assumptions either
+#: way; being round makes them both legible and adjustable.
 STROM_HAUSHALT_EUR_KWH: Final = 0.35
 STROM_WAERMEPUMPE_EUR_KWH: Final = 0.27
-GAS_EUR_KWH: Final = 0.115
+GAS_EUR_KWH: Final = 0.12
 HEIZOEL_EUR_L: Final = 1.10
 HEIZOEL_KWH_PRO_L: Final = 10.0
-FERNWAERME_EUR_KWH: Final = 0.145
+FERNWAERME_EUR_KWH: Final = 0.15
 PV_EINSPEISUNG_EUR_KWH: Final = 0.079
 PV_GESTEHUNG_EUR_KWH: Final = 0.11
 

@@ -140,11 +140,16 @@ sends `createSurface` + `updateDataModel` + `updateComponents`; every later call
 to the same tool sends only the two updates, so the card the client is already
 reading changes in place instead of a near-duplicate appearing below it.
 
-The profile surface lives in its own column beside the conversation and is
-updated on every turn; everything else stacks in the stage in creation order.
-That split is the point: the profile is context — what the agent currently
-believes about the client — while the stage is the conversation, and the
-screen grows with it rather than presenting a dashboard up front.
+The context column beside the conversation holds the two things that are true
+throughout rather than at a moment: where the conversation stands, and what the
+agent currently believes about the client. Everything else stacks in the stage
+in creation order. That split is the point: the stage is the conversation, and
+the screen grows with it rather than presenting a dashboard up front.
+
+The progress indicator is driven by `Journey.steps`, sent with the session
+frame, and a step counts as done only once its surface is actually on screen.
+Surfaces that answer a question rather than advance the conversation — a
+concern, the what-if view — are deliberately not steps.
 
 There is no transcript. A live voice API answers by speaking, and the column
 it used to occupy is worth more to the advice than to a reading-along panel.
@@ -161,6 +166,50 @@ ausgelöst"), and the agent reacts in speech.
 
 Splitting those is deliberate: the UI responds at click speed, the voice
 responds at conversation speed, and neither blocks the other.
+
+### The what-if surfaces: arithmetic in the browser
+
+Every other surface arrives with its figures already rendered as strings. The
+"Was wäre wenn" surface is the exception, and it is where A2UI earns its keep.
+
+A2UI's `DynamicValue` can be a *function call* against the catalog's function
+set, with arguments that are themselves paths into the data model or further
+calls. The renderer resolves each argument to a signal and re-evaluates the
+whole chain whenever any of them changes. So a `Slider` bound to
+`/wenn/preis_alt_ct` and a figure built from
+`formatCurrency(add(multiply(/basis/eur_je_ct_alt, /wenn/preis_alt_ct), …))`
+are connected without a single line of application JavaScript: dragging the
+slider recomputes the number in the browser, at drag speed, with no round trip
+to the agent and no re-render of the page.
+
+That is a genuinely different capability from "the agent draws a card", and it
+is what makes the advice feel personal: the client can put their own gas price
+into the model and watch the twenty-year balance move.
+
+The obvious risk is that the arithmetic now lives in two places. Three things
+contain it:
+
+- **The backend ships coefficients, not formulas.** `domain.energie
+  .stellschrauben()` returns "one cent of gas costs this many euros a year",
+  derived from the same calculation that produced the advice. The browser only
+  multiplies and adds. It cannot produce a number the backend would not have.
+- **The composers state the formula they assume**, in the docstring, next to
+  the coefficients that satisfy it.
+- **`backend/tests/test_stellschrauben.py` evaluates the emitted expression
+  trees** the way `@a2ui/web_core`'s basic functions do and holds the result
+  against the domain module, at the slider's opening position and after a
+  simulated drag. `frontend/scripts/check-catalog.mjs` then drags a real
+  slider in a real browser and asserts the figures move.
+
+Then the client taps "Mit diesen Preisen weiterrechnen". The slider values ride
+back on the action's `context`, the agent calls `annahmen_uebernehmen` with
+them, and the backend recomputes and re-pushes every affected surface — so the
+preview is instant and the commitment is authoritative. The visible assumptions
+change with it: once the client has set a price, the modal says so.
+
+One constraint worth knowing: the basic catalog's `Slider` has no `step`, so it
+moves in ones. The demo's energy prices are therefore whole cents — otherwise
+the thumb would open half a step away from the figure it explains.
 
 ## Audio
 
@@ -216,7 +265,10 @@ README). Those are styled by element, in one marked section of `blocks.css`.
 | Malformed UI never reaches the browser | `protocol.validate_tree` runs before every emit; a bad tree is logged and dropped, the conversation continues |
 | A failing tool does not end the call | ADK returns the error to the model as the function response, and the agent speaks on |
 | A dying session is never silent | `_drain_session` reports an unexpected end to the browser |
-| Assumptions are visible | `AssumptionNote` on every surface carrying a number |
+| Assumptions are visible | `AssumptionNote` on every surface carrying a number, updated to name the client's own figures once they set them |
+| The client knows they are talking to an AI | A permanent `KI-Beratung` badge in the session frame, beside `Demo-Daten` |
+| A slider cannot invent a number | The browser receives coefficients, not formulas; `test_stellschrauben.py` evaluates the emitted expressions against the domain module |
+| Discarding the conversation asks first | "Neu starten" confirms inline — nothing is stored, so a mis-click would cost the whole session |
 | No personal data | The prompts do not ask for it; nothing is persisted |
 
 ## What a production version would change

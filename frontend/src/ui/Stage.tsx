@@ -4,7 +4,7 @@
  * Each A2UI surface is one advisory building block. They stack in the order
  * the agent created them, which is the progressive disclosure the briefing
  * asks for: the screen grows with the conversation rather than presenting a
- * dashboard up front. The profile is not here — see `ProfileAside`.
+ * dashboard up front. The profile is not here — see `ContextAside`.
  */
 
 import {useEffect, useRef} from 'react';

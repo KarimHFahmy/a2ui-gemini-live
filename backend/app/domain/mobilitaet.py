@@ -36,6 +36,10 @@ class Mobilitaetsprofil:
     bedenken: list[str] = field(default_factory=list)
     prioritaeten: list[str] = field(default_factory=list)
 
+    #: Der Anteil der Ladeenergie, den der Kunde selbst zu Hause veranschlagt,
+    #: in Prozent. Solange er leer ist, gilt der Mix der Lademöglichkeit.
+    anteil_zuhause_laden: float | None = None
+
     def jahresfahrleistung_km(self) -> float:
         pendel = self.taeglich_km * self.pendeltage_pro_woche * 46
         langstrecke = self.langstrecke_km * self.langstrecken_pro_monat * 12
@@ -215,6 +219,23 @@ def ladepreis_eur_kwh(lademoeglichkeit: str) -> float:
     return sum(anteil * _PREIS_JE_QUELLE[quelle] for quelle, anteil in mix.items())
 
 
+def mischpreis_eur_kwh(profil: Mobilitaetsprofil) -> float:
+    """Der Strompreis, mit dem für dieses Profil gerechnet wird.
+
+    Der Ladeort ist der größte Kostenhebel und zugleich das, was im Gespräch am
+    unschärfsten bleibt („meistens zu Hause, manchmal unterwegs“). Hat der Kunde
+    selbst eine Quote gesetzt, gilt seine — der Mix der Lademöglichkeit ist nur
+    die Ausgangsschätzung.
+    """
+    if profil.anteil_zuhause_laden is None:
+        return ladepreis_eur_kwh(profil.lademoeglichkeit)
+    anteil = max(0.0, min(1.0, profil.anteil_zuhause_laden / 100.0))
+    return (
+        anteil * dd.LADEN_ZUHAUSE_EUR_KWH
+        + (1 - anteil) * ladepreis_eur_kwh("nur_oeffentlich")
+    )
+
+
 def ladeoptionen(profil: Mobilitaetsprofil) -> dict[str, Any]:
     """Vergleicht die realistischen Ladeszenarien für dieses Profil.
 
@@ -285,7 +306,7 @@ def kostenvergleich(profil: Mobilitaetsprofil) -> dict[str, Any]:
 
     # --- Elektro ---
     verbrauch_kwh_100 = r["verbrauch_sommer"] * 1.15
-    strompreis = ladepreis_eur_kwh(profil.lademoeglichkeit)
+    strompreis = mischpreis_eur_kwh(profil)
     energie_e = jahres_km * verbrauch_kwh_100 / 100.0 * strompreis
     wertverlust_e = fahrzeug["preis_eur"] * (1 - fahrzeug["restwert_4j"]) * (jahre / 4)
     wallbox = (
@@ -442,14 +463,89 @@ def fahrzeugvorschlaege(profil: Mobilitaetsprofil, *, anzahl: int = 3) -> list[d
 
 
 def annahmen(profil: Mobilitaetsprofil) -> list[str]:
-    """Die Annahmenliste, die unter jeder Zahl im UI steht."""
-    preis = ladepreis_eur_kwh(profil.lademoeglichkeit)
+    """Die Annahmenliste, die unter jeder Zahl im UI steht.
+
+    Sobald der Kunde selbst eine Ladequote gesetzt hat, steht seine hier — sonst
+    würde die sichtbare Annahme der gezeigten Zahl widersprechen.
+    """
+    preis = mischpreis_eur_kwh(profil)
+    herkunft = (
+        f"{profil.anteil_zuhause_laden:.0f} % zu Hause, von Ihnen gesetzt"
+        if profil.anteil_zuhause_laden is not None
+        else f"Mix für „{profil.lademoeglichkeit}“"
+    )
     return [
         f"Jahresfahrleistung {profil.jahresfahrleistung_km():,.0f} km".replace(",", "."),
-        f"Mischladepreis {preis:.2f} €/kWh für „{profil.lademoeglichkeit}“",
+        f"Mischladepreis {preis:.2f} €/kWh ({herkunft})",
         f"Winter-Mehrverbrauch {dd.WINTER_MEHRVERBRAUCH:.0%}, "
         f"Autobahn-Mehrverbrauch {dd.LANGSTRECKE_MEHRVERBRAUCH:.0%}",
         f"Ladefenster 10–80 % SoC, Haltedauer {profil.haltedauer_jahre} Jahre",
         f"Kraftstoff Benzin {dd.BENZIN_EUR_L:.2f} €/l, Diesel {dd.DIESEL_EUR_L:.2f} €/l",
         dd.DISCLAIMER,
     ]
+
+
+# ---------------------------------------------------------------------------
+# Stellschrauben
+# ---------------------------------------------------------------------------
+
+
+def stellschrauben(profil: Mobilitaetsprofil) -> dict[str, Any]:
+    """Die Koeffizienten hinter „Was wäre wenn?“.
+
+    Zwei Zahlen entscheiden über die Energiekosten eines E-Autos, und beide sind
+    im Erstgespräch grobe Schätzungen: die tatsächliche Tagesstrecke und der
+    Anteil, den man zu Hause lädt. Statt sie festzuschreiben, gibt diese
+    Funktion die Rechnung als Faktoren heraus, mit denen der Browser live
+    nachrechnet, während der Kunde am Regler zieht:
+
+        Jahres-km     = km_je_tag × tage_pro_jahr + km_konstante
+        Strompreis_ct = preis_unterwegs_ct + Anteil_zuhause × delta_je_prozent
+        Strom  je Jahr = Jahres-km × Strompreis_ct × strom_eur_je_km_je_ct
+        Sprit  je Jahr = Jahres-km × kraftstoff_eur_je_km
+
+    Es ist dieselbe Arithmetik wie in :func:`kostenvergleich`, nur nach den zwei
+    unsicheren Größen aufgelöst.
+    """
+    r = reichweite(profil)
+    referenz = dd.VERBRENNER_REFERENZ[profil.fahrzeugklasse]
+
+    verbrauch_kwh_100 = r["verbrauch_sommer"] * 1.15
+    verbrauch_l_100 = profil.aktueller_verbrauch_l_100km or referenz["verbrauch_l_100km"]
+    kraftstoffpreis = (
+        dd.BENZIN_EUR_L if referenz["kraftstoff"] == "benzin" else dd.DIESEL_EUR_L
+    )
+
+    preis_zuhause_ct = dd.LADEN_ZUHAUSE_EUR_KWH * 100
+    preis_unterwegs_ct = ladepreis_eur_kwh("nur_oeffentlich") * 100
+    anteil_zuhause = (
+        profil.anteil_zuhause_laden
+        if profil.anteil_zuhause_laden is not None
+        else _LADEMIX[profil.lademoeglichkeit]["zuhause"] * 100
+    )
+
+    # Alles außer der Tagesstrecke bleibt beim Ziehen konstant: Langstrecken
+    # und Freizeitkilometer, genau wie in `jahresfahrleistung_km`.
+    km_konstante = profil.langstrecke_km * profil.langstrecken_pro_monat * 12 + 2500.0
+
+    return {
+        "fahrzeug": r["fahrzeug"],
+        "kraftstoff": referenz["kraftstoff"],
+        # Startwerte der Regler.
+        "taeglich_km": round(profil.taeglich_km),
+        "anteil_zuhause": round(anteil_zuhause),
+        "taeglich_km_min": 5,
+        "taeglich_km_max": max(150, int(profil.taeglich_km * 2)),
+        # Fahrleistung.
+        "tage_pro_jahr": profil.pendeltage_pro_woche * 46,
+        "km_konstante": round(km_konstante),
+        # Ladepreis als Gerade über den Anteil, den man zu Hause lädt.
+        "preis_zuhause_ct": round(preis_zuhause_ct, 1),
+        "preis_unterwegs_ct": round(preis_unterwegs_ct, 1),
+        "delta_je_prozent": round((preis_zuhause_ct - preis_unterwegs_ct) / 100.0, 4),
+        # Ein Kilometer bei einem Cent je Kilowattstunde kostet so viel Euro.
+        "strom_eur_je_km_je_ct": round(verbrauch_kwh_100 / 10000.0, 6),
+        "kraftstoff_eur_je_km": round(verbrauch_l_100 / 100.0 * kraftstoffpreis, 4),
+        "verbrauch_kwh_100km": round(verbrauch_kwh_100, 1),
+        "verbrauch_l_100km": round(verbrauch_l_100, 1),
+    }

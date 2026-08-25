@@ -112,6 +112,32 @@
   border-color: var(--brand-accent-strong);
 }
 
+/*
+ * Sliders. The renderer draws the label, the live value and the range input;
+ * this only gives the input a comfortable hit area — the colours come from
+ * the `--a2ui-slider-*` tokens in theme.css.
+ */
+.surface input[type='range'] {
+  height: 22px;
+  margin: 2px 0 0;
+}
+
+/*
+ * A row of cards reflows instead of crushing its figures.
+ *
+ * `weight` compiles to `flex: 1` with a zero basis, so a row of four cost
+ * cards keeps shrinking until "2.990 €" wraps mid-number. Cards get a real
+ * basis and are allowed to wrap; every other row child keeps its zero basis
+ * and therefore still never wraps.
+ */
+.stage div[style*='flex-direction: row'] {
+  flex-wrap: wrap;
+}
+
+.stage div[style*='flex-direction: row'] > .a2ui-card {
+  flex: 1 1 220px;
+}
+
 /* ChoicePicker chips. */
 .surface button.chip {
   border-radius: var(--radius-pill);

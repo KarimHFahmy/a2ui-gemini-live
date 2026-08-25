@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from google.adk.events import EventActions  # noqa: E402
 from google.adk.tools import ToolContext  # noqa: E402
 
-from app.journeys import energie, mobilitaet  # noqa: E402
+from app.journeys import all_journeys, energie, mobilitaet  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "frontend" / "fixtures.json"
 
@@ -69,6 +69,7 @@ SCRIPTS: dict[str, Script] = {
         (energie.szenarien_vergleichen, {"empfohlen": "waermepumpe"}),
         (energie.wirtschaftlichkeit_zeigen, {"szenario": "waermepumpe"}),
         (energie.foerderung_und_fahrplan_zeigen, {"szenario": "waermepumpe"}),
+        (energie.stellschrauben_zeigen, {}),
         (
             energie.bedenken_adressieren,
             {
@@ -148,6 +149,7 @@ SCRIPTS: dict[str, Script] = {
         (mobilitaet.ladeloesungen_vergleichen, {}),
         (mobilitaet.fahrzeuge_vorschlagen, {}),
         (mobilitaet.kosten_vergleichen, {}),
+        (mobilitaet.stellschrauben_zeigen, {}),
         (
             mobilitaet.bedenken_adressieren,
             {
@@ -208,8 +210,20 @@ SCRIPTS: dict[str, Script] = {
 }
 
 
-def capture() -> dict[str, list[dict[str, Any]]]:
-    fixtures: dict[str, list[dict[str, Any]]] = {}
+def capture() -> dict[str, dict[str, Any]]:
+    """One entry per journey: its arc, and the A2UI stream a run produces.
+
+    The arc travels with the fixtures so the preview renders the same context
+    column a live session does — otherwise the one screen used for design
+    review would be the one screen the progress indicator is missing from.
+    """
+    arcs = {
+        journey.id: [
+            {"surfaceId": surface_id, "label": label} for surface_id, label in journey.steps
+        ]
+        for journey in all_journeys()
+    }
+    fixtures: dict[str, dict[str, Any]] = {}
 
     for journey_id, script in SCRIPTS.items():
         context = CaptureContext()
@@ -219,7 +233,7 @@ def capture() -> dict[str, list[dict[str, Any]]]:
             tool(tool_context=context, **args)  # type: ignore[arg-type]
             messages.extend(context.drain())
 
-        fixtures[journey_id] = messages
+        fixtures[journey_id] = {"steps": arcs[journey_id], "messages": messages}
 
     return fixtures
 
@@ -229,8 +243,8 @@ def main() -> None:
     OUTPUT.write_text(
         json.dumps(fixtures, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
     )
-    for journey_id, messages in fixtures.items():
-        print(f"{journey_id}: {len(messages)} A2UI messages")
+    for journey_id, captured in fixtures.items():
+        print(f"{journey_id}: {len(captured['messages'])} A2UI messages")
     print(f"written to {OUTPUT}")
 
 

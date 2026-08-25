@@ -38,6 +38,11 @@ class Gebaeudeprofil:
     bedenken: list[str] = field(default_factory=list)
     pv_vorhanden: bool = False
 
+    #: Preisannahmen, die der Kunde selbst gesetzt hat, in Cent je Kilowattstunde.
+    #: Solange sie leer sind, gelten die Demo-Werte aus :mod:`demo_data`.
+    preis_alt_ct: float | None = None
+    preis_strom_ct: float | None = None
+
     def baualtersklasse(self) -> str:
         if self.baujahr < 1979:
             return "vor_1979"
@@ -236,16 +241,35 @@ def foerderung(
 # ---------------------------------------------------------------------------
 
 
+def _bestand_energietraeger(profil: Gebaeudeprofil) -> tuple[str, float, float]:
+    """Bezeichnung, Preis je Kilowattstunde und Nutzungsgrad der Bestandsheizung.
+
+    Getrennt vom Kostenaufruf, weil die beiden Zahlen zweimal gebraucht werden:
+    einmal für die Kosten und einmal als Stellschraube, an der der Kunde selbst
+    drehen kann.
+    """
+    traeger, preis, nutzungsgrad = {
+        "gas": ("Erdgas", dd.GAS_EUR_KWH, 0.88),
+        "oel": ("Heizöl", dd.HEIZOEL_EUR_L / dd.HEIZOEL_KWH_PRO_L, 0.85),
+        "fernwaerme": ("Fernwärme", dd.FERNWAERME_EUR_KWH, 1.0),
+        "nachtspeicher": ("Strom", dd.STROM_HAUSHALT_EUR_KWH, 1.0),
+        "waermepumpe": ("Strom", dd.STROM_WAERMEPUMPE_EUR_KWH, 3.5),
+    }[profil.heizung]
+    if profil.preis_alt_ct is not None:
+        preis = profil.preis_alt_ct / 100.0
+    return traeger, preis, nutzungsgrad
+
+
+def strompreis_eur_kwh(profil: Gebaeudeprofil) -> float:
+    """Der Wärmepumpen-Strompreis — der des Kunden, sonst der Demo-Wert."""
+    if profil.preis_strom_ct is not None:
+        return profil.preis_strom_ct / 100.0
+    return dd.STROM_WAERMEPUMPE_EUR_KWH
+
+
 def _energiekosten_bestand(profil: Gebaeudeprofil, bedarf: float) -> float:
-    if profil.heizung == "gas":
-        return bedarf / 0.88 * dd.GAS_EUR_KWH
-    if profil.heizung == "oel":
-        return bedarf / 0.85 * dd.HEIZOEL_EUR_L / dd.HEIZOEL_KWH_PRO_L * 10.0
-    if profil.heizung == "fernwaerme":
-        return bedarf * dd.FERNWAERME_EUR_KWH
-    if profil.heizung == "nachtspeicher":
-        return bedarf * dd.STROM_HAUSHALT_EUR_KWH
-    return bedarf / 3.5 * dd.STROM_WAERMEPUMPE_EUR_KWH
+    _, preis, nutzungsgrad = _bestand_energietraeger(profil)
+    return bedarf / nutzungsgrad * preis
 
 
 def _co2_bestand(profil: Gebaeudeprofil, bedarf: float) -> float:
@@ -278,6 +302,7 @@ def szenarien(
     bedarf = waermebedarf_kwh_a(profil)
     check = eignung(profil)
     arbeitszahl = check["jaz"]
+    strompreis = strompreis_eur_kwh(profil)
 
     ergebnis: list[Szenario] = [
         Szenario(
@@ -318,7 +343,7 @@ def szenarien(
             ),
             investition_eur=invest_wp,
             foerderung_eur=foerd_wp["betrag_eur"],
-            energiekosten_eur_a=round(strom_wp * dd.STROM_WAERMEPUMPE_EUR_KWH),
+            energiekosten_eur_a=round(strom_wp * strompreis),
             wartung_eur_a=dd.WARTUNG_EUR_A["waermepumpe"],
             co2_kg_a=round(strom_wp * dd.CO2_STROMMIX_G_KWH / 1000.0),
             komfort_score=4,
@@ -352,7 +377,7 @@ def szenarien(
             ),
             investition_eur=invest_huelle,
             foerderung_eur=foerd_huelle["betrag_eur"],
-            energiekosten_eur_a=round(strom_huelle * dd.STROM_WAERMEPUMPE_EUR_KWH),
+            energiekosten_eur_a=round(strom_huelle * strompreis),
             wartung_eur_a=dd.WARTUNG_EUR_A["waermepumpe"],
             co2_kg_a=round(strom_huelle * dd.CO2_STROMMIX_G_KWH / 1000.0),
             komfort_score=5,
@@ -372,7 +397,7 @@ def szenarien(
         eigenverbrauchsanteil = 0.35
         mischpreis = (
             eigenverbrauchsanteil * dd.PV_GESTEHUNG_EUR_KWH
-            + (1 - eigenverbrauchsanteil) * dd.STROM_WAERMEPUMPE_EUR_KWH
+            + (1 - eigenverbrauchsanteil) * strompreis
         )
         haushaltsstrom_ersparnis = 1400.0 * (
             dd.STROM_HAUSHALT_EUR_KWH - dd.PV_GESTEHUNG_EUR_KWH
@@ -462,11 +487,18 @@ def amortisation(basis: Szenario, alternative: Szenario) -> dict[str, Any]:
 
 
 def annahmen(profil: Gebaeudeprofil) -> list[str]:
-    """Die Annahmenliste, die unter jeder Zahl im UI steht."""
+    """Die Annahmenliste, die unter jeder Zahl im UI steht.
+
+    Sobald der Kunde eigene Preise gesetzt hat, stehen seine hier — sonst
+    würde die sichtbare Annahme der gezeigten Zahl widersprechen.
+    """
+    traeger, preis_alt, _ = _bestand_energietraeger(profil)
+    eigene = profil.preis_alt_ct is not None or profil.preis_strom_ct is not None
     return [
         f"Wärmebedarf {waermebedarf_kwh_a(profil):,.0f} kWh/a".replace(",", "."),
-        f"Strompreis Wärmepumpe {dd.STROM_WAERMEPUMPE_EUR_KWH:.2f} €/kWh, "
-        f"Gaspreis {dd.GAS_EUR_KWH:.3f} €/kWh",
+        f"Strompreis Wärmepumpe {strompreis_eur_kwh(profil):.2f} €/kWh, "
+        f"{traeger}preis {preis_alt:.3f} €/kWh"
+        + (" (Ihre eigenen Annahmen)" if eigene else ""),
         f"Preissteigerung Strom {dd.PREISPFAD_STROM_P_A:.0%} p. a., "
         f"fossil {dd.PREISPFAD_GAS_P_A:.1%} p. a.",
         f"Jahresarbeitszahl {jaz(vorlauftemperatur(profil))} bei "
@@ -474,3 +506,62 @@ def annahmen(profil: Gebaeudeprofil) -> list[str]:
         "Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik",
         dd.DISCLAIMER,
     ]
+
+
+# ---------------------------------------------------------------------------
+# Stellschrauben
+# ---------------------------------------------------------------------------
+
+
+def stellschrauben(
+    profil: Gebaeudeprofil,
+    bestand: Szenario,
+    fokus: Szenario,
+) -> dict[str, Any]:
+    """Die Koeffizienten hinter „Was wäre wenn?“.
+
+    Die Wirtschaftlichkeit einer Wärmepumpe hängt an genau zwei Zahlen, die
+    niemand kennt: dem künftigen Strompreis und dem künftigen Preis des heutigen
+    Brennstoffs. Statt eine Annahme zu setzen und zu verteidigen, gibt diese
+    Funktion die Rechnung selbst heraus — als Faktoren, mit denen der Browser
+    live nachrechnet, während der Kunde am Regler zieht:
+
+        Heizkosten heute  = eur_je_ct_alt × Preis_alt_ct + wartung_alt
+        Heizkosten danach = eur_je_ct_neu × Preis_strom_ct + wartung_neu
+
+    Beide Zeilen sind exakt dieselbe Arithmetik, mit der :func:`szenarien` die
+    Ausgangswerte gerechnet hat. Der Regler kann deshalb keine Zahl erzeugen,
+    die der Backend nicht auch geliefert hätte.
+    """
+    bedarf = waermebedarf_kwh_a(profil)
+    traeger, preis_alt, nutzungsgrad = _bestand_energietraeger(profil)
+
+    # Der Wärmestrom des Zielszenarios, zurückgerechnet aus seinen Kosten:
+    # so bleibt ein PV-Eigenverbrauchsanteil enthalten, ohne ihn hier erneut
+    # modellieren zu müssen.
+    kwh_alt = bedarf / nutzungsgrad
+    kwh_neu = fokus.energiekosten_eur_a / strompreis_eur_kwh(profil)
+
+    return {
+        "traeger": traeger,
+        "fokus_label": fokus.label,
+        # Startwerte der Regler, in ganzen Cent je Kilowattstunde: der
+        # A2UI-Slider springt in Einerschritten, also müssen die Preise, mit
+        # denen die übrige Beratung rechnet, auf dem Raster liegen.
+        "preis_alt_ct": round(preis_alt * 100),
+        "preis_strom_ct": round(strompreis_eur_kwh(profil) * 100),
+        # Reglergrenzen, bewusst weit genug für ein ehrliches „rechnet sich nicht“.
+        "preis_alt_min_ct": max(2, int(preis_alt * 100 * 0.5)),
+        "preis_alt_max_ct": int(preis_alt * 100 * 2.5) + 1,
+        "preis_strom_min_ct": 15,
+        "preis_strom_max_ct": 55,
+        # Ein Cent Preisänderung kostet so viele Euro im Jahr.
+        "eur_je_ct_alt": round(kwh_alt / 100.0, 3),
+        "eur_je_ct_neu": round(kwh_neu / 100.0, 3),
+        "wartung_alt": bestand.wartung_eur_a,
+        "wartung_neu": fokus.wartung_eur_a,
+        "eigenanteil_eur": round(fokus.eigenanteil_eur),
+        "bedarf_kwh_a": round(bedarf),
+        "kwh_alt": round(kwh_alt),
+        "kwh_neu": round(kwh_neu),
+    }

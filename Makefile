@@ -53,8 +53,8 @@ test: test-backend test-frontend check-catalog ## Run everything
 test-backend: ## Backend unit tests
 	cd backend && $(PY) -m pytest -q
 
-test-frontend: ## TypeScript typecheck
-	cd frontend && npm run typecheck
+test-frontend: ## TypeScript typecheck and formatting
+	cd frontend && npm run typecheck && npm run format:check
 
 check-catalog: build ## Render every surface in a browser and check for gaps
 	cd frontend && npm run check:catalog

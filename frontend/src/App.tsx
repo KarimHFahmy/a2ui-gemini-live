@@ -5,11 +5,11 @@
  * conversation. Everything on screen after that is built by the agent.
  */
 
-import {useCallback, useEffect, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 
 import {A2uiHost} from './a2ui/A2uiHost';
+import {ContextAside} from './ui/ContextAside';
 import {Landing, type JourneyOption} from './ui/Landing';
-import {ProfileAside} from './ui/ProfileAside';
 import {Stage} from './ui/Stage';
 import {splitSurfaces} from './ui/surfaces';
 import {VoiceDock} from './ui/VoiceDock';
@@ -53,6 +53,7 @@ export default function App() {
   const [journeys, setJourneys] = useState<JourneyOption[]>(FALLBACK_JOURNEYS);
   const [active, setActive] = useState<JourneyOption | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
+  const [confirmRestart, setConfirmRestart] = useState(false);
 
   const advisory = useAdvisory();
 
@@ -87,14 +88,25 @@ export default function App() {
     [advisory, journeys],
   );
 
-  /** Ends the session and returns to the journey choice. */
+  /**
+   * Ends the session and returns to the journey choice.
+   *
+   * Confirmed inline rather than immediately: the advice is not stored
+   * anywhere, so a mis-click here throws away the whole conversation.
+   */
   const handleRestart = useCallback(() => {
+    setConfirmRestart(false);
     advisory.stop();
     setActive(null);
   }, [advisory]);
 
   // The profile is context, not conversation: it gets its own column.
   const {profile, flow} = splitSurfaces(advisory.surfaces);
+  const present = useMemo(
+    () => new Set(advisory.surfaces.map(surface => surface.id)),
+    [advisory.surfaces],
+  );
+  const hasContext = advisory.steps.length > 0 || profile !== null;
 
   if (!active) {
     return (
@@ -115,17 +127,49 @@ export default function App() {
           <span className="session__journey">{active.label}</span>
 
           <div className="session__actions">
-            <button
-              type="button"
-              className="session__control"
-              onClick={handleRestart}
-              title="Beratung beenden und eine andere wählen"
-            >
-              <RestartIcon />
-              Neu starten
-            </button>
+            {confirmRestart ? (
+              <span className="session__confirm" role="group" aria-label="Neu starten bestätigen">
+                <span className="session__confirm-text">Gespräch verwerfen?</span>
+                <button
+                  type="button"
+                  className="session__control session__control--danger"
+                  onClick={handleRestart}
+                >
+                  Ja, neu starten
+                </button>
+                <button
+                  type="button"
+                  className="session__control"
+                  onClick={() => setConfirmRestart(false)}
+                >
+                  Abbrechen
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="session__control"
+                onClick={() => setConfirmRestart(true)}
+                title="Beratung beenden und eine andere wählen"
+              >
+                <RestartIcon />
+                Neu starten
+              </button>
+            )}
 
-            <span className="session__demo-badge" title="Alle Zahlen sind Demo-Beispielwerte">
+            {/*
+             * Two things the client is entitled to know at a glance, and the
+             * reason they are a permanent part of the frame rather than a
+             * one-off notice: they speak to an AI, and the figures are
+             * illustrative.
+             */}
+            <span
+              className="session__badge session__badge--ai"
+              title="Sie sprechen mit einem KI-Berater. Die Beratung ist unverbindlich und ersetzt keine Fachberatung."
+            >
+              KI-Beratung
+            </span>
+            <span className="session__badge" title="Alle Zahlen sind Demo-Beispielwerte">
               Demo-Daten
             </span>
           </div>
@@ -137,14 +181,14 @@ export default function App() {
           </div>
         ) : null}
 
-        <div className={`session__body${profile ? '' : ' session__body--solo'}`}>
+        <div className={`session__body${hasContext ? '' : ' session__body--solo'}`}>
           <Stage
             surfaces={flow}
             titles={advisory.surfaceTitles}
             journeyLabel={active.label}
             hasAnySurface={advisory.surfaces.length > 0}
           />
-          {profile ? <ProfileAside surface={profile} /> : null}
+          <ContextAside profile={profile} steps={advisory.steps} present={present} />
         </div>
 
         <VoiceDock

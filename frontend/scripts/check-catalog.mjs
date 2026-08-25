@@ -4,9 +4,10 @@
  * Serves the built `preview.html`, renders every captured surface in a real
  * browser in both colour schemes, and fails if anything comes out as a missing
  * child placeholder, an unknown component, an empty chart, literal Markdown or
- * a page that scrolls sideways. It also checks that the profile sits in its
- * own column beside the conversation rather than in the flow. Run it after
- * touching a component, a schema or a composer.
+ * a page that scrolls sideways. It also checks the context column — progress
+ * plus "Das habe ich verstanden" — and the interactive what-if surface, whose
+ * figures are computed in the browser rather than composed server-side. Run it
+ * after touching a component, a schema or a composer.
  *
  *   make check-catalog
  */
@@ -96,6 +97,7 @@ for (const scheme of ['light', 'dark']) {
         chips: q('.surface button.chip'),
         buttons: q('.surface button:not(.chip)'),
         modals: q('.a2ui-modal-trigger'),
+        sliders: q(".surface input[type='range']"),
         // Literal Markdown on screen means the renderer has no Markdown
         // renderer wired up, or a non-Markdown variant was used with syntax.
         rawMarkdown: (document.body.innerText.match(/(^|\s)(\*\*|##+\s|- \*\*)/gm) || []).length,
@@ -112,13 +114,20 @@ for (const scheme of ['light', 'dark']) {
       stats.tables === 0 ||
       stats.cards === 0 ||
       stats.headings === 0 ||
-      stats.modals === 0;
+      stats.modals === 0 ||
+      stats.sliders === 0;
     if (bad) failures++;
     console.log(`[${scheme}] ${journey}:`, JSON.stringify(stats));
-    const aside = await checkProfileAside(page);
+    const aside = await checkContextAside(page);
     if (aside.problems.length) {
       failures++;
-      console.log(`  [${scheme}] ${journey} profile column: ${aside.problems.join('; ')}`);
+      console.log(`  [${scheme}] ${journey} context column: ${aside.problems.join('; ')}`);
+    }
+
+    const whatIf = await checkWhatIf(page);
+    if (whatIf.problems.length) {
+      failures++;
+      console.log(`  [${scheme}] ${journey} what-if: ${whatIf.problems.join('; ')}`);
     }
 
     if (scheme === 'light') {
@@ -139,14 +148,14 @@ console.log(failures ? `\nFAILURES: ${failures}` : '\nALL CHECKS PASSED');
 process.exit(failures ? 1 : 0);
 
 /**
- * Checks the profile column.
+ * Checks the context column: progress, then "Das habe ich verstanden".
  *
- * "Das habe ich verstanden" is persistent context, so it belongs beside the
- * conversation rather than in it. As a sticky band above the stage it cost a
- * third of the height and let content scroll behind it; this asserts it stays
- * out of the flow and keeps its own scroll.
+ * Both are persistent context, so they belong beside the conversation rather
+ * than in it. As a sticky band above the stage the profile cost a third of the
+ * height and let content scroll behind it; this asserts it stays out of the
+ * flow and keeps its own scroll.
  */
-async function checkProfileAside(page) {
+async function checkContextAside(page) {
   return page.evaluate(() => {
     const problems = [];
     const aside = document.querySelector('.aside');
@@ -179,6 +188,74 @@ async function checkProfileAside(page) {
       problems.push('a transcript panel is present');
     }
 
+    // Progress is only honest if a step counts as done when its surface is on
+    // screen — no more, no less.
+    const progress = aside.querySelector('.progress');
+    if (!progress) {
+      problems.push('no progress indicator');
+    } else {
+      const total = Number(progress.dataset.total);
+      const done = Number(progress.dataset.done);
+      const onScreen = progress.querySelectorAll('.progress__step[data-state="done"]').length;
+      if (!total) problems.push('the arc is empty');
+      if (done !== onScreen) problems.push(`progress counts ${done} but marks ${onScreen}`);
+      if (done > total) problems.push('more steps done than exist');
+      if (done === 0) problems.push('no step marked done despite rendered surfaces');
+    }
+
     return {problems};
   });
+}
+
+/**
+ * Checks the what-if surface.
+ *
+ * Its figures are the only ones on screen the backend never rendered: the
+ * sliders write into the data model and the renderer recomputes every value
+ * from a chain of catalog functions. A missing function, a stale coefficient
+ * or a wrong locale shows up here as a blank, a NaN or a dollar sign — none of
+ * which any server-side test can see.
+ */
+async function checkWhatIf(page) {
+  const surface = page.locator('[data-surface-id="stellschrauben"]');
+  if ((await surface.count()) === 0) return {problems: ['no what-if surface rendered']};
+
+  const problems = [];
+  const readValues = () =>
+    surface.locator('h1').evaluateAll(nodes => nodes.map(n => n.textContent.trim()));
+
+  const before = await readValues();
+  if (before.length < 3) problems.push(`only ${before.length} live figures`);
+  for (const value of before) {
+    if (!value) problems.push('a live figure rendered empty');
+    else if (/NaN|Infinity|undefined/.test(value)) problems.push(`live figure reads "${value}"`);
+    // German formatting: 1.234 € or 25.950, never $1,234.00.
+    else if (/[$£]|\d,\d{3}/.test(value)) problems.push(`live figure is not German: "${value}"`);
+  }
+
+  // Drag the first slider to its maximum and watch the figures follow, with no
+  // round trip to an agent — the whole point of the surface.
+  const slider = surface.locator("input[type='range']").first();
+  await slider.evaluate(input => {
+    // React tracks the last value it wrote and swallows an event that does not
+    // differ from it, so the assignment has to go through the native setter.
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
+    setter.call(input, input.max);
+    input.dispatchEvent(new Event('input', {bubbles: true}));
+  });
+  await page.waitForTimeout(200);
+
+  // A range input steps in ones, so a fractional start would leave the thumb
+  // half a step from the figures it is supposed to explain.
+  const offGrid = await surface
+    .locator("input[type='range']")
+    .evaluateAll(inputs => inputs.filter(i => !Number.isInteger(Number(i.value))).length);
+  if (offGrid) problems.push(`${offGrid} slider(s) sit between steps`);
+
+  const after = await readValues();
+  if (JSON.stringify(before) === JSON.stringify(after)) {
+    problems.push('dragging a slider changed nothing');
+  }
+
+  return {problems};
 }

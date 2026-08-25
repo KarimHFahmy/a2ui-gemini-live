@@ -15,6 +15,8 @@ export const TOOL_LABEL: Record<string, string> = {
   ladeloesungen_vergleichen: 'Vergleicht die Ladeoptionen …',
   fahrzeuge_vorschlagen: 'Sucht passende Fahrzeugklassen …',
   kosten_vergleichen: 'Rechnet die Gesamtkosten …',
+  stellschrauben_zeigen: 'Macht die Rechnung verstellbar …',
+  annahmen_uebernehmen: 'Rechnet mit Ihren Werten neu …',
   bedenken_adressieren: 'Geht auf Ihre Frage ein …',
   naechsten_schritt_anbieten: 'Fasst alles zusammen …',
 };

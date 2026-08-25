@@ -31,6 +31,13 @@ marked. Mention a worry and it gets its own card, named in the client's words
 and answered point by point. Every figure carries its assumptions one click
 away.
 
+Say *"aber ihr rechnet euch das doch schön"* and the advice hands over the
+controls. Two sliders appear — the gas price and the electricity price — and
+the heating costs, the monthly difference and the twenty-year balance recompute
+as the client drags, in the browser, with no round trip. When they tap *Mit
+diesen Preisen weiterrechnen*, their assumption becomes the one the whole
+consultation uses, and the visible assumptions say so.
+
 ### Two journeys, one core
 
 | | **Mein Zuhause** | **Meine Mobilität** |
@@ -123,6 +130,7 @@ overrides:
 | Karten mit Leitkennzahl | `Card` › `Column` › `Text` (`h4`, `h1`, `body`) |
 | Fakten, Timeline, Empfehlungen | `List` with a `ChildList` **template** over the data model |
 | Szenarioauswahl | `ChoicePicker`, `displayStyle: chips` |
+| Stellschrauben | `Slider` bound two-way to the data model |
 | Call-to-action | `Button` with an agent event |
 | Annahmen & Datenquellen | `Modal` (trigger + content) |
 | Aufzählungen, Hervorhebung | `Text` with Markdown |
@@ -139,6 +147,14 @@ are each *one* component definition plus a data array. Adding a step is an
 `highlight` read the same data-model path. Picking a scenario re-highlights the
 table immediately — client-side, no round trip — while the Button separately
 tells the agent, which reacts in speech. The UI never waits on the model.
+
+**Arithmetic in the browser.** On the "Was wäre wenn" surface a `Slider` writes
+into the data model and the figures below it are A2UI *function calls* —
+`formatCurrency(add(multiply(…)))` — over that same model. The renderer
+re-evaluates the whole chain on every drag. No application JavaScript is
+involved; the backend only ships the coefficients, which is what keeps a
+dragged slider from producing a number the backend would not have. See
+`docs/architecture.md` for how that is contained and tested.
 
 > **Note on `@a2ui/react@0.10.2`.** The published package ships its CSS Modules
 > without the class-name map, so `Button`, `TextField` and `ChoicePicker`
@@ -255,7 +271,7 @@ frontend/
     live/
       audio.ts            Capture (16 kHz) and playback (24 kHz) with barge-in
       session.ts          WebSocket client
-    ui/                   Landing, Stage, ProfileAside, VoiceDock
+    ui/                   Landing, Stage, ContextAside, JourneyProgress, VoiceDock
     useAdvisory.ts        Ties socket, audio and MessageProcessor together
     preview/              Offline catalog preview
   scripts/check-catalog.mjs
@@ -276,11 +292,19 @@ make test
   alone, the profile survives across calls, and every data binding resolves
   against the data model it ships with. The ADK event translation is driven
   with hand-built events, so no runner or credentials are needed.
-- **Frontend** (`tsc`) — typecheck.
+  `test_stellschrauben.py` additionally evaluates the client-side expression
+  trees the way `@a2ui/web_core` does and holds the result against the domain
+  module — at the slider's opening position and after a simulated drag — so the
+  arithmetic that runs in the browser cannot drift from the arithmetic that
+  produced the advice.
+- **Frontend** (`tsc`, `prettier --check`) — typecheck and formatting.
 - **Catalog check** (Playwright) — renders every captured surface in a real
   browser in light and dark mode and fails on a missing-child placeholder, an
   unknown component, an empty chart, literal Markdown on screen (the sign of a
-  missing renderer) or a page that scrolls sideways.
+  missing renderer) or a page that scrolls sideways. It also drags a real
+  slider and asserts the live figures follow, and checks the context column:
+  the progress indicator agrees with what is on screen, and the profile stays
+  out of the conversation flow.
 
 ---
 

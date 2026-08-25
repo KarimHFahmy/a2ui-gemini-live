@@ -11,7 +11,7 @@ from typing import Any
 
 from ..domain import demo_data as dd
 from ..domain import mobilitaet as calc
-from .builder import SurfaceBuilder, bind
+from .builder import SurfaceBuilder, bind, minus, money, number, over, plus, times
 from .surface import Surface
 
 _LADE_LABEL = {
@@ -462,3 +462,152 @@ def kosten_surface(profil: calc.Mobilitaetsprofil) -> Surface:
     )
 
     return b.finish({"kategorien": k["kategorien"], "serien": k["serien"]})
+
+
+def stellschrauben_surface(profil: calc.Mobilitaetsprofil) -> Surface:
+    """„Was wäre wenn?“ — die zwei Zahlen, bei denen jeder Kunde schätzt.
+
+    „So um die fünfzig Kilometer“ und „meistens zu Hause, manchmal unterwegs“
+    sind die ehrlichen Antworten im Erstgespräch – und beide entscheiden über
+    die Kosten. Statt sie festzuschreiben, gibt die Beratung die Regler heraus.
+
+    Die Zahlen darunter rechnen im Browser mit, ohne Umweg über den Agenten —
+    aus Koeffizienten, die :func:`app.domain.mobilitaet.stellschrauben`
+    geliefert hat. Erst der Knopf macht die Einstellung für alles Weitere gültig.
+    """
+    werte = calc.stellschrauben(profil)
+
+    # Die Rechnung, wie sie im Browser steht. Jede Zeile liest die Regler und
+    # rechnet neu, sobald sich einer bewegt.
+    jahres_km = plus(
+        times(bind("/wenn/taeglich_km"), bind("/basis/tage_pro_jahr")),
+        bind("/basis/km_konstante"),
+    )
+    preis_ct = plus(
+        bind("/basis/preis_unterwegs_ct"),
+        times(bind("/wenn/anteil_zuhause"), bind("/basis/delta_je_prozent")),
+    )
+    strom_eur = times(jahres_km, times(preis_ct, bind("/basis/strom_eur_je_km_je_ct")))
+    kraftstoff_eur = times(jahres_km, bind("/basis/kraftstoff_eur_je_km"))
+
+    b = SurfaceBuilder("stellschrauben", "Was wäre wenn")
+    b.root(
+        b.column(
+            [
+                b.heading(
+                    "Was wäre wenn",
+                    "Ihre Strecke, Ihr Ladeort",
+                    "Zwei Zahlen entscheiden über die Kosten, und bei beiden haben "
+                    "wir bisher geschätzt. Stellen Sie ein, was wirklich zu Ihnen "
+                    "passt – die Rechnung unten folgt sofort.",
+                ),
+                b.card(
+                    b.column(
+                        [
+                            b.text("Ihre Einstellung", variant="h3"),
+                            b.slider(
+                                label="Kilometer an einem typischen Tag",
+                                value_path="/wenn/taeglich_km",
+                                minimum=werte["taeglich_km_min"],
+                                maximum=werte["taeglich_km_max"],
+                            ),
+                            b.slider(
+                                label="Anteil, den Sie zu Hause laden, in Prozent",
+                                value_path="/wenn/anteil_zuhause",
+                                minimum=0,
+                                maximum=100,
+                            ),
+                            b.text(
+                                f"Zu Hause rechne ich mit {_komma(werte['preis_zuhause_ct'] / 100)} "
+                                f"€/kWh, unterwegs mit {_komma(werte['preis_unterwegs_ct'] / 100)} "
+                                "€/kWh im Mix aus AC und Schnellladen.",
+                                variant="caption",
+                            ),
+                        ]
+                    )
+                ),
+                b.row(
+                    [
+                        b.live_stat(
+                            # Die Einheit steht im Label, damit die Zahl selbst
+                            # dieselbe Rechnung bleibt, die auch die Kosten speist.
+                            label="Kilometer im Jahr",
+                            value=number(jahres_km),
+                            hint="mit Langstrecken und Freizeit",
+                        ),
+                        b.live_stat(
+                            label="Strom",
+                            value=money(strom_eur),
+                            hint="pro Jahr",
+                        ),
+                        b.live_stat(
+                            label=f"{werte['kraftstoff'].capitalize()} zum Vergleich",
+                            value=money(kraftstoff_eur),
+                            hint="pro Jahr, gleiche Strecke",
+                        ),
+                        b.live_stat(
+                            label="Unterschied",
+                            value=money(over(minus(kraftstoff_eur, strom_eur), 12)),
+                            hint="pro Monat, nur Energie",
+                        ),
+                    ]
+                ),
+                b.card(
+                    b.column(
+                        [
+                            b.text("Sollen wir so weiterrechnen?", variant="h3"),
+                            b.text(
+                                "Übernehmen Sie Ihre Einstellung, gilt sie für die "
+                                "ganze Beratung – Reichweite, Ladeoptionen und "
+                                "Gesamtkosten."
+                            ),
+                            b.button(
+                                "Mit diesen Werten weiterrechnen",
+                                event="annahmen_uebernehmen",
+                                context={
+                                    "taeglich_km": bind("/wenn/taeglich_km"),
+                                    "anteil_zuhause": bind("/wenn/anteil_zuhause"),
+                                },
+                                variant="primary",
+                            ),
+                        ]
+                    )
+                ),
+                b.assumptions(
+                    [
+                        f"{werte['fahrzeug']}, {_komma(werte['verbrauch_kwh_100km'], 1)} "
+                        f"kWh/100 km im Realbetrieb",
+                        f"Verbrenner-Vergleich mit {_komma(werte['verbrauch_l_100km'], 1)} "
+                        f"l/100 km {werte['kraftstoff']}",
+                        f"Neben der Tagesstrecke rechne ich fest mit "
+                        f"{werte['km_konstante']:,.0f} km im Jahr für Langstrecken "
+                        f"und Freizeit.".replace(",", "."),
+                        "Die Regler verändern nur Strecke und Ladeort – Verbrauch, "
+                        "Preise und Fahrzeugklasse bleiben, wie berechnet.",
+                        "Nur Energiekosten. Wertverlust, Wartung, Versicherung und "
+                        "Steuer stehen im Kostenvergleich.",
+                        dd.DISCLAIMER,
+                    ],
+                    source=dd.QUELLE_MOBILITAET,
+                    as_of=dd.STAND,
+                ),
+            ]
+        )
+    )
+
+    return b.finish(
+        {
+            "wenn": {
+                "taeglich_km": werte["taeglich_km"],
+                "anteil_zuhause": werte["anteil_zuhause"],
+            },
+            "basis": {
+                "tage_pro_jahr": werte["tage_pro_jahr"],
+                "km_konstante": werte["km_konstante"],
+                "preis_unterwegs_ct": werte["preis_unterwegs_ct"],
+                "delta_je_prozent": werte["delta_je_prozent"],
+                "strom_eur_je_km_je_ct": werte["strom_eur_je_km_je_ct"],
+                "kraftstoff_eur_je_km": werte["kraftstoff_eur_je_km"],
+            },
+        }
+    )
