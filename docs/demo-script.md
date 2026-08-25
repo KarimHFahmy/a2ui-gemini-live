@@ -8,6 +8,99 @@ uncomfortable thing when the numbers call for it.
 
 ---
 
+## Starter lines
+
+The first thing you say. Everything else follows from it, so it is worth
+picking one on purpose rather than improvising at the microphone.
+
+Each line is written the way a real client opens — a situation and a worry, not
+a list of parameters — and each lands somewhere different. The outcomes below
+are what the domain modules actually produce, not what would be nice.
+
+### Mein Zuhause
+
+> „Wir haben ein Einfamilienhaus von 1985, etwa 160 Quadratmeter, vier
+> Personen. Gasheizung, die langsam in die Jahre kommt."
+
+The neutral opening. The agent has building and heating and will ask about the
+radiators next — which is the question that decides the whole consultation.
+
+> „Meine Gasheizung ist 22 Jahre alt und der Schornsteinfeger hat was gesagt.
+> Ich weiß aber nicht, ob eine Wärmepumpe bei uns überhaupt funktioniert."
+
+Starts on the worry rather than the data, so the agent has to draw the building
+out of you. Good for showing that it asks one question at a time instead of
+presenting a form.
+
+> „Rechnet sich das überhaupt? Ich höre da sehr viel Widersprüchliches."
+
+Goes at the economics first. Expect the agent to insist on the suitability
+question before it will talk about money — that ordering is deliberate, and
+saying so out loud lands well.
+
+> „Altbau von 1975, 220 Quadratmeter, unsaniert, Ölheizung."
+
+The strongest case in the demo: a big heat bill is what a heat pump pays back
+against. Break-even inside a decade.
+
+**Then the sentence that decides it.** The agent will ask what the radiators
+look like, and the answer moves the whole verdict:
+
+| Your answer | Vorlauf | JAZ | Verdict |
+|---|---|---|---|
+| „Fußbodenheizung." | 35 °C | 4,3 | 90/100 · gut geeignet |
+| „Große flache Heizkörper, großzügig ausgelegt." | 45 °C | 3,8 | 90/100 · gut geeignet |
+| „Ganz normale Heizkörper, nichts Besonderes." | 55 °C | 3,2 | 75/100 · gut geeignet |
+| „Alte schmale Rippenheizkörper." | 65 °C | 2,6 | 55/100 · geeignet mit Vorbereitung |
+
+The last row is the one to use if you want to show the advice being careful
+rather than encouraging.
+
+### Meine Mobilität
+
+> „Ich fahre jeden Tag rund 40 Kilometer zur Arbeit, am Wochenende manchmal
+> weiter. Ob ein E-Auto für mich Sinn ergibt, weiß ich ehrlich gesagt nicht."
+
+The neutral opening, and an honest outcome: at 16.500 km im Jahr the EV comes
+out about **40 € a month behind** without a home charger — and still slightly
+behind with one. Low mileage is the case where it does not pay off yet, and the
+advice says so.
+
+> „Ich habe Angst, mit einem E-Auto auf der Autobahn liegen zu bleiben. Wir
+> fahren regelmäßig 400 Kilometer zu meiner Schwester."
+
+Straight at Reichweitenangst. The Alltagstauglichkeit surface answers it with
+the client's own week and their own 400 km trip, broken into real charging
+stops — the moment the fear usually stops being abstract.
+
+> „Wir wohnen zur Miete, ich kann zu Hause gar nicht laden. Lohnt sich das
+> trotzdem?"
+
+The journey's actual argument: charging location beats model choice. Expect
+around **940 € a year** of difference between the charging options.
+
+> „Ich pendle 80 Kilometer am Tag, fünf Tage die Woche, und wir haben eine
+> Wallbox in der Garage."
+
+The favourable case: 29.300 km im Jahr, winter range 3,2× the daily need, and
+about **52 € a month cheaper** over six years. See "The happy path" below for
+the full run.
+
+### If the agent asks
+
+Short answers that keep a demo moving, for the questions that come up most:
+
+- **Wärmebedarf / Gasverbrauch** — „Rund 20.000 Kilowattstunden im Jahr." Or
+  „Weiß ich nicht auswendig" — it will estimate and mark the estimate as one.
+- **Stellplatz** — „Ja, eigene Garage." Or „Nein, nur Straßenparken", which
+  removes the wallbox option entirely.
+- **Haltedauer** — „Sechs, sieben Jahre." Longer holding periods favour the EV.
+- **Einkommensbonus** — do not volunteer it. The agent is instructed not to ask.
+- **Anything you would rather not answer** — say so. „Das möchte ich nicht
+  sagen" is handled, and the open point shows up in the right-hand column.
+
+---
+
 ## 01 — Der persönliche Energieberater
 
 Pick **Mein Zuhause**. The agent greets and asks one open question.
