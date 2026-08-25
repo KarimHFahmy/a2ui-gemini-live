@@ -115,10 +115,10 @@ agent-authored text from becoming an XSS vector.
 v0.9 also resolves every component against the *surface's* catalog — there is
 no per-component `catalogId` override yet. So the Adaptive Advisory catalog is
 registered as a superset: the basic catalog's components and functions plus our
-two additions, under one id (`urn:a2ui:catalog:adaptive-advisory:1.0`, shared
+three additions, under one id (`urn:a2ui:catalog:adaptive-advisory:1.0`, shared
 by `backend/app/a2ui/protocol.py` and `frontend/src/a2ui/catalog.ts`).
 
-### The catalog is Google's, plus two
+### The catalog is Google's, plus three
 
 Almost everything on screen is rendered by `@a2ui/react`'s own basic catalog,
 themed entirely through its `--a2ui-*` custom properties — no component
@@ -127,7 +127,7 @@ overrides:
 | Baustein | Rendered with |
 |---|---|
 | Section headers | `Text` variants `caption` + `h2` |
-| Karten mit Leitkennzahl | `Card` › `Column` › `Text` (`h4`, `h1`, `body`) |
+| **Karten mit Leitkennzahl** | `StatCard` — ours; the basic catalog has nowhere to put a tone |
 | Fakten, Timeline, Empfehlungen | `List` with a `ChildList` **template** over the data model |
 | Szenarioauswahl | `ChoicePicker`, `displayStyle: chips` |
 | Stellschrauben | `Slider` bound two-way to the data model |
@@ -274,9 +274,35 @@ frontend/
     ui/                   Landing, Stage, ContextAside, JourneyProgress, VoiceDock
     useAdvisory.ts        Ties socket, audio and MessageProcessor together
     preview/              Offline catalog preview
-  scripts/check-catalog.mjs
+  public/fonts/         IBM Plex Sans + Mono, self-hosted (OFL)
+  scripts/
+    check-catalog.mjs   Every surface in a real browser, light and dark
+    check-session.mjs   The shell through restart: does a new session start clean
+
+docs/
+  architecture.md       Why A2UI v0.9, semantic tools, the session model
+  design.md             The visual direction and the critique that produced it
+  demo-script.md        Starter lines, two full runs, and the happy path
 ```
 
+
+---
+
+## Design
+
+The visual direction is **Messwerte** — readings: technical stock, print-black
+type, instrument blue, and figures set the way a datasheet sets them. It comes
+out of the one job this product has, which is to make someone trust a number
+they did not calculate.
+
+The rule that matters most: **one hue, one meaning.** The accent means "you can
+act here" and nothing else; positive, caution and ink carry what a figure is
+worth. Type has two roles — IBM Plex Sans for prose, IBM Plex Mono for
+measurements — both self-hosted, because the previous stack silently fell back
+to Arial on any network that blocks Google Fonts.
+
+`docs/design.md` has the full token system, the signature element, and the
+critique pass that rejected copper, a second green, and numbered step markers.
 
 ---
 
@@ -317,14 +343,15 @@ make test
 
 **Rebrand.** The accent colour, wordmark and type stack are the only things a
 rebrand touches: `frontend/src/styles/theme.css` and `VITE_BRAND_NAME`. The
-demo ships deliberately brand-neutral.
+tone scale and the chart series are semantic and should survive one. See
+`docs/design.md` for the direction and what it deliberately rejected.
 
 **Change the numbers.** Everything lives in `backend/app/domain/demo_data.py`
 with a `STAND` date that is surfaced in the UI. Nothing else hardcodes a price.
 
 **Add a surface.** Compose it in a `composer_*.py` with `SurfaceBuilder`, then
 call it from a tool. Reach for a new *component* only when the basic catalog
-genuinely cannot express the idea — two additions in this whole demo is the
+genuinely cannot express the idea — three additions in this whole demo is the
 bar. If you do: Zod API in `frontend/src/a2ui/schemas.ts`, implementation in
 `components/blocks.tsx`, add it to `ADVISORY_COMPONENTS`, and a matching method
 on `SurfaceBuilder`.
@@ -332,6 +359,19 @@ on `SurfaceBuilder`.
 **Add a journey.** Copy `backend/app/journeys/energie.py`: an instruction, a
 list of tool functions, and a `build()` returning a `Journey`. Register it in
 `journeys/__init__.py` and the landing page picks it up from `/api/journeys`.
+
+---
+
+## Running the demo
+
+`docs/demo-script.md` opens with **starter lines** — the first thing to say for
+each journey, and what each one actually lands on. Worth picking one on purpose:
+the opening sentence decides the whole consultation, and one of them is written
+to land on "das rechnet sich für Sie heute nicht", which is the version people
+believe.
+
+It also carries two full four-minute runs and a **happy path** with the figures
+to expect, plus `make preview-happy` to click through that version offline.
 
 ---
 

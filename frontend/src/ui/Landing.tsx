@@ -2,9 +2,11 @@
  * The landing page: "Mein Zuhause" or "Meine Mobilität".
  *
  * Deliberately sparse. The briefing wants the conversation to start with an
- * open question, not with a form, so this page's only job is to pick a topic
- * and hand over to the voice.
+ * open question, not with a form, so this page's only job is to show what the
+ * thing does, then hand over to the voice. `HeroDemo` does the showing.
  */
+
+import {HeroDemo} from './HeroDemo';
 
 export interface JourneyOption {
   id: string;
@@ -30,15 +32,14 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
       <div className="landing__inner">
         <header className="landing__head">
           <span className="landing__wordmark">{brandName}</span>
-          <h1 className="landing__title">
-            Von Antworten zu <em>Beratung</em>, die sich anfühlt wie ein Gespräch.
-          </h1>
+          <h1 className="landing__title">Die Beratung entsteht, während Sie sprechen.</h1>
           <p className="landing__lede">
-            Erzählen Sie einfach von Ihrer Situation. Ich höre zu, stelle nur die Fragen, die
-            wirklich weiterhelfen — und baue Ihnen währenddessen genau die Übersicht, die zu Ihrer
-            Frage passt.
+            Erzählen Sie von Ihrer Situation. Was Sie sagen, wird gerechnet — und steht Satz für
+            Satz vor Ihnen.
           </p>
         </header>
+
+        <HeroDemo />
 
         <div className="landing__choices">
           {journeys.map(journey => (
@@ -50,19 +51,23 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
               disabled={starting !== null}
               aria-busy={starting === journey.id}
             >
-              <span className="choice__icon" aria-hidden="true">
+              <span className="choice__label">
                 <svg
+                  className="choice__icon"
                   viewBox="0 0 24 24"
+                  width="18"
+                  height="18"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth={1.5}
+                  strokeWidth={1.6}
                   strokeLinecap="round"
                   strokeLinejoin="round"
+                  aria-hidden="true"
                 >
                   <path d={ACCENT_ICONS[journey.id] ?? ACCENT_ICONS.energie} />
                 </svg>
+                {journey.label}
               </span>
-              <span className="choice__label">{journey.label}</span>
               <span className="choice__tagline">{journey.tagline}</span>
               <span className="choice__cta">
                 {starting === journey.id ? 'Verbinde …' : 'Gespräch starten'}
@@ -86,9 +91,9 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
 
         <footer className="landing__foot">
           <p>
-            Sie brauchen ein Mikrofon. Das Gespräch bleibt in dieser Sitzung und wird nicht
-            gespeichert. Alle gezeigten Zahlen sind gekennzeichnete Demo-Beispielwerte und ersetzen
-            keine Fachberatung.
+            Sie sprechen mit einem KI-Berater und brauchen ein Mikrofon. Das Gespräch bleibt in
+            dieser Sitzung und wird nicht gespeichert. Alle Zahlen sind gekennzeichnete
+            Demo-Beispielwerte und ersetzen keine Fachberatung.
           </p>
         </footer>
       </div>

@@ -57,21 +57,31 @@ for (const scheme of ['light', 'dark']) {
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
-  // Google Fonts is unreachable in this sandbox; the fallback stack covers it.
   page.on('console', m => {
     const t = m.text();
-    if (
-      m.type() === 'error' &&
-      !/ERR_CONNECTION_RESET|ERR_FAILED|fonts\.(googleapis|gstatic)/.test(t)
-    ) {
+    if (m.type() === 'error' && !/ERR_CONNECTION_RESET|ERR_FAILED/.test(t)) {
       errors.push('console: ' + t);
     }
   });
-  await page.route('**fonts.googleapis.com**', r => r.abort());
-  await page.route('**fonts.gstatic.com**', r => r.abort());
+  // Nothing is fetched from a font CDN any more. If something tries, the type
+  // has quietly gone back to being a network dependency.
+  await page.route('**fonts.googleapis.com**', r => {
+    errors.push('the page requested Google Fonts; the type is meant to be self-hosted');
+    r.abort();
+  });
+  await page.route('**fonts.gstatic.com**', r => {
+    errors.push('the page requested a font from gstatic; the type is meant to be self-hosted');
+    r.abort();
+  });
 
   await page.goto('http://localhost:4173/preview.html', {waitUntil: 'networkidle'});
   await page.waitForSelector('.surface', {timeout: 8000});
+
+  const type = await checkType(page);
+  if (type.problems.length) {
+    failures++;
+    console.log(`  [${scheme}] type: ${type.problems.join('; ')}`);
+  }
 
   for (const journey of ['Mein Zuhause', 'Meine Mobilität']) {
     await page.getByRole('button', {name: journey}).click();
@@ -98,6 +108,14 @@ for (const scheme of ['light', 'dark']) {
         buttons: q('.surface button:not(.chip)'),
         modals: q('.a2ui-modal-trigger'),
         sliders: q(".surface input[type='range']"),
+        stats: q('.stat'),
+        // An axis label that runs off the left of its SVG reads as a data
+        // error, not a layout one: "125 Tsd. €" clipped to "25 Tsd. €" is a
+        // plausible number. The gutter is computed from the label width, and
+        // this is what proves it.
+        clippedTicks: [...document.querySelectorAll('.chart__tick, .chart__label')].filter(
+          node => node.getBBox().x < -0.5,
+        ).length,
         // Literal Markdown on screen means the renderer has no Markdown
         // renderer wired up, or a non-Markdown variant was used with syntax.
         rawMarkdown: (document.body.innerText.match(/(^|\s)(\*\*|##+\s|- \*\*)/gm) || []).length,
@@ -115,7 +133,9 @@ for (const scheme of ['light', 'dark']) {
       stats.cards === 0 ||
       stats.headings === 0 ||
       stats.modals === 0 ||
-      stats.sliders === 0;
+      stats.sliders === 0 ||
+      stats.stats === 0 ||
+      stats.clippedTicks;
     if (bad) failures++;
     console.log(`[${scheme}] ${journey}:`, JSON.stringify(stats));
     const aside = await checkContextAside(page);
@@ -128,6 +148,12 @@ for (const scheme of ['light', 'dark']) {
     if (whatIf.problems.length) {
       failures++;
       console.log(`  [${scheme}] ${journey} what-if: ${whatIf.problems.join('; ')}`);
+    }
+
+    const tone = await checkTone(page);
+    if (tone.problems.length) {
+      failures++;
+      console.log(`  [${scheme}] ${journey} tone: ${tone.problems.join('; ')}`);
     }
 
     if (scheme === 'light') {
@@ -208,6 +234,90 @@ async function checkContextAside(page) {
 }
 
 /**
+ * Checks that the type on screen is the type that was chosen.
+ *
+ * The previous stack loaded Inter from a CDN with no self-hosted fallback, so
+ * anywhere that CDN is blocked — which is a lot of German corporate networks —
+ * the whole design silently rendered in Arial and nothing said so. The faces
+ * are vendored now, and this fails if they are not actually in use.
+ */
+async function checkType(page) {
+  await page.evaluate(() => document.fonts.ready);
+  return page.evaluate(() => {
+    const problems = [];
+    for (const face of ['IBM Plex Sans', 'IBM Plex Mono']) {
+      if (!document.fonts.check(`16px "${face}"`)) problems.push(`${face} did not load`);
+    }
+
+    // And that both roles are actually doing their job on the page.
+    const body = getComputedStyle(document.body).fontFamily;
+    if (!body.includes('IBM Plex Sans')) problems.push(`body is set in ${body}`);
+
+    const tick = document.querySelector('.chart__tick');
+    if (tick && !getComputedStyle(tick).fontFamily.includes('IBM Plex Mono')) {
+      problems.push('chart readings are not set in the mono');
+    }
+    return {problems};
+  });
+}
+
+/**
+ * Checks that colour tells the truth about each figure.
+ *
+ * Every headline metric used to be painted with the brand accent, including
+ * the one whose job is to say "this is more expensive for you". Tone now
+ * arrives as data, so this reads the computed colour back out of the browser
+ * and fails if a caution figure is wearing the positive colour — the exact
+ * shape of the original bug, in both themes where the tokens differ.
+ */
+async function checkTone(page) {
+  return page.evaluate(() => {
+    const problems = [];
+    const cards = [...document.querySelectorAll('.stat')];
+    if (cards.length === 0) return {problems: ['no stat cards rendered']};
+
+    const colourOf = card => {
+      const metric = card.querySelector('.stat__metric');
+      return metric ? getComputedStyle(metric).color : null;
+    };
+    const toneOf = card =>
+      card.classList.contains('stat--caution')
+        ? 'caution'
+        : card.classList.contains('stat--positive')
+          ? 'positive'
+          : 'neutral';
+
+    const seen = new Map();
+    for (const card of cards) {
+      const colour = colourOf(card);
+      if (!colour) continue;
+      const tone = toneOf(card);
+      if (!seen.has(tone)) seen.set(tone, colour);
+      if (seen.get(tone) !== colour) {
+        problems.push(`two ${tone} figures render in different colours`);
+      }
+    }
+
+    // The three tones must be visually distinct wherever two of them meet.
+    const distinct = new Set(seen.values());
+    if (distinct.size !== seen.size) {
+      problems.push(`tones share a colour: ${[...seen].map(([t, c]) => `${t}=${c}`).join(', ')}`);
+    }
+
+    // And the tone has to be readable without colour at all.
+    for (const card of cards) {
+      if (!card.querySelector('.stat__mark')) problems.push('a stat card has no tone mark');
+      const label = card.querySelector('.stat__tone-label');
+      if (!label || !label.textContent.trim()) {
+        problems.push('a stat card has no tone label for assistive tech');
+      }
+    }
+
+    return {problems};
+  });
+}
+
+/**
  * Checks the what-if surface.
  *
  * Its figures are the only ones on screen the backend never rendered: the
@@ -222,7 +332,9 @@ async function checkWhatIf(page) {
 
   const problems = [];
   const readValues = () =>
-    surface.locator('h1').evaluateAll(nodes => nodes.map(n => n.textContent.trim()));
+    surface
+      .locator('.stat__metric')
+      .evaluateAll(nodes => nodes.map(n => n.firstChild?.textContent.trim() ?? ''));
 
   const before = await readValues();
   if (before.length < 3) problems.push(`only ${before.length} live figures`);

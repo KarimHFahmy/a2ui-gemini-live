@@ -1,51 +1,115 @@
 /*
  * Design tokens for the Adaptive Advisory experience.
  *
- * Deliberately brand-neutral: the accent, the wordmark and the type stack are
- * the only things a rebrand needs to touch. Override --brand-* here (or set
- * VITE_BRAND_NAME) rather than editing components.
+ * The direction is "Messwerte" — readings. This is a product whose one job is
+ * to make someone trust a number they did not calculate, so it borrows from
+ * the world those numbers come from: technical stock, print-black type,
+ * instrument blue, figures set like a datasheet. Not from the sustainability
+ * brochure, which is where an energy brief lands by default.
+ *
+ * The colour rule that follows from that, and the reason the palette changed:
+ * one hue, one meaning.
+ *
+ *   signal (blue)   you can act here          buttons, focus, selection
+ *   positive        this is in your favour    tone only
+ *   caution         this deserves attention   tone only
+ *   ink             this is a fact            every other figure
+ *
+ * The previous accent green did all four jobs at once, which is the same as
+ * doing none of them. See docs/design.md for the full plan and its critique.
+ *
+ * A rebrand touches --brand-* and the type stack; nothing else should need it.
  */
+
+/* Self-hosted so the type is the type, on any network. IBM Plex is OFL. */
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/plex-sans-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/plex-sans-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020,
+    U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/plex-mono-400-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/plex-mono-500-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 :root {
   color-scheme: light dark;
 
-  /* Brand */
-  --brand-accent: #0f9b6c;
-  --brand-accent-strong: #0b7a54;
-  --brand-accent-soft: rgba(15, 155, 108, 0.12);
-  --brand-ink: #10151a;
+  /* Brand — "signal" is interactive intent, and nothing else. */
+  --brand-accent: #145a6e;
+  --brand-accent-strong: #0e4353;
+  --brand-accent-soft: rgba(20, 90, 110, 0.1);
+  --brand-ink: #131a21;
 
-  /* Surfaces */
-  --bg: #f6f7f8;
+  /* Surfaces — cool technical stock, not warm paper and not pure white. */
+  --bg: #eef1f4;
   --bg-elevated: #ffffff;
-  --bg-sunken: #eceef0;
-  --bg-inverse: #10151a;
+  --bg-sunken: #e3e8ec;
+  --bg-inverse: #131a21;
 
   /* Text */
-  --text: #10151a;
-  --text-muted: #5b6670;
-  --text-faint: #8b959d;
-  --text-inverse: #f6f7f8;
+  --text: #131a21;
+  --text-muted: #55636e;
+  --text-faint: #808d97;
+  --text-inverse: #f4f7f9;
 
   /* Lines */
-  --line: rgba(16, 21, 26, 0.1);
-  --line-strong: rgba(16, 21, 26, 0.2);
+  --line: rgba(19, 26, 33, 0.11);
+  --line-strong: rgba(19, 26, 33, 0.22);
 
-  /* Semantic tones for advisory content */
-  --tone-positive: #0f9b6c;
-  --tone-positive-bg: rgba(15, 155, 108, 0.1);
-  --tone-caution: #b26a00;
-  --tone-caution-bg: rgba(178, 106, 0, 0.1);
-  --tone-neutral: #3b6ea5;
-  --tone-neutral-bg: rgba(59, 110, 165, 0.1);
+  /* Semantic tones. A figure wears one of these or it wears ink. */
+  --tone-positive: #1a7a5e;
+  --tone-positive-bg: rgba(26, 122, 94, 0.1);
+  --tone-caution: #a5620e;
+  --tone-caution-bg: rgba(165, 98, 14, 0.11);
+  --tone-neutral: var(--text);
+  --tone-neutral-bg: rgba(19, 26, 33, 0.06);
 
-  /* Data visualisation — ordered so the first two read clearly against each
-     other, since most charts here compare exactly two things. */
-  --series-1: #0f9b6c;
-  --series-2: #3b6ea5;
-  --series-3: #b26a00;
-  --series-4: #7a5ea8;
-  --series-5: #a8556b;
+  /*
+   * Data visualisation. Deliberately none of the tone colours: a series is a
+   * thing being measured, not a verdict on it. Green for "Elektro" would say
+   * the electric option is the good one even on the chart that shows it
+   * costing more.
+   */
+  --series-1: #1f6a80;
+  --series-2: #8c6d52;
+  --series-3: #5d5a8a;
+  --series-4: #3f7a6a;
+  --series-5: #9a5566;
 
   /* Geometry */
   --radius-s: 6px;
@@ -64,9 +128,15 @@
   --shadow-card: 0 1px 2px rgba(16, 21, 26, 0.06), 0 4px 16px rgba(16, 21, 26, 0.05);
   --shadow-lift: 0 2px 6px rgba(16, 21, 26, 0.08), 0 12px 32px rgba(16, 21, 26, 0.1);
 
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  /*
+   * Two roles with a real job split: prose in the sans, *measurements* in the
+   * mono. Units, axis ticks, table figures, slider readouts and the assumption
+   * notes are all readings, and setting them like readings is most of what
+   * makes the advice look calculated rather than asserted.
+   */
+  --font-sans: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
 
   /* ------------------------------------------------------------------
      The official basic catalog.
@@ -156,35 +226,35 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --brand-accent: #2ecb92;
-    --brand-accent-strong: #4fdca7;
-    --brand-accent-soft: rgba(46, 203, 146, 0.16);
+    --brand-accent: #4bb2cd;
+    --brand-accent-strong: #74cbe3;
+    --brand-accent-soft: rgba(75, 178, 205, 0.15);
 
-    --bg: #0c1014;
-    --bg-elevated: #151b21;
-    --bg-sunken: #090d10;
-    --bg-inverse: #f6f7f8;
+    --bg: #0b1014;
+    --bg-elevated: #141b22;
+    --bg-sunken: #080c10;
+    --bg-inverse: #eef1f4;
 
-    --text: #e9edf0;
-    --text-muted: #9aa5ae;
-    --text-faint: #6b757d;
-    --text-inverse: #10151a;
+    --text: #e4eaef;
+    --text-muted: #97a4af;
+    --text-faint: #6c7883;
+    --text-inverse: #131a21;
 
-    --line: rgba(233, 237, 240, 0.12);
-    --line-strong: rgba(233, 237, 240, 0.24);
+    --line: rgba(228, 234, 239, 0.13);
+    --line-strong: rgba(228, 234, 239, 0.26);
 
-    --tone-positive: #2ecb92;
-    --tone-positive-bg: rgba(46, 203, 146, 0.14);
+    --tone-positive: #35c398;
+    --tone-positive-bg: rgba(53, 195, 152, 0.14);
     --tone-caution: #e0a34a;
     --tone-caution-bg: rgba(224, 163, 74, 0.14);
-    --tone-neutral: #6ea8e0;
-    --tone-neutral-bg: rgba(110, 168, 224, 0.14);
+    --tone-neutral: var(--text);
+    --tone-neutral-bg: rgba(228, 234, 239, 0.08);
 
-    --series-1: #2ecb92;
-    --series-2: #6ea8e0;
-    --series-3: #e0a34a;
-    --series-4: #b095e0;
-    --series-5: #e08ba0;
+    --series-1: #5aa8c2;
+    --series-2: #c0996f;
+    --series-3: #9a95d4;
+    --series-4: #67b39c;
+    --series-5: #d18a9c;
 
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
     --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.4);

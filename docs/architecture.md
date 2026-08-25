@@ -14,7 +14,7 @@ using something official rather than building it:
    response demultiplexing that had to track the SDK.
 2. **The A2UI renderer is Google's.** `@a2ui/react` v0.9, unmodified, including
    its Markdown pipeline and its Generic Binder.
-3. **The catalog is Google's, plus two.** Everything the agent composes with
+3. **The catalog is Google's, plus three.** Everything the agent composes with
    comes from the official basic catalog, except a chart and a comparison
    table, which have no official equivalent.
 
@@ -82,22 +82,31 @@ The id is duplicated in two places by necessity — `protocol.ADVISORY_CATALOG_I
 and `catalog.ts` — and a mismatch is a blank surface, so both carry a comment
 pointing at the other.
 
-### Only two custom components
+### Only three custom components
 
-The first version of this demo had ten. Collapsing them to two was not
-minimalism for its own sake — it changed what has to be maintained.
+The first version of this demo had ten. Collapsing them was not minimalism for
+its own sake — it changed what has to be maintained.
 
-A `Card` containing a heading, a big number and a paragraph does not need to be
-a component; it needs a *function that composes those three*. That is what
-`SurfaceBuilder.stat_card()` is: server-side, no renderer contract, no schema,
-no CSS. The same applies to headers, timelines, ranked lists and calls to
-action. What survived is the two things the basic catalog genuinely cannot
-express — a chart and a table.
+A header, a timeline, a ranked list, a call to action: none of those need to be
+a component. They need a *function that composes the primitives*, which is what
+most of `SurfaceBuilder` is — server-side, no renderer contract, no schema, no
+CSS. What survived is the three things the basic catalog genuinely cannot
+express: a chart, a comparison table, and a stat card.
 
-The cost is real and worth naming: the tone of an insight is now a leading
-glyph (`✓ → !`) rather than a coloured stripe, because the basic catalog has no
-tone affordance to theme. That is the price of the agent composing from
-approved primitives instead of from bespoke widgets.
+The stat card was the last to arrive, and it arrived because the price of *not*
+having it came due. Composed from `Card` › `Column` › `Text`, the tone of an
+insight had nowhere to live but a leading glyph (`✓ → !`) inside a Markdown
+string, so colour — the strongest signal on screen — said the same thing on
+every card. The figure telling a client an EV would cost them 1.907 € *more*
+was painted in exactly the brand green of the CO₂ saving beside it. A demo
+whose whole pitch is that it says the uncomfortable thing cannot afford that,
+and no amount of composing around the basic catalog fixes it: tone has to reach
+the browser as data.
+
+So `StatCard` takes `tone` as a property and the body stays a *child*, which
+keeps it going through the official `Text` and its Markdown. That is the test
+for a fourth component too — not "would this be convenient", but "is there
+information here that cannot survive the trip otherwise".
 
 ### Semantic tools instead of generated UI
 
@@ -240,8 +249,9 @@ The basic catalog's components carry their own inline styles, built from
 supported way to restyle them — a stylesheet rule targeting `.a2ui-card` loses
 to the inline `var()` it reads.
 
-`theme.css` maps the whole set onto this demo's tokens once, and a context like
-the profile column narrows them locally:
+`theme.css` maps the whole set onto this demo's tokens once (see
+`docs/design.md` for what those tokens mean), and a context like the profile
+column narrows them locally:
 
 ```css
 .aside {

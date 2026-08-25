@@ -42,15 +42,6 @@
   font-weight: 600;
 }
 
-.surface h1 {
-  /* The agent uses an H1 for a single headline metric inside a card. */
-  font-size: clamp(26px, 3.2vw, 34px);
-  font-weight: 700;
-  letter-spacing: -0.028em;
-  color: var(--brand-accent);
-  font-variant-numeric: tabular-nums;
-}
-
 .surface p {
   margin: 0;
 }
@@ -134,8 +125,23 @@
   flex-wrap: wrap;
 }
 
-.stage div[style*='flex-direction: row'] > .a2ui-card {
+.stage div[style*='flex-direction: row'] > .a2ui-card,
+.stage div[style*='flex-direction: row'] > .stat {
   flex: 1 1 220px;
+}
+
+/*
+ * The slider's value readout. The renderer draws it as an unclassed span
+ * beside the label (see the packaging note above), so it is reached
+ * structurally — the label is a <label>, so `> span` is the value and only the
+ * value. It is the most literal reading on the screen and set like one.
+ */
+.surface div:has(> input[type='range']) > div > span {
+  font-family: var(--font-mono);
+  font-size: 15px !important;
+  font-weight: 500;
+  color: var(--text) !important;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ChoicePicker chips. */
@@ -200,6 +206,178 @@
   font-size: 15px;
 }
 
+/* ---------- StatCard ---------- */
+
+/*
+ * One figure and what it means. The card that used to paint every headline
+ * number in the brand accent — including the one whose job was to say "this is
+ * more expensive for you". Colour now follows `tone`, which the domain
+ * calculation set and the component carries as data.
+ *
+ * Neutral is deliberately ink, not accent: most figures are facts, and an
+ * accent that fires on every card is not an accent.
+ */
+.stat {
+  --stat-tone: var(--text);
+  --stat-rule: var(--line-strong);
+  --stat-wash: transparent;
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  padding-left: calc(var(--space-5) - 3px);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--stat-rule);
+  border-radius: var(--radius-l);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-card);
+}
+
+.stat--positive {
+  --stat-tone: var(--tone-positive);
+  --stat-rule: var(--tone-positive);
+  --stat-wash: var(--tone-positive-bg);
+}
+
+.stat--caution {
+  --stat-tone: var(--tone-caution);
+  --stat-rule: var(--tone-caution);
+  --stat-wash: var(--tone-caution-bg);
+}
+
+.stat__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+/* The mark repeats the tone for anyone who cannot separate the colours. */
+.stat__mark {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--stat-wash);
+  color: var(--stat-tone);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.stat--neutral .stat__mark {
+  background: var(--bg-sunken);
+  color: var(--text-faint);
+}
+
+/* Read out, never shown: the mark is a glyph, this is the word behind it. */
+.stat__tone-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.stat__metric {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+  font-size: clamp(26px, 3.2vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.028em;
+  line-height: 1.15;
+  color: var(--stat-tone);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat__metric-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  color: var(--text-faint);
+  font-variant-numeric: normal;
+}
+
+.stat__body {
+  color: var(--text-muted);
+  font-size: 14.5px;
+}
+
+.stat__body p + p {
+  margin-top: var(--space-2);
+}
+
+/* ---------- The what-if panel ---------- */
+
+/*
+ * The one place this design raises its voice.
+ *
+ * Everything else on the stage is a card on paper. This surface is the only
+ * thing in the product nobody else has — figures that recompute under the
+ * client's hand, in the browser, with no round trip — so it is built as an
+ * instrument panel: recessed ground, a finer rule, flat components sitting
+ * *on* it rather than floating above it, and every live figure set in the mono
+ * as a readout. Restraint everywhere else is what lets this land.
+ */
+.surface[data-surface-id='stellschrauben'] {
+  --grid-line: rgba(19, 26, 33, 0.055);
+  --a2ui-card-box-shadow: none;
+  --a2ui-card-border: 1px solid var(--line);
+  --a2ui-card-background: var(--bg-elevated);
+
+  padding: var(--space-5);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-l);
+  background-color: var(--bg-sunken);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 12px 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .surface[data-surface-id='stellschrauben'] {
+    --grid-line: rgba(228, 234, 239, 0.06);
+  }
+}
+
+/* Readouts, not headlines: they change while you watch them. */
+.surface[data-surface-id='stellschrauben'] .stat {
+  box-shadow: none;
+}
+
+/*
+ * Every figure in this panel is neutral by construction — they move as the
+ * client drags, so none of them claims anything — which makes a tone mark on
+ * each one four repetitions of "no opinion". The label behind it stays in the
+ * DOM for assistive tech.
+ */
+.surface[data-surface-id='stellschrauben'] .stat__mark {
+  display: none;
+}
+
+.surface[data-surface-id='stellschrauben'] .stat__metric {
+  font-family: var(--font-mono);
+  font-size: clamp(22px, 2.6vw, 28px);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
 /* ---------- MetricChart ---------- */
 
 .chart__title {
@@ -242,15 +420,16 @@
 .chart__tick,
 .chart__label {
   fill: var(--text-faint);
-  font-size: 11px;
-  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  letter-spacing: -0.01em;
 }
 
 .chart__threshold {
   fill: var(--text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  font-family: var(--font-mono);
 }
 
 .chart__legend {
@@ -277,6 +456,7 @@
 
 .chart__unit {
   margin-left: auto;
+  font-family: var(--font-mono);
   color: var(--text-faint);
 }
 
@@ -302,7 +482,8 @@
   width: 100%;
   margin-top: var(--space-3);
   border-collapse: collapse;
-  font-size: 13px;
+  font-family: var(--font-mono);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -339,6 +520,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+.compare__table td {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
 .compare__table th,
 .compare__table td {
   padding: var(--space-3);
@@ -356,6 +542,7 @@
 
 .compare__criterion {
   text-align: left !important;
+  font-family: var(--font-sans);
   font-weight: 500;
   color: var(--text-muted);
   white-space: normal;

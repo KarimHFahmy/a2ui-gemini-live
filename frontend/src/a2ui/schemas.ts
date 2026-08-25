@@ -1,10 +1,11 @@
 /**
- * The two components this demo adds to Google's basic catalog.
+ * The three components this demo adds to Google's basic catalog.
  *
- * Everything else on screen — headers, cards, lists, buttons, the choice
- * picker, the assumptions modal — is rendered by the official `@a2ui/react`
- * basic catalog, themed through its `--a2ui-*` custom properties. Only a chart
- * and a comparison table have no official equivalent, so only those are ours.
+ * Everything else on screen — headers, lists, buttons, the choice picker, the
+ * sliders, the assumptions modal — is rendered by the official `@a2ui/react`
+ * basic catalog, themed through its `--a2ui-*` custom properties. Only a chart,
+ * a comparison table and a stat card have no official equivalent, so only those
+ * are ours.
  *
  * A2UI keeps a component's API (this Zod schema) separate from its
  * implementation. The schema is the contract the agent writes against, and the
@@ -14,7 +15,7 @@
 import {z} from 'zod';
 import {CommonSchemas} from '@a2ui/web_core/v0_9';
 
-const {DynamicString, DynamicValue} = CommonSchemas;
+const {ComponentId, DynamicString, DynamicValue} = CommonSchemas;
 
 /**
  * The numeric backbone of the advice.
@@ -53,6 +54,47 @@ export const ComparisonTableApi = {
     highlight: DynamicValue.optional(),
   }),
 };
+
+/**
+ * One figure, and what it means for the client.
+ *
+ * The advisory unit that repeats most often, and the reason it is ours rather
+ * than a Card wrapping a Column of Texts: `tone` is the whole point. Whether a
+ * number is good news, a plain fact, or an honest downside is something the
+ * domain calculation knows, and it has to survive the trip to the browser —
+ * otherwise the figure that says "the EV costs you 1.907 € more" is painted in
+ * exactly the same colour as the one that says "you save 2,5 t of CO₂".
+ *
+ * The body copy stays a child rather than a prop so it still goes through the
+ * official `Text` component and keeps its Markdown.
+ */
+export const StatCardApi = {
+  name: 'StatCard',
+  schema: z.object({
+    title: DynamicString,
+    metric: DynamicString.optional(),
+    metricLabel: DynamicString.optional(),
+    // A DynamicString rather than an enum so a List template can bind tone per
+    // item; `asTone` is what actually narrows it, and treats anything it does
+    // not recognise as neutral.
+    tone: DynamicString.optional(),
+    child: ComponentId.optional(),
+    weight: z.number().optional(),
+  }),
+};
+
+export type Tone = 'positive' | 'neutral' | 'caution';
+
+/** What each tone means, for the people who cannot see the colour. */
+export const TONE_LABEL: Record<Tone, string> = {
+  positive: 'Spricht dafür',
+  neutral: 'Zur Einordnung',
+  caution: 'Zu beachten',
+};
+
+export function asTone(value: unknown): Tone {
+  return value === 'positive' || value === 'caution' ? value : 'neutral';
+}
 
 export type Column = {id: string; label: string};
 export type Row = {

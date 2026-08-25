@@ -29,8 +29,10 @@ Component = dict[str, Any]
 Dynamic = Any  # a literal, a {"path": …} binding, or a {"call": …} function call
 Tone = Literal["positive", "neutral", "caution"]
 
-#: Tone is carried by a leading mark rather than by colour: the basic catalog
-#: has no tone affordance, and a glyph survives both Markdown and plain text.
+#: Tone as a leading mark, for the places that render prose through the basic
+#: catalog's Text and have nowhere to put a tone attribute — the points under a
+#: concern, for instance. Cards carry their tone as data instead; see
+#: :meth:`SurfaceBuilder.stat_card`.
 TONE_MARK: dict[str, str] = {"positive": "✓", "neutral": "→", "caution": "!"}
 
 
@@ -359,25 +361,34 @@ class SurfaceBuilder:
         self,
         *,
         title: Dynamic,
-        body: Dynamic,
+        body: Dynamic | None = None,
         metric: Dynamic | None = None,
         metric_label: Dynamic | None = None,
         tone: Tone = "neutral",
         weight: float | None = None,
     ) -> str:
-        """Baustein "Karte": one idea, optionally with a headline metric."""
-        children = [
-            self.text(
-                f"{TONE_MARK[tone]} {title}" if isinstance(title, str) else title,
-                variant="h4",
-            )
-        ]
-        if metric is not None:
-            children.append(self.text(metric, variant="h1"))
-            if metric_label:
-                children.append(self.text(metric_label, variant="caption"))
-        children.append(self.text(body))
-        return self.card(self.column(children), weight=weight)
+        """Baustein "Karte": one idea, optionally with a headline metric.
+
+        `tone` travels to the browser as data, which is the whole reason this
+        is a component of ours rather than a Card wrapping a Column of Texts.
+        Whether a figure is good news, a plain fact or an honest downside is
+        something the domain calculation knows; if it does not survive the trip,
+        the number that says "this costs you more" ends up the same colour as
+        the one that says "you save this much".
+        """
+        return self._add(
+            {
+                "component": "StatCard",
+                "title": title,
+                "metric": metric,
+                "metricLabel": metric_label,
+                "tone": tone,
+                # The body stays a child so the official Text renders its
+                # Markdown, exactly as it does everywhere else.
+                "child": self.text(body) if body is not None else None,
+                "weight": weight,
+            }
+        )
 
     def live_stat(
         self,
@@ -391,11 +402,17 @@ class SurfaceBuilder:
 
         Same shape as :meth:`stat_card`, but the value is a client-side
         expression rather than a string the agent already knows.
+
+        Deliberately toneless: the figure changes as the client drags, so any
+        fixed claim about whether it is good news would be wrong half the time.
         """
-        children = [self.text(label, variant="h4"), self.text(value, variant="h1")]
-        if hint is not None:
-            children.append(self.text(hint, variant="caption"))
-        return self.card(self.column(children), weight=weight)
+        return self.stat_card(
+            title=label,
+            metric=value,
+            metric_label=hint,
+            tone="neutral",
+            weight=weight,
+        )
 
     def bullets(self, items: Sequence[str], *, heading: Dynamic | None = None) -> str:
         """A bulleted list.

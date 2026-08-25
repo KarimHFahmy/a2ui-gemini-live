@@ -1,5 +1,5 @@
 /**
- * The two additions to Google's basic catalog.
+ * The three additions to Google's basic catalog.
  *
  * Both are `createComponentImplementation`, so the Generic Binder resolves
  * every data binding before the component renders and re-renders it when the
@@ -11,13 +11,50 @@ import {createComponentImplementation} from '@a2ui/react/v0_9';
 import {
   ComparisonTableApi,
   MetricChartApi,
+  StatCardApi,
+  TONE_LABEL,
   asKey,
   asList,
   asStrings,
+  asTone,
   type Column,
   type Row,
 } from '../schemas';
 import {Chart} from './Chart';
+
+/** The mark that carries tone where colour alone would not be enough. */
+const TONE_MARK = {positive: '✓', neutral: '→', caution: '!'} as const;
+
+export const StatCard = createComponentImplementation(StatCardApi, ({props, buildChild}) => {
+  const tone = asTone(props.tone);
+
+  return (
+    <section
+      className={`stat stat--${tone}`}
+      style={props.weight ? {flex: props.weight, minWidth: 0} : undefined}
+    >
+      <h4 className="stat__title">
+        <span className="stat__mark" aria-hidden="true">
+          {TONE_MARK[tone]}
+        </span>
+        <span className="stat__tone-label">{TONE_LABEL[tone]}: </span>
+        {props.title}
+      </h4>
+
+      {props.metric ? (
+        <p className="stat__metric">
+          {props.metric}
+          {props.metricLabel ? (
+            <span className="stat__metric-label">{props.metricLabel}</span>
+          ) : null}
+        </p>
+      ) : null}
+
+      {/* The body stays a child so the official Text renders its Markdown. */}
+      {props.child ? <div className="stat__body">{buildChild(props.child)}</div> : null}
+    </section>
+  );
+});
 
 export const MetricChart = createComponentImplementation(MetricChartApi, ({props}) => (
   <section className="chart">
@@ -88,4 +125,4 @@ export const ComparisonTable = createComponentImplementation(ComparisonTableApi,
   );
 });
 
-export const ADVISORY_COMPONENTS = [MetricChart, ComparisonTable];
+export const ADVISORY_COMPONENTS = [StatCard, MetricChart, ComparisonTable];

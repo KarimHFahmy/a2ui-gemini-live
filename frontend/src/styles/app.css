@@ -18,14 +18,15 @@
 
 .landing__head {
   text-align: center;
-  margin-bottom: var(--space-7);
+  margin-bottom: var(--space-6);
 }
 
 .landing__wordmark {
   display: inline-block;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.14em;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--brand-accent);
   margin-bottom: var(--space-5);
@@ -46,7 +47,7 @@
 
 .landing__lede {
   margin: 0 auto;
-  max-width: 62ch;
+  max-width: 52ch;
   color: var(--text-muted);
   font-size: 16px;
 }
@@ -55,6 +56,206 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+/* ---------- Hero: the product doing its trick ---------- */
+
+/*
+ * A sentence arrives, then the panel builds beside it, in the order the real
+ * agent builds it. Delays only — the finished state is the last frame, so
+ * reduced motion simply starts there.
+ */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: var(--space-5);
+  align-items: center;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background-color: var(--bg-elevated);
+  background-image:
+    linear-gradient(rgba(19, 26, 33, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(19, 26, 33, 0.035) 1px, transparent 1px);
+  background-size: 24px 24px;
+  box-shadow: var(--shadow-card);
+}
+
+.hero__said {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+}
+
+.hero__ear {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.hero__ear-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--brand-accent);
+  animation: hero-listen 1.9s ease-in-out infinite;
+}
+
+@keyframes hero-listen {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.hero__quote {
+  margin: 0;
+  font-size: clamp(17px, 1.9vw, 21px);
+  line-height: 1.42;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  animation: hero-in 0.5s both;
+}
+
+.hero__panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--tone-positive);
+  border-radius: var(--radius-m);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-card);
+  animation: hero-in 0.5s 0.9s both;
+}
+
+.hero__eyebrow {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.hero__verdict {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+}
+
+.hero__verdict strong {
+  font-weight: 600;
+  color: var(--tone-positive);
+}
+
+.hero__readouts {
+  margin: var(--space-2) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.hero__readout {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.hero__readout:nth-child(1) {
+  animation: hero-in 0.45s 1.5s both;
+}
+
+.hero__readout:nth-child(2) {
+  animation: hero-in 0.45s 1.9s both;
+}
+
+.hero__readout dt {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.hero__readout dd {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.hero__value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero__unit {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.hero__note {
+  font-size: 12.5px;
+  color: var(--text-faint);
+}
+
+.hero__caption {
+  margin: var(--space-2) 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+  animation: hero-in 0.45s 2.3s both;
+}
+
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .hero {
+    background-image:
+      linear-gradient(rgba(228, 234, 239, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(228, 234, 239, 0.045) 1px, transparent 1px);
+  }
+}
+
+@media (max-width: 860px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .hero__said {
+    padding: 0;
+  }
 }
 
 .choice {
@@ -83,21 +284,14 @@
 }
 
 .choice__icon {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  border-radius: var(--radius-m);
-  background: var(--brand-accent-soft);
+  flex: none;
   color: var(--brand-accent);
 }
 
-.choice__icon svg {
-  width: 22px;
-  height: 22px;
-}
-
 .choice__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   font-size: 21px;
   font-weight: 600;
   letter-spacing: -0.012em;
@@ -156,9 +350,10 @@
 }
 
 .session__wordmark {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
   text-transform: uppercase;
   color: var(--brand-accent);
 }
@@ -182,6 +377,7 @@
 }
 
 .session__badge {
+  font-family: var(--font-mono);
   padding: 3px 10px;
   border-radius: var(--radius-pill);
   border: 1px solid var(--line-strong);
@@ -292,6 +488,15 @@
 
 /* ---------- Stage ---------- */
 
+/*
+ * The stage sits on squared paper.
+ *
+ * The one deliberate risk in this design, and the cheapest way to say what the
+ * product is: the advice is a worked calculation, not an opinion, so the
+ * ground under it is Rechenpapier. Two gradients, no image, and faint enough
+ * (3–4 % of the ink) that it never competes with a figure — the point is that
+ * you notice it second, not first.
+ */
 .stage {
   min-width: 0;
   overflow-y: auto;
@@ -299,6 +504,19 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+
+  --grid-line: rgba(19, 26, 33, 0.035);
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center top;
+}
+
+@media (prefers-color-scheme: dark) {
+  .stage {
+    --grid-line: rgba(228, 234, 239, 0.045);
+  }
 }
 
 .stage__flow {
@@ -472,6 +690,7 @@
 
 .progress__count {
   margin-left: auto;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
 }
 
