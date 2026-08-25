@@ -377,6 +377,20 @@ def fahrzeuge_surface(profil: calc.Mobilitaetsprofil) -> Surface:
     )
 
 
+def _energie_tone(elektro_eur_100km: float, verbrenner_eur_100km: float) -> str:
+    """Whether the energy cost is genuinely an advantage, or just a wash.
+
+    Two cents apart over 100 km is a tie, and a tie should not be coloured as a
+    win — 11,37 € against 11,39 € is exactly the case this demo is built to be
+    honest about. A tenth of the fuel cost is the smallest gap worth a claim.
+    """
+    if elektro_eur_100km > verbrenner_eur_100km:
+        return "caution"
+    if verbrenner_eur_100km - elektro_eur_100km >= verbrenner_eur_100km * 0.1:
+        return "positive"
+    return "neutral"
+
+
 def kosten_surface(profil: calc.Mobilitaetsprofil) -> Surface:
     """Total cost of ownership, itemised so nothing hides in a total."""
     k = calc.kostenvergleich(profil)
@@ -419,9 +433,10 @@ def kosten_surface(profil: calc.Mobilitaetsprofil) -> Surface:
                             metric_label="elektrisch, je 100 km",
                             body=f"Strom {_komma(k['energie_elektro_eur_100km'])} € "
                             f"gegenüber Kraftstoff {_komma(k['energie_verbrenner_eur_100km'])} €.",
-                            tone="positive"
-                            if k["energie_elektro_eur_100km"] < k["energie_verbrenner_eur_100km"]
-                            else "caution",
+                            tone=_energie_tone(
+                                k["energie_elektro_eur_100km"],
+                                k["energie_verbrenner_eur_100km"],
+                            ),
                             weight=1,
                         ),
                         b.stat_card(

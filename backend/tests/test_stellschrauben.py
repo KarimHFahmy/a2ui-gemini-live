@@ -56,11 +56,17 @@ def find(surface, component_id_prefix: str) -> list[dict[str, Any]]:
 
 
 def live_values(surface) -> list[Any]:
-    """Every Text whose content is a client-side computation."""
+    """Every figure on the surface that is computed in the browser.
+
+    The what-if figures are `StatCard` metrics whose value is a function-call
+    expression rather than a string the backend already rendered.
+    """
     return [
-        c["text"]
+        c["metric"]
         for c in surface.components
-        if c.get("component") == "Text" and isinstance(c.get("text"), dict) and "call" in c["text"]
+        if c.get("component") == "StatCard"
+        and isinstance(c.get("metric"), dict)
+        and "call" in c["metric"]
     ]
 
 

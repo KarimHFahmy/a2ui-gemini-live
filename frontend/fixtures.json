@@ -240,132 +240,60 @@
       {
        "id": "c4",
        "component": "Text",
-       "text": "✓ Nötige Vorlauftemperatur",
-       "variant": "h4"
+       "text": "Je niedriger, desto effizienter arbeitet die Wärmepumpe. Unter 55 °C ist der Betrieb unkritisch."
       },
       {
        "id": "c5",
-       "component": "Text",
-       "text": "55 °C",
-       "variant": "h1"
+       "component": "StatCard",
+       "title": "Nötige Vorlauftemperatur",
+       "metric": "55 °C",
+       "metricLabel": "im Auslegungsfall",
+       "tone": "positive",
+       "child": "c4",
+       "weight": 1
       },
       {
        "id": "c6",
        "component": "Text",
-       "text": "im Auslegungsfall",
-       "variant": "caption"
+       "text": "Aus 1 kWh Strom werden 3.2 kWh Wärme – rund 7.000 kWh Strom im Jahr."
       },
       {
        "id": "c7",
-       "component": "Text",
-       "text": "Je niedriger, desto effizienter arbeitet die Wärmepumpe. Unter 55 °C ist der Betrieb unkritisch."
+       "component": "StatCard",
+       "title": "Erwartete Jahresarbeitszahl",
+       "metric": "3.2",
+       "metricLabel": "JAZ",
+       "tone": "neutral",
+       "child": "c6",
+       "weight": 1
       },
       {
        "id": "c8",
-       "component": "Column",
-       "children": [
-        "c4",
-        "c5",
-        "c6",
-        "c7"
-       ]
+       "component": "Text",
+       "text": "Danach wird die Wärmepumpe ausgelegt. Zu groß dimensioniert taktet sie und verschleißt schneller."
       },
       {
        "id": "c9",
-       "component": "Card",
+       "component": "StatCard",
+       "title": "Benötigte Heizleistung",
+       "metric": "12.4 kW",
+       "metricLabel": "Norm-Heizlast",
+       "tone": "neutral",
        "child": "c8",
        "weight": 1
       },
       {
        "id": "c10",
-       "component": "Text",
-       "text": "→ Erwartete Jahresarbeitszahl",
-       "variant": "h4"
-      },
-      {
-       "id": "c11",
-       "component": "Text",
-       "text": "3.2",
-       "variant": "h1"
-      },
-      {
-       "id": "c12",
-       "component": "Text",
-       "text": "JAZ",
-       "variant": "caption"
-      },
-      {
-       "id": "c13",
-       "component": "Text",
-       "text": "Aus 1 kWh Strom werden 3.2 kWh Wärme – rund 7.000 kWh Strom im Jahr."
-      },
-      {
-       "id": "c14",
-       "component": "Column",
-       "children": [
-        "c10",
-        "c11",
-        "c12",
-        "c13"
-       ]
-      },
-      {
-       "id": "c15",
-       "component": "Card",
-       "child": "c14",
-       "weight": 1
-      },
-      {
-       "id": "c16",
-       "component": "Text",
-       "text": "→ Benötigte Heizleistung",
-       "variant": "h4"
-      },
-      {
-       "id": "c17",
-       "component": "Text",
-       "text": "12.4 kW",
-       "variant": "h1"
-      },
-      {
-       "id": "c18",
-       "component": "Text",
-       "text": "Norm-Heizlast",
-       "variant": "caption"
-      },
-      {
-       "id": "c19",
-       "component": "Text",
-       "text": "Danach wird die Wärmepumpe ausgelegt. Zu groß dimensioniert taktet sie und verschleißt schneller."
-      },
-      {
-       "id": "c20",
-       "component": "Column",
-       "children": [
-        "c16",
-        "c17",
-        "c18",
-        "c19"
-       ]
-      },
-      {
-       "id": "c21",
-       "component": "Card",
-       "child": "c20",
-       "weight": 1
-      },
-      {
-       "id": "c22",
        "component": "Row",
        "children": [
-        "c9",
-        "c15",
-        "c21"
+        "c5",
+        "c7",
+        "c9"
        ],
        "align": "stretch"
       },
       {
-       "id": "c23",
+       "id": "c11",
        "component": "MetricChart",
        "title": "So verteilt sich Ihre Heizlast über den Winter",
        "subtitle": "Auch im Januar deckt die Wärmepumpe die Last allein.",
@@ -380,81 +308,81 @@
        "valueFormat": "number"
       },
       {
-       "id": "c24",
+       "id": "c12",
        "component": "Card",
-       "child": "c23"
+       "child": "c11"
       },
       {
-       "id": "c25",
+       "id": "c13",
        "component": "Text",
        "text": "Was die Effizienz noch verbessert",
        "variant": "h5"
       },
       {
-       "id": "c26",
+       "id": "c14",
        "component": "Text",
        "text": "- Hydraulischer Abgleich und Heizkurve absenken\n- Dachbodendämmung als günstige Einstiegsmaßnahme prüfen"
       },
       {
-       "id": "c27",
+       "id": "c15",
        "component": "Column",
        "children": [
-        "c25",
-        "c26"
+        "c13",
+        "c14"
        ]
       },
       {
-       "id": "c28",
+       "id": "c16",
        "component": "Card",
-       "child": "c27"
+       "child": "c15"
       },
       {
-       "id": "c29",
+       "id": "c17",
        "component": "Text",
        "text": "Annahmen und Datenquellen ansehen",
        "variant": "caption"
       },
       {
-       "id": "c30",
+       "id": "c18",
        "component": "Text",
        "text": "Annahmen und Datenquellen",
        "variant": "h3"
       },
       {
-       "id": "c31",
+       "id": "c19",
        "component": "Text",
        "text": "- Wärmebedarf 22.400 kWh/a\n- Strompreis Wärmepumpe 0.27 €/kWh, Erdgaspreis 0.120 €/kWh\n- Preissteigerung Strom 2% p. a., fossil 4.5% p. a.\n- Jahresarbeitszahl 3.2 bei 55 °C Vorlauf\n- Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Mit Standard-Heizkörpern läuft die Wärmepumpe gut, aber nicht optimal."
       },
       {
-       "id": "c32",
+       "id": "c20",
        "component": "Text",
        "text": "Demo-Datensatz Energie (Beispielwerte, keine Angebotsgrundlage) · Demo-Annahmen, Stand Q3/2026",
        "variant": "caption"
       },
       {
-       "id": "c33",
+       "id": "c21",
        "component": "Column",
        "children": [
-        "c30",
-        "c31",
-        "c32"
+        "c18",
+        "c19",
+        "c20"
        ]
       },
       {
-       "id": "c34",
+       "id": "c22",
        "component": "Modal",
-       "trigger": "c29",
-       "content": "c33"
+       "trigger": "c17",
+       "content": "c21"
       },
       {
        "id": "root",
        "component": "Column",
        "children": [
         "c3",
-        "c22",
-        "c24",
-        "c28",
-        "c34"
+        "c10",
+        "c12",
+        "c16",
+        "c22"
        ]
       }
      ]
@@ -852,167 +780,95 @@
       {
        "id": "c6",
        "component": "Text",
-       "text": "✓ Break-even",
-       "variant": "h4"
+       "text": "Nach rund 11 Jahren haben Sie die Mehrinvestition wieder drin. Ab dann sparen Sie jedes Jahr."
       },
       {
        "id": "c7",
-       "component": "Text",
-       "text": "11 Jahre",
-       "variant": "h1"
+       "component": "StatCard",
+       "title": "Break-even",
+       "metric": "11 Jahre",
+       "metricLabel": "bis zum Ausgleich",
+       "tone": "positive",
+       "child": "c6",
+       "weight": 1
       },
       {
        "id": "c8",
        "component": "Text",
-       "text": "bis zum Ausgleich",
-       "variant": "caption"
+       "text": "Statt 3.275 € zahlen Sie 2.150 € – Energie und Wartung zusammen."
       },
       {
        "id": "c9",
-       "component": "Text",
-       "text": "Nach rund 11 Jahren haben Sie die Mehrinvestition wieder drin. Ab dann sparen Sie jedes Jahr."
+       "component": "StatCard",
+       "title": "Laufende Kosten pro Jahr",
+       "metric": "− 1.125 €",
+       "metricLabel": "pro Jahr",
+       "tone": "positive",
+       "child": "c8",
+       "weight": 1
       },
       {
        "id": "c10",
-       "component": "Column",
-       "children": [
-        "c6",
-        "c7",
-        "c8",
-        "c9"
-       ]
+       "component": "Text",
+       "text": "Differenz gegenüber „weiter wie bisher“, inklusive Investition, Förderung und angenommener Preissteigerung."
       },
       {
        "id": "c11",
-       "component": "Card",
+       "component": "StatCard",
+       "title": "Über 20 Jahre",
+       "metric": "32.300 €",
+       "metricLabel": "Vorteil gesamt",
+       "tone": "positive",
        "child": "c10",
        "weight": 1
       },
       {
        "id": "c12",
-       "component": "Text",
-       "text": "✓ Laufende Kosten pro Jahr",
-       "variant": "h4"
-      },
-      {
-       "id": "c13",
-       "component": "Text",
-       "text": "− 1.125 €",
-       "variant": "h1"
-      },
-      {
-       "id": "c14",
-       "component": "Text",
-       "text": "pro Jahr",
-       "variant": "caption"
-      },
-      {
-       "id": "c15",
-       "component": "Text",
-       "text": "Statt 3.275 € zahlen Sie 2.150 € – Energie und Wartung zusammen."
-      },
-      {
-       "id": "c16",
-       "component": "Column",
-       "children": [
-        "c12",
-        "c13",
-        "c14",
-        "c15"
-       ]
-      },
-      {
-       "id": "c17",
-       "component": "Card",
-       "child": "c16",
-       "weight": 1
-      },
-      {
-       "id": "c18",
-       "component": "Text",
-       "text": "✓ Über 20 Jahre",
-       "variant": "h4"
-      },
-      {
-       "id": "c19",
-       "component": "Text",
-       "text": "32.300 €",
-       "variant": "h1"
-      },
-      {
-       "id": "c20",
-       "component": "Text",
-       "text": "Vorteil gesamt",
-       "variant": "caption"
-      },
-      {
-       "id": "c21",
-       "component": "Text",
-       "text": "Differenz gegenüber „weiter wie bisher“, inklusive Investition, Förderung und angenommener Preissteigerung."
-      },
-      {
-       "id": "c22",
-       "component": "Column",
-       "children": [
-        "c18",
-        "c19",
-        "c20",
-        "c21"
-       ]
-      },
-      {
-       "id": "c23",
-       "component": "Card",
-       "child": "c22",
-       "weight": 1
-      },
-      {
-       "id": "c24",
        "component": "Row",
        "children": [
-        "c11",
-        "c17",
-        "c23"
+        "c7",
+        "c9",
+        "c11"
        ],
        "align": "stretch"
       },
       {
-       "id": "c25",
+       "id": "c13",
        "component": "Text",
        "text": "Annahmen und Datenquellen ansehen",
        "variant": "caption"
       },
       {
-       "id": "c26",
+       "id": "c14",
        "component": "Text",
        "text": "Annahmen und Datenquellen",
        "variant": "h3"
       },
       {
-       "id": "c27",
+       "id": "c15",
        "component": "Text",
        "text": "- Wärmebedarf 22.400 kWh/a\n- Strompreis Wärmepumpe 0.27 €/kWh, Erdgaspreis 0.120 €/kWh\n- Preissteigerung Strom 2% p. a., fossil 4.5% p. a.\n- Jahresarbeitszahl 3.2 bei 55 °C Vorlauf\n- Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
       },
       {
-       "id": "c28",
+       "id": "c16",
        "component": "Text",
        "text": "Demo-Datensatz Energie (Beispielwerte, keine Angebotsgrundlage) · Demo-Annahmen, Stand Q3/2026",
        "variant": "caption"
       },
       {
-       "id": "c29",
+       "id": "c17",
        "component": "Column",
        "children": [
-        "c26",
-        "c27",
-        "c28"
+        "c14",
+        "c15",
+        "c16"
        ]
       },
       {
-       "id": "c30",
+       "id": "c18",
        "component": "Modal",
-       "trigger": "c25",
-       "content": "c29"
+       "trigger": "c13",
+       "content": "c17"
       },
       {
        "id": "root",
@@ -1020,8 +876,8 @@
        "children": [
         "c3",
         "c5",
-        "c24",
-        "c30"
+        "c12",
+        "c18"
        ]
       }
      ]
@@ -1151,32 +1007,33 @@
       {
        "id": "c10",
        "component": "Text",
-       "text": "✓ Erwarteter Zuschuss",
-       "variant": "h4"
+       "text": "Bezogen auf förderfähige Kosten von 30.000 €. Ihr Eigenanteil sinkt damit auf 18.200 €."
       },
       {
        "id": "c11",
-       "component": "Text",
-       "text": "15.000 €",
-       "variant": "h1"
+       "component": "StatCard",
+       "title": "Erwarteter Zuschuss",
+       "metric": "15.000 €",
+       "metricLabel": "50% Förderquote",
+       "tone": "positive",
+       "child": "c10",
+       "weight": 1
       },
       {
        "id": "c12",
        "component": "Text",
-       "text": "50% Förderquote",
-       "variant": "caption"
+       "text": "So setzt sich die Quote zusammen",
+       "variant": "h5"
       },
       {
        "id": "c13",
        "component": "Text",
-       "text": "Bezogen auf förderfähige Kosten von 30.000 €. Ihr Eigenanteil sinkt damit auf 18.200 €."
+       "text": "- Grundförderung: 30%\n- Klimageschwindigkeits-Bonus: 20%"
       },
       {
        "id": "c14",
        "component": "Column",
        "children": [
-        "c10",
-        "c11",
         "c12",
         "c13"
        ]
@@ -1189,46 +1046,21 @@
       },
       {
        "id": "c16",
-       "component": "Text",
-       "text": "So setzt sich die Quote zusammen",
-       "variant": "h5"
-      },
-      {
-       "id": "c17",
-       "component": "Text",
-       "text": "- Grundförderung: 30%\n- Klimageschwindigkeits-Bonus: 20%"
-      },
-      {
-       "id": "c18",
-       "component": "Column",
-       "children": [
-        "c16",
-        "c17"
-       ]
-      },
-      {
-       "id": "c19",
-       "component": "Card",
-       "child": "c18",
-       "weight": 1
-      },
-      {
-       "id": "c20",
        "component": "Row",
        "children": [
-        "c15",
-        "c19"
+        "c11",
+        "c15"
        ],
        "align": "stretch"
       },
       {
-       "id": "c21",
+       "id": "c17",
        "component": "Text",
        "text": "Ihr Weg in fünf Schritten",
        "variant": "h3"
       },
       {
-       "id": "c22",
+       "id": "c18",
        "component": "List",
        "children": {
         "componentId": "c5",
@@ -1237,52 +1069,52 @@
        "direction": "vertical"
       },
       {
-       "id": "c23",
+       "id": "c19",
        "component": "Text",
        "text": "Annahmen und Datenquellen ansehen",
        "variant": "caption"
       },
       {
-       "id": "c24",
+       "id": "c20",
        "component": "Text",
        "text": "Annahmen und Datenquellen",
        "variant": "h3"
       },
       {
-       "id": "c25",
+       "id": "c21",
        "component": "Text",
        "text": "- Förderhöhe abhängig von Antragstellung, Einkommensnachweis und Gebäudetyp. Demo-Abbildung, bitte im Einzelfall prüfen.\n- Antragstellung vor Vorhabenbeginn ist zwingend.\n- Boni sind an Nachweise gebunden (z. B. Einkommen, Austausch der Altanlage).\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
       },
       {
-       "id": "c26",
+       "id": "c22",
        "component": "Text",
        "text": "Demo-Datensatz Energie (Beispielwerte, keine Angebotsgrundlage) · Demo-Annahmen, Stand Q3/2026",
        "variant": "caption"
       },
       {
-       "id": "c27",
+       "id": "c23",
        "component": "Column",
        "children": [
-        "c24",
-        "c25",
-        "c26"
+        "c20",
+        "c21",
+        "c22"
        ]
       },
       {
-       "id": "c28",
+       "id": "c24",
        "component": "Modal",
-       "trigger": "c23",
-       "content": "c27"
+       "trigger": "c19",
+       "content": "c23"
       },
       {
        "id": "root",
        "component": "Column",
        "children": [
         "c9",
-        "c20",
-        "c21",
-        "c22",
-        "c28"
+        "c16",
+        "c17",
+        "c18",
+        "c24"
        ]
       }
      ]
@@ -1389,14 +1221,9 @@
       },
       {
        "id": "c9",
-       "component": "Text",
-       "text": "Heute mit Gasheizung",
-       "variant": "h4"
-      },
-      {
-       "id": "c10",
-       "component": "Text",
-       "text": {
+       "component": "StatCard",
+       "title": "Heute mit Gasheizung",
+       "metric": {
         "call": "formatCurrency",
         "args": {
          "value": {
@@ -1425,39 +1252,15 @@
         },
         "returnType": "string"
        },
-       "variant": "h1"
-      },
-      {
-       "id": "c11",
-       "component": "Text",
-       "text": "pro Jahr, mit Wartung",
-       "variant": "caption"
-      },
-      {
-       "id": "c12",
-       "component": "Column",
-       "children": [
-        "c9",
-        "c10",
-        "c11"
-       ]
-      },
-      {
-       "id": "c13",
-       "component": "Card",
-       "child": "c12",
+       "metricLabel": "pro Jahr, mit Wartung",
+       "tone": "neutral",
        "weight": 1
       },
       {
-       "id": "c14",
-       "component": "Text",
-       "text": "Mit Wärmepumpe",
-       "variant": "h4"
-      },
-      {
-       "id": "c15",
-       "component": "Text",
-       "text": {
+       "id": "c10",
+       "component": "StatCard",
+       "title": "Mit Wärmepumpe",
+       "metric": {
         "call": "formatCurrency",
         "args": {
          "value": {
@@ -1486,39 +1289,15 @@
         },
         "returnType": "string"
        },
-       "variant": "h1"
-      },
-      {
-       "id": "c16",
-       "component": "Text",
-       "text": "pro Jahr, mit Wartung",
-       "variant": "caption"
-      },
-      {
-       "id": "c17",
-       "component": "Column",
-       "children": [
-        "c14",
-        "c15",
-        "c16"
-       ]
-      },
-      {
-       "id": "c18",
-       "component": "Card",
-       "child": "c17",
+       "metricLabel": "pro Jahr, mit Wartung",
+       "tone": "neutral",
        "weight": 1
       },
       {
-       "id": "c19",
-       "component": "Text",
-       "text": "Unterschied",
-       "variant": "h4"
-      },
-      {
-       "id": "c20",
-       "component": "Text",
-       "text": {
+       "id": "c11",
+       "component": "StatCard",
+       "title": "Unterschied",
+       "metric": {
         "call": "formatCurrency",
         "args": {
          "value": {
@@ -1581,39 +1360,15 @@
         },
         "returnType": "string"
        },
-       "variant": "h1"
-      },
-      {
-       "id": "c21",
-       "component": "Text",
-       "text": "pro Monat",
-       "variant": "caption"
-      },
-      {
-       "id": "c22",
-       "component": "Column",
-       "children": [
-        "c19",
-        "c20",
-        "c21"
-       ]
-      },
-      {
-       "id": "c23",
-       "component": "Card",
-       "child": "c22",
+       "metricLabel": "pro Monat",
+       "tone": "neutral",
        "weight": 1
       },
       {
-       "id": "c24",
-       "component": "Text",
-       "text": "Nach 20 Jahren",
-       "variant": "h4"
-      },
-      {
-       "id": "c25",
-       "component": "Text",
-       "text": {
+       "id": "c12",
+       "component": "StatCard",
+       "title": "Nach 20 Jahren",
+       "metric": {
         "call": "formatCurrency",
         "args": {
          "value": {
@@ -1685,60 +1440,41 @@
         },
         "returnType": "string"
        },
-       "variant": "h1"
-      },
-      {
-       "id": "c26",
-       "component": "Text",
-       "text": "nach Ihrem Eigenanteil von 18.200 €",
-       "variant": "caption"
-      },
-      {
-       "id": "c27",
-       "component": "Column",
-       "children": [
-        "c24",
-        "c25",
-        "c26"
-       ]
-      },
-      {
-       "id": "c28",
-       "component": "Card",
-       "child": "c27",
+       "metricLabel": "nach Ihrem Eigenanteil von 18.200 €",
+       "tone": "neutral",
        "weight": 1
       },
       {
-       "id": "c29",
+       "id": "c13",
        "component": "Row",
        "children": [
-        "c13",
-        "c18",
-        "c23",
-        "c28"
+        "c9",
+        "c10",
+        "c11",
+        "c12"
        ],
        "align": "stretch"
       },
       {
-       "id": "c30",
+       "id": "c14",
        "component": "Text",
        "text": "Sollen wir so weiterrechnen?",
        "variant": "h3"
       },
       {
-       "id": "c31",
+       "id": "c15",
        "component": "Text",
        "text": "Bisher rechne ich mit den Demo-Preisen. Übernehmen Sie Ihre Einstellung, gilt sie für die ganze Beratung – Vergleich, Wirtschaftlichkeit und Empfehlung."
       },
       {
-       "id": "c32",
+       "id": "c16",
        "component": "Text",
        "text": "Mit diesen Preisen weiterrechnen"
       },
       {
-       "id": "c33",
+       "id": "c17",
        "component": "Button",
-       "child": "c32",
+       "child": "c16",
        "variant": "primary",
        "action": {
         "event": {
@@ -1755,56 +1491,56 @@
        }
       },
       {
-       "id": "c34",
+       "id": "c18",
        "component": "Column",
        "children": [
-        "c30",
-        "c31",
-        "c33"
+        "c14",
+        "c15",
+        "c17"
        ]
       },
       {
-       "id": "c35",
+       "id": "c19",
        "component": "Card",
-       "child": "c34"
+       "child": "c18"
       },
       {
-       "id": "c36",
+       "id": "c20",
        "component": "Text",
        "text": "Annahmen und Datenquellen ansehen",
        "variant": "caption"
       },
       {
-       "id": "c37",
+       "id": "c21",
        "component": "Text",
        "text": "Annahmen und Datenquellen",
        "variant": "h3"
       },
       {
-       "id": "c38",
+       "id": "c22",
        "component": "Text",
        "text": "- Wärmebedarf 22.400 kWh/a\n- Daraus 25.455 kWh Erdgas heute gegenüber 7.000 kWh Strom danach\n- Die Regler verändern nur die beiden Preise – Bedarf, Jahresarbeitszahl und Investition bleiben, wie berechnet.\n- Preissteigerungen sind hier bewusst nicht enthalten: Sie stellen den Preis ein, der über die Laufzeit im Mittel gelten soll.\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
       },
       {
-       "id": "c39",
+       "id": "c23",
        "component": "Text",
        "text": "Demo-Datensatz Energie (Beispielwerte, keine Angebotsgrundlage) · Demo-Annahmen, Stand Q3/2026",
        "variant": "caption"
       },
       {
-       "id": "c40",
+       "id": "c24",
        "component": "Column",
        "children": [
-        "c37",
-        "c38",
-        "c39"
+        "c21",
+        "c22",
+        "c23"
        ]
       },
       {
-       "id": "c41",
+       "id": "c25",
        "component": "Modal",
-       "trigger": "c36",
-       "content": "c40"
+       "trigger": "c20",
+       "content": "c24"
       },
       {
        "id": "root",
@@ -1812,9 +1548,9 @@
        "children": [
         "c3",
         "c8",
-        "c29",
-        "c35",
-        "c41"
+        "c13",
+        "c19",
+        "c25"
        ]
       }
      ]
@@ -2499,132 +2235,60 @@
       {
        "id": "c10",
        "component": "Text",
-       "text": "✓ Puffer im Alltag",
-       "variant": "h4"
+       "text": "Ihre 55 km am Tag sind selbst im Winter kein Thema. Sie laden etwa alle 4 Tage."
       },
       {
        "id": "c11",
-       "component": "Text",
-       "text": "5×",
-       "variant": "h1"
+       "component": "StatCard",
+       "title": "Puffer im Alltag",
+       "metric": "5×",
+       "metricLabel": "Ihres Tagesbedarfs",
+       "tone": "positive",
+       "child": "c10",
+       "weight": 1
       },
       {
        "id": "c12",
        "component": "Text",
-       "text": "Ihres Tagesbedarfs",
-       "variant": "caption"
+       "text": "Bei Kälte steigt der Verbrauch auf 20,6 kWh/100 km. Im Sommer sind es 323 km."
       },
       {
        "id": "c13",
-       "component": "Text",
-       "text": "Ihre 55 km am Tag sind selbst im Winter kein Thema. Sie laden etwa alle 4 Tage."
+       "component": "StatCard",
+       "title": "Reichweite im Winter",
+       "metric": "258 km",
+       "metricLabel": "Kompaktklasse, 58 kWh",
+       "tone": "neutral",
+       "child": "c12",
+       "weight": 1
       },
       {
        "id": "c14",
-       "component": "Column",
-       "children": [
-        "c10",
-        "c11",
-        "c12",
-        "c13"
-       ]
+       "component": "Text",
+       "text": "Der ehrlichste Wert: kalt, bei Richtgeschwindigkeit. Danach planen sich Langstrecken zuverlässig."
       },
       {
        "id": "c15",
-       "component": "Card",
+       "component": "StatCard",
+       "title": "Autobahn im Winter",
+       "metric": "208 km",
+       "metricLabel": "25,6 kWh/100 km",
+       "tone": "neutral",
        "child": "c14",
        "weight": 1
       },
       {
        "id": "c16",
-       "component": "Text",
-       "text": "→ Reichweite im Winter",
-       "variant": "h4"
-      },
-      {
-       "id": "c17",
-       "component": "Text",
-       "text": "258 km",
-       "variant": "h1"
-      },
-      {
-       "id": "c18",
-       "component": "Text",
-       "text": "Kompaktklasse, 58 kWh",
-       "variant": "caption"
-      },
-      {
-       "id": "c19",
-       "component": "Text",
-       "text": "Bei Kälte steigt der Verbrauch auf 20,6 kWh/100 km. Im Sommer sind es 323 km."
-      },
-      {
-       "id": "c20",
-       "component": "Column",
-       "children": [
-        "c16",
-        "c17",
-        "c18",
-        "c19"
-       ]
-      },
-      {
-       "id": "c21",
-       "component": "Card",
-       "child": "c20",
-       "weight": 1
-      },
-      {
-       "id": "c22",
-       "component": "Text",
-       "text": "→ Autobahn im Winter",
-       "variant": "h4"
-      },
-      {
-       "id": "c23",
-       "component": "Text",
-       "text": "208 km",
-       "variant": "h1"
-      },
-      {
-       "id": "c24",
-       "component": "Text",
-       "text": "25,6 kWh/100 km",
-       "variant": "caption"
-      },
-      {
-       "id": "c25",
-       "component": "Text",
-       "text": "Der ehrlichste Wert: kalt, bei Richtgeschwindigkeit. Danach planen sich Langstrecken zuverlässig."
-      },
-      {
-       "id": "c26",
-       "component": "Column",
-       "children": [
-        "c22",
-        "c23",
-        "c24",
-        "c25"
-       ]
-      },
-      {
-       "id": "c27",
-       "component": "Card",
-       "child": "c26",
-       "weight": 1
-      },
-      {
-       "id": "c28",
        "component": "Row",
        "children": [
-        "c15",
-        "c21",
-        "c27"
+        "c11",
+        "c13",
+        "c15"
        ],
        "align": "stretch"
       },
       {
-       "id": "c29",
+       "id": "c17",
        "component": "MetricChart",
        "title": "Ihre typische Woche",
        "subtitle": "Die Linie ist die Winterreichweite. Solange die Balken darunter bleiben, kommen Sie ohne Zwischenladen aus.",
@@ -2639,39 +2303,39 @@
        "valueFormat": "number"
       },
       {
-       "id": "c30",
+       "id": "c18",
        "component": "Card",
-       "child": "c29"
+       "child": "c17"
       },
       {
-       "id": "c31",
+       "id": "c19",
        "component": "Text",
        "text": "Langstrecke",
        "variant": "caption"
       },
       {
-       "id": "c32",
+       "id": "c20",
        "component": "Text",
        "text": "Ihre 450-km-Fahrt konkret",
        "variant": "h2"
       },
       {
-       "id": "c33",
+       "id": "c21",
        "component": "Text",
        "text": "2 Ladestopp(s), zusammen 60 Minuten mehr als mit einem Verbrenner.",
        "variant": "body"
       },
       {
-       "id": "c34",
+       "id": "c22",
        "component": "Column",
        "children": [
-        "c31",
-        "c32",
-        "c33"
+        "c19",
+        "c20",
+        "c21"
        ]
       },
       {
-       "id": "c35",
+       "id": "c23",
        "component": "List",
        "children": {
         "componentId": "c5",
@@ -2680,53 +2344,53 @@
        "direction": "vertical"
       },
       {
-       "id": "c36",
+       "id": "c24",
        "component": "Text",
        "text": "Annahmen und Datenquellen ansehen",
        "variant": "caption"
       },
       {
-       "id": "c37",
+       "id": "c25",
        "component": "Text",
        "text": "Annahmen und Datenquellen",
        "variant": "h3"
       },
       {
-       "id": "c38",
+       "id": "c26",
        "component": "Text",
        "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0.60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
       },
       {
-       "id": "c39",
+       "id": "c27",
        "component": "Text",
        "text": "Demo-Datensatz E-Mobilität (Beispielwerte, keine Angebotsgrundlage) · Demo-Annahmen, Stand Q3/2026",
        "variant": "caption"
       },
       {
-       "id": "c40",
+       "id": "c28",
        "component": "Column",
        "children": [
-        "c37",
-        "c38",
-        "c39"
+        "c25",
+        "c26",
+        "c27"
        ]
       },
       {
-       "id": "c41",
+       "id": "c29",
        "component": "Modal",
-       "trigger": "c36",
-       "content": "c40"
+       "trigger": "c24",
+       "content": "c28"
       },
       {
        "id": "root",
        "component": "Column",
        "children": [
         "c9",
-        "c28",
-        "c30",
-        "c34",
-        "c35",
-        "c41"
+        "c16",
+        "c18",
+        "c22",
+        "c23",
+        "c29"
        ]
       }
      ]
@@ -2841,43 +2505,19 @@
       {
        "id": "c4",
        "component": "Text",
-       "text": "✓ Ihr größter Hebel",
-       "variant": "h4"
-      },
-      {
-       "id": "c5",
-       "component": "Text",
-       "text": "1.787 €",
-       "variant": "h1"
-      },
-      {
-       "id": "c6",
-       "component": "Text",
-       "text": "Ersparnis pro Jahr",
-       "variant": "caption"
-      },
-      {
-       "id": "c7",
-       "component": "Text",
        "text": "Der Wechsel von „Nur öffentlich laden“ zu „Laden beim Arbeitgeber“ spart Ihnen rund 1.787 € im Jahr – mehr als die meisten Fahrzeugentscheidungen ausmachen."
       },
       {
-       "id": "c8",
-       "component": "Column",
-       "children": [
-        "c4",
-        "c5",
-        "c6",
-        "c7"
-       ]
+       "id": "c5",
+       "component": "StatCard",
+       "title": "Ihr größter Hebel",
+       "metric": "1.787 €",
+       "metricLabel": "Ersparnis pro Jahr",
+       "tone": "positive",
+       "child": "c4"
       },
       {
-       "id": "c9",
-       "component": "Card",
-       "child": "c8"
-      },
-      {
-       "id": "c10",
+       "id": "c6",
        "component": "ComparisonTable",
        "title": "Ladeoptionen im Vergleich",
        "columns": {
@@ -2891,56 +2531,56 @@
        }
       },
       {
-       "id": "c11",
+       "id": "c7",
        "component": "Card",
-       "child": "c10"
+       "child": "c6"
       },
       {
-       "id": "c12",
+       "id": "c8",
        "component": "Text",
        "text": "Annahmen und Datenquellen ansehen",
        "variant": "caption"
       },
       {
-       "id": "c13",
+       "id": "c9",
        "component": "Text",
        "text": "Annahmen und Datenquellen",
        "variant": "h3"
       },
       {
-       "id": "c14",
+       "id": "c10",
        "component": "Text",
        "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0.60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Jahresenergiebedarf rund 5.949 kWh"
       },
       {
-       "id": "c15",
+       "id": "c11",
        "component": "Text",
        "text": "Demo-Datensatz E-Mobilität (Beispielwerte, keine Angebotsgrundlage) · Demo-Annahmen, Stand Q3/2026",
        "variant": "caption"
       },
       {
-       "id": "c16",
+       "id": "c12",
        "component": "Column",
        "children": [
-        "c13",
-        "c14",
-        "c15"
+        "c9",
+        "c10",
+        "c11"
        ]
       },
       {
-       "id": "c17",
+       "id": "c13",
        "component": "Modal",
-       "trigger": "c12",
-       "content": "c16"
+       "trigger": "c8",
+       "content": "c12"
       },
       {
        "id": "root",
        "component": "Column",
        "children": [
         "c3",
-        "c9",
-        "c11",
-        "c17"
+        "c5",
+        "c7",
+        "c13"
        ]
       }
      ]
@@ -3235,132 +2875,60 @@
       {
        "id": "c4",
        "component": "Text",
-       "text": "! Elektro gegen Verbrenner",
-       "variant": "h4"
+       "text": "Mit Ihrer heutigen Ladesituation ist das E-Auto insgesamt teurer – rund 40 € im Monat. Mit einer eigenen Lademöglichkeit dreht sich das Bild."
       },
       {
        "id": "c5",
-       "component": "Text",
-       "text": "1.907 €",
-       "variant": "h1"
+       "component": "StatCard",
+       "title": "Elektro gegen Verbrenner",
+       "metric": "1.907 €",
+       "metricLabel": "Nachteil Elektro",
+       "tone": "caution",
+       "child": "c4",
+       "weight": 1
       },
       {
        "id": "c6",
        "component": "Text",
-       "text": "Nachteil Elektro",
-       "variant": "caption"
+       "text": "Strom 11,37 € gegenüber Kraftstoff 11,39 €."
       },
       {
        "id": "c7",
-       "component": "Text",
-       "text": "Mit Ihrer heutigen Ladesituation ist das E-Auto insgesamt teurer – rund 40 € im Monat. Mit einer eigenen Lademöglichkeit dreht sich das Bild."
+       "component": "StatCard",
+       "title": "Energie je 100 km",
+       "metric": "11,37 €",
+       "metricLabel": "elektrisch, je 100 km",
+       "tone": "neutral",
+       "child": "c6",
+       "weight": 1
       },
       {
        "id": "c8",
-       "component": "Column",
-       "children": [
-        "c4",
-        "c5",
-        "c6",
-        "c7"
-       ]
+       "component": "Text",
+       "text": "Gerechnet mit dem deutschen Strommix. Mit eigener PV-Anlage oder Ökostromtarif fällt die Bilanz besser aus."
       },
       {
        "id": "c9",
-       "component": "Card",
+       "component": "StatCard",
+       "title": "CO₂ pro Jahr",
+       "metric": "− 2,5 t",
+       "metricLabel": "gegenüber Verbrenner",
+       "tone": "positive",
        "child": "c8",
        "weight": 1
       },
       {
        "id": "c10",
-       "component": "Text",
-       "text": "✓ Energie je 100 km",
-       "variant": "h4"
-      },
-      {
-       "id": "c11",
-       "component": "Text",
-       "text": "11,37 €",
-       "variant": "h1"
-      },
-      {
-       "id": "c12",
-       "component": "Text",
-       "text": "elektrisch, je 100 km",
-       "variant": "caption"
-      },
-      {
-       "id": "c13",
-       "component": "Text",
-       "text": "Strom 11,37 € gegenüber Kraftstoff 11,39 €."
-      },
-      {
-       "id": "c14",
-       "component": "Column",
-       "children": [
-        "c10",
-        "c11",
-        "c12",
-        "c13"
-       ]
-      },
-      {
-       "id": "c15",
-       "component": "Card",
-       "child": "c14",
-       "weight": 1
-      },
-      {
-       "id": "c16",
-       "component": "Text",
-       "text": "✓ CO₂ pro Jahr",
-       "variant": "h4"
-      },
-      {
-       "id": "c17",
-       "component": "Text",
-       "text": "− 2,5 t",
-       "variant": "h1"
-      },
-      {
-       "id": "c18",
-       "component": "Text",
-       "text": "gegenüber Verbrenner",
-       "variant": "caption"
-      },
-      {
-       "id": "c19",
-       "component": "Text",
-       "text": "Gerechnet mit dem deutschen Strommix. Mit eigener PV-Anlage oder Ökostromtarif fällt die Bilanz besser aus."
-      },
-      {
-       "id": "c20",
-       "component": "Column",
-       "children": [
-        "c16",
-        "c17",
-        "c18",
-        "c19"
-       ]
-      },
-      {
-       "id": "c21",
-       "component": "Card",
-       "child": "c20",
-       "weight": 1
-      },
-      {
-       "id": "c22",
        "component": "Row",
        "children": [
-        "c9",
-        "c15",
-        "c21"
+        "c5",
+        "c7",
+        "c9"
        ],
        "align": "stretch"
       },
       {
-       "id": "c23",
+       "id": "c11",
        "component": "MetricChart",
        "title": "Kostenposten im Vergleich",
        "subtitle": "Gesamtkosten über 4 Jahre bei 31.350 km im Jahr.",
@@ -3375,56 +2943,56 @@
        "valueFormat": "currency"
       },
       {
-       "id": "c24",
+       "id": "c12",
        "component": "Card",
-       "child": "c23"
+       "child": "c11"
       },
       {
-       "id": "c25",
+       "id": "c13",
        "component": "Text",
        "text": "Annahmen und Datenquellen ansehen",
        "variant": "caption"
       },
       {
-       "id": "c26",
+       "id": "c14",
        "component": "Text",
        "text": "Annahmen und Datenquellen",
        "variant": "h3"
       },
       {
-       "id": "c27",
+       "id": "c15",
        "component": "Text",
        "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0.60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Gesamtkosten Elektro 39.093 €, Verbrenner 37.186 €\n- Wertverlust auf Basis angenommener Restwerte nach vier Jahren."
       },
       {
-       "id": "c28",
+       "id": "c16",
        "component": "Text",
        "text": "Demo-Datensatz E-Mobilität (Beispielwerte, keine Angebotsgrundlage) · Demo-Annahmen, Stand Q3/2026",
        "variant": "caption"
       },
       {
-       "id": "c29",
+       "id": "c17",
        "component": "Column",
        "children": [
-        "c26",
-        "c27",
-        "c28"
+        "c14",
+        "c15",
+        "c16"
        ]
       },
       {
-       "id": "c30",
+       "id": "c18",
        "component": "Modal",
-       "trigger": "c25",
-       "content": "c29"
+       "trigger": "c13",
+       "content": "c17"
       },
       {
        "id": "root",
        "component": "Column",
        "children": [
         "c3",
-        "c22",
-        "c24",
-        "c30"
+        "c10",
+        "c12",
+        "c18"
        ]
       }
      ]
@@ -3539,14 +3107,9 @@
       },
       {
        "id": "c10",
-       "component": "Text",
-       "text": "Kilometer im Jahr",
-       "variant": "h4"
-      },
-      {
-       "id": "c11",
-       "component": "Text",
-       "text": {
+       "component": "StatCard",
+       "title": "Kilometer im Jahr",
+       "metric": {
         "call": "formatNumber",
         "args": {
          "value": {
@@ -3574,39 +3137,15 @@
         },
         "returnType": "string"
        },
-       "variant": "h1"
-      },
-      {
-       "id": "c12",
-       "component": "Text",
-       "text": "mit Langstrecken und Freizeit",
-       "variant": "caption"
-      },
-      {
-       "id": "c13",
-       "component": "Column",
-       "children": [
-        "c10",
-        "c11",
-        "c12"
-       ]
-      },
-      {
-       "id": "c14",
-       "component": "Card",
-       "child": "c13",
+       "metricLabel": "mit Langstrecken und Freizeit",
+       "tone": "neutral",
        "weight": 1
       },
       {
-       "id": "c15",
-       "component": "Text",
-       "text": "Strom",
-       "variant": "h4"
-      },
-      {
-       "id": "c16",
-       "component": "Text",
-       "text": {
+       "id": "c11",
+       "component": "StatCard",
+       "title": "Strom",
+       "metric": {
         "call": "formatCurrency",
         "args": {
          "value": {
@@ -3671,39 +3210,15 @@
         },
         "returnType": "string"
        },
-       "variant": "h1"
-      },
-      {
-       "id": "c17",
-       "component": "Text",
-       "text": "pro Jahr",
-       "variant": "caption"
-      },
-      {
-       "id": "c18",
-       "component": "Column",
-       "children": [
-        "c15",
-        "c16",
-        "c17"
-       ]
-      },
-      {
-       "id": "c19",
-       "component": "Card",
-       "child": "c18",
+       "metricLabel": "pro Jahr",
+       "tone": "neutral",
        "weight": 1
       },
       {
-       "id": "c20",
-       "component": "Text",
-       "text": "Benzin zum Vergleich",
-       "variant": "h4"
-      },
-      {
-       "id": "c21",
-       "component": "Text",
-       "text": {
+       "id": "c12",
+       "component": "StatCard",
+       "title": "Benzin zum Vergleich",
+       "metric": {
         "call": "formatCurrency",
         "args": {
          "value": {
@@ -3741,39 +3256,15 @@
         },
         "returnType": "string"
        },
-       "variant": "h1"
-      },
-      {
-       "id": "c22",
-       "component": "Text",
-       "text": "pro Jahr, gleiche Strecke",
-       "variant": "caption"
-      },
-      {
-       "id": "c23",
-       "component": "Column",
-       "children": [
-        "c20",
-        "c21",
-        "c22"
-       ]
-      },
-      {
-       "id": "c24",
-       "component": "Card",
-       "child": "c23",
+       "metricLabel": "pro Jahr, gleiche Strecke",
+       "tone": "neutral",
        "weight": 1
       },
       {
-       "id": "c25",
-       "component": "Text",
-       "text": "Unterschied",
-       "variant": "h4"
-      },
-      {
-       "id": "c26",
-       "component": "Text",
-       "text": {
+       "id": "c13",
+       "component": "StatCard",
+       "title": "Unterschied",
+       "metric": {
         "call": "formatCurrency",
         "args": {
          "value": {
@@ -3881,60 +3372,41 @@
         },
         "returnType": "string"
        },
-       "variant": "h1"
-      },
-      {
-       "id": "c27",
-       "component": "Text",
-       "text": "pro Monat, nur Energie",
-       "variant": "caption"
-      },
-      {
-       "id": "c28",
-       "component": "Column",
-       "children": [
-        "c25",
-        "c26",
-        "c27"
-       ]
-      },
-      {
-       "id": "c29",
-       "component": "Card",
-       "child": "c28",
+       "metricLabel": "pro Monat, nur Energie",
+       "tone": "neutral",
        "weight": 1
       },
       {
-       "id": "c30",
+       "id": "c14",
        "component": "Row",
        "children": [
-        "c14",
-        "c19",
-        "c24",
-        "c29"
+        "c10",
+        "c11",
+        "c12",
+        "c13"
        ],
        "align": "stretch"
       },
       {
-       "id": "c31",
+       "id": "c15",
        "component": "Text",
        "text": "Sollen wir so weiterrechnen?",
        "variant": "h3"
       },
       {
-       "id": "c32",
+       "id": "c16",
        "component": "Text",
        "text": "Übernehmen Sie Ihre Einstellung, gilt sie für die ganze Beratung – Reichweite, Ladeoptionen und Gesamtkosten."
       },
       {
-       "id": "c33",
+       "id": "c17",
        "component": "Text",
        "text": "Mit diesen Werten weiterrechnen"
       },
       {
-       "id": "c34",
+       "id": "c18",
        "component": "Button",
-       "child": "c33",
+       "child": "c17",
        "variant": "primary",
        "action": {
         "event": {
@@ -3951,56 +3423,56 @@
        }
       },
       {
-       "id": "c35",
+       "id": "c19",
        "component": "Column",
        "children": [
-        "c31",
-        "c32",
-        "c34"
+        "c15",
+        "c16",
+        "c18"
        ]
       },
       {
-       "id": "c36",
+       "id": "c20",
        "component": "Card",
-       "child": "c35"
+       "child": "c19"
       },
       {
-       "id": "c37",
+       "id": "c21",
        "component": "Text",
        "text": "Annahmen und Datenquellen ansehen",
        "variant": "caption"
       },
       {
-       "id": "c38",
+       "id": "c22",
        "component": "Text",
        "text": "Annahmen und Datenquellen",
        "variant": "h3"
       },
       {
-       "id": "c39",
+       "id": "c23",
        "component": "Text",
        "text": "- Kompaktklasse, 19,0 kWh/100 km im Realbetrieb\n- Verbrenner-Vergleich mit 6,4 l/100 km benzin\n- Neben der Tagesstrecke rechne ich fest mit 18.700 km im Jahr für Langstrecken und Freizeit.\n- Die Regler verändern nur Strecke und Ladeort – Verbrauch, Preise und Fahrzeugklasse bleiben, wie berechnet.\n- Nur Energiekosten. Wertverlust, Wartung, Versicherung und Steuer stehen im Kostenvergleich.\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
       },
       {
-       "id": "c40",
+       "id": "c24",
        "component": "Text",
        "text": "Demo-Datensatz E-Mobilität (Beispielwerte, keine Angebotsgrundlage) · Demo-Annahmen, Stand Q3/2026",
        "variant": "caption"
       },
       {
-       "id": "c41",
+       "id": "c25",
        "component": "Column",
        "children": [
-        "c38",
-        "c39",
-        "c40"
+        "c22",
+        "c23",
+        "c24"
        ]
       },
       {
-       "id": "c42",
+       "id": "c26",
        "component": "Modal",
-       "trigger": "c37",
-       "content": "c41"
+       "trigger": "c21",
+       "content": "c25"
       },
       {
        "id": "root",
@@ -4008,9 +3480,9 @@
        "children": [
         "c3",
         "c9",
-        "c30",
-        "c36",
-        "c42"
+        "c14",
+        "c20",
+        "c26"
        ]
       }
      ]

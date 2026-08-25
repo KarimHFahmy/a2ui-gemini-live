@@ -98,6 +98,7 @@ for (const scheme of ['light', 'dark']) {
         buttons: q('.surface button:not(.chip)'),
         modals: q('.a2ui-modal-trigger'),
         sliders: q(".surface input[type='range']"),
+        stats: q('.stat'),
         // Literal Markdown on screen means the renderer has no Markdown
         // renderer wired up, or a non-Markdown variant was used with syntax.
         rawMarkdown: (document.body.innerText.match(/(^|\s)(\*\*|##+\s|- \*\*)/gm) || []).length,
@@ -115,7 +116,8 @@ for (const scheme of ['light', 'dark']) {
       stats.cards === 0 ||
       stats.headings === 0 ||
       stats.modals === 0 ||
-      stats.sliders === 0;
+      stats.sliders === 0 ||
+      stats.stats === 0;
     if (bad) failures++;
     console.log(`[${scheme}] ${journey}:`, JSON.stringify(stats));
     const aside = await checkContextAside(page);
@@ -128,6 +130,12 @@ for (const scheme of ['light', 'dark']) {
     if (whatIf.problems.length) {
       failures++;
       console.log(`  [${scheme}] ${journey} what-if: ${whatIf.problems.join('; ')}`);
+    }
+
+    const tone = await checkTone(page);
+    if (tone.problems.length) {
+      failures++;
+      console.log(`  [${scheme}] ${journey} tone: ${tone.problems.join('; ')}`);
     }
 
     if (scheme === 'light') {
@@ -208,6 +216,62 @@ async function checkContextAside(page) {
 }
 
 /**
+ * Checks that colour tells the truth about each figure.
+ *
+ * Every headline metric used to be painted with the brand accent, including
+ * the one whose job is to say "this is more expensive for you". Tone now
+ * arrives as data, so this reads the computed colour back out of the browser
+ * and fails if a caution figure is wearing the positive colour — the exact
+ * shape of the original bug, in both themes where the tokens differ.
+ */
+async function checkTone(page) {
+  return page.evaluate(() => {
+    const problems = [];
+    const cards = [...document.querySelectorAll('.stat')];
+    if (cards.length === 0) return {problems: ['no stat cards rendered']};
+
+    const colourOf = card => {
+      const metric = card.querySelector('.stat__metric');
+      return metric ? getComputedStyle(metric).color : null;
+    };
+    const toneOf = card =>
+      card.classList.contains('stat--caution')
+        ? 'caution'
+        : card.classList.contains('stat--positive')
+          ? 'positive'
+          : 'neutral';
+
+    const seen = new Map();
+    for (const card of cards) {
+      const colour = colourOf(card);
+      if (!colour) continue;
+      const tone = toneOf(card);
+      if (!seen.has(tone)) seen.set(tone, colour);
+      if (seen.get(tone) !== colour) {
+        problems.push(`two ${tone} figures render in different colours`);
+      }
+    }
+
+    // The three tones must be visually distinct wherever two of them meet.
+    const distinct = new Set(seen.values());
+    if (distinct.size !== seen.size) {
+      problems.push(`tones share a colour: ${[...seen].map(([t, c]) => `${t}=${c}`).join(', ')}`);
+    }
+
+    // And the tone has to be readable without colour at all.
+    for (const card of cards) {
+      if (!card.querySelector('.stat__mark')) problems.push('a stat card has no tone mark');
+      const label = card.querySelector('.stat__tone-label');
+      if (!label || !label.textContent.trim()) {
+        problems.push('a stat card has no tone label for assistive tech');
+      }
+    }
+
+    return {problems};
+  });
+}
+
+/**
  * Checks the what-if surface.
  *
  * Its figures are the only ones on screen the backend never rendered: the
@@ -222,7 +286,9 @@ async function checkWhatIf(page) {
 
   const problems = [];
   const readValues = () =>
-    surface.locator('h1').evaluateAll(nodes => nodes.map(n => n.textContent.trim()));
+    surface
+      .locator('.stat__metric')
+      .evaluateAll(nodes => nodes.map(n => n.firstChild?.textContent.trim() ?? ''));
 
   const before = await readValues();
   if (before.length < 3) problems.push(`only ${before.length} live figures`);

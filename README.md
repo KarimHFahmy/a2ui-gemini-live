@@ -115,10 +115,10 @@ agent-authored text from becoming an XSS vector.
 v0.9 also resolves every component against the *surface's* catalog — there is
 no per-component `catalogId` override yet. So the Adaptive Advisory catalog is
 registered as a superset: the basic catalog's components and functions plus our
-two additions, under one id (`urn:a2ui:catalog:adaptive-advisory:1.0`, shared
+three additions, under one id (`urn:a2ui:catalog:adaptive-advisory:1.0`, shared
 by `backend/app/a2ui/protocol.py` and `frontend/src/a2ui/catalog.ts`).
 
-### The catalog is Google's, plus two
+### The catalog is Google's, plus three
 
 Almost everything on screen is rendered by `@a2ui/react`'s own basic catalog,
 themed entirely through its `--a2ui-*` custom properties — no component
@@ -127,7 +127,7 @@ overrides:
 | Baustein | Rendered with |
 |---|---|
 | Section headers | `Text` variants `caption` + `h2` |
-| Karten mit Leitkennzahl | `Card` › `Column` › `Text` (`h4`, `h1`, `body`) |
+| **Karten mit Leitkennzahl** | `StatCard` — ours; the basic catalog has nowhere to put a tone |
 | Fakten, Timeline, Empfehlungen | `List` with a `ChildList` **template** over the data model |
 | Szenarioauswahl | `ChoicePicker`, `displayStyle: chips` |
 | Stellschrauben | `Slider` bound two-way to the data model |
@@ -324,7 +324,7 @@ with a `STAND` date that is surfaced in the UI. Nothing else hardcodes a price.
 
 **Add a surface.** Compose it in a `composer_*.py` with `SurfaceBuilder`, then
 call it from a tool. Reach for a new *component* only when the basic catalog
-genuinely cannot express the idea — two additions in this whole demo is the
+genuinely cannot express the idea — three additions in this whole demo is the
 bar. If you do: Zod API in `frontend/src/a2ui/schemas.ts`, implementation in
 `components/blocks.tsx`, add it to `ADVISORY_COMPONENTS`, and a matching method
 on `SurfaceBuilder`.
