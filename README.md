@@ -305,6 +305,11 @@ make test
   slider and asserts the live figures follow, and checks the context column:
   the progress indicator agrees with what is on screen, and the profile stays
   out of the conversation flow.
+- **Session check** (Playwright) — drives the *shell* against a stubbed socket:
+  start a journey, restart, start a different one, and assert the second
+  conversation begins on an empty screen. The renderer's `MessageProcessor`
+  outlives any one session, so this is the only place a leaked surface from the
+  previous conversation shows up.
 
 ---
 
