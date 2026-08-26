@@ -120,6 +120,14 @@ for (const scheme of ['light', 'dark']) {
         // renderer wired up, or a non-Markdown variant was used with syntax.
         rawMarkdown: (document.body.innerText.match(/(^|\s)(\*\*|##+\s|- \*\*)/gm) || []).length,
         hScroll: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+        /*
+         * The shell fits the viewport: only `.stage` and `.aside` scroll. A
+         * scrolling *document* means something has escaped into document
+         * coordinates — an absolutely positioned element with no positioned
+         * ancestor is the usual way — and it shows up as a second scrollbar
+         * that runs off into empty page.
+         */
+        vScroll: document.documentElement.scrollHeight - document.documentElement.clientHeight,
       };
     });
     const bad =
@@ -128,6 +136,7 @@ for (const scheme of ['light', 'dark']) {
       stats.chartEmpty ||
       stats.rawMarkdown ||
       stats.hScroll ||
+      stats.vScroll ||
       stats.charts === 0 ||
       stats.tables === 0 ||
       stats.cards === 0 ||
