@@ -247,6 +247,15 @@
 }
 
 .stat__title {
+  /*
+   * Positioned so the visually-hidden tone label below has a containing block
+   * *inside* the card. Without one it resolves against the initial containing
+   * block: the span then sits at its static position in document coordinates,
+   * escapes the stage's `overflow: auto`, and stretches the document to the
+   * full height of the scrolled conversation. Eleven 1 px spans were adding
+   * 3.5 k pixels of empty page scroll behind a shell that fits the viewport.
+   */
+  position: relative;
   display: flex;
   align-items: baseline;
   gap: var(--space-2);
@@ -279,6 +288,7 @@
 
 /* Read out, never shown: the mark is a glyph, this is the word behind it. */
 .stat__tone-label {
+  /* Contained by `.stat__title`, which is positioned for exactly this. */
   position: absolute;
   width: 1px;
   height: 1px;
