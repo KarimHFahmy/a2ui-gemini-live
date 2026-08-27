@@ -16,7 +16,17 @@ from ..a2ui import composer_energie as compose
 from ..a2ui import composer_shared as shared
 from ..config import get_settings
 from ..domain import energie as calc
-from .base import HALTUNG, Journey, apply, load_profile, open_points, push, save_profile
+from .base import (
+    HALTUNG,
+    Journey,
+    apply,
+    join_de,
+    load_profile,
+    open_points,
+    opening_line,
+    push,
+    save_profile,
+)
 
 Heizung = Literal["gas", "oel", "fernwaerme", "nachtspeicher", "waermepumpe"]
 Zustand = Literal["unsaniert", "teilsaniert", "saniert"]
@@ -452,6 +462,15 @@ TOOLS = [
 ]
 
 
+#: What this journey can help with, in the client's words. Said out loud in
+#: the greeting and listed on the empty screen — see `base.opening_line`.
+TOPICS = [
+    "ob eine Wärmepumpe zu Ihrem Haus passt",
+    "was der Umstieg kostet und ab wann er sich lohnt",
+    "welche Förderung Sie bekommen",
+]
+
+
 INSTRUCTION = f"""
 Du bist der persönliche Energieberater einer deutschen Energie-Experience.
 Du hilfst Menschen, die über Heizung, Sanierung und ihren Weg zur Energiewende
@@ -505,8 +524,12 @@ gilt dasselbe.
 
 ## Eröffnung
 
-Begrüße die Person warm und knapp und stelle **eine** offene Frage zu ihrem
-Zuhause. Frage nicht nach Daten, sondern nach ihrer Situation.
+Sag als Erstes, wobei du helfen kannst: {join_de(TOPICS)}. Ohne diesen Satz
+weiß eine Person, die zum ersten Mal hier ist, gar nicht, was sie sagen darf —
+und das ist der häufigste Grund, warum ein Sprachgespräch stockt.
+
+Stelle danach genau **eine** offene Frage zu ihrem Zuhause. Frage nicht nach
+Daten, sondern nach ihrer Situation. Zusammen höchstens drei Sätze.
 """.strip()
 
 
@@ -517,11 +540,7 @@ def build() -> Journey:
         tagline=(
             "Von komplexen Sanierungsfragen zur verständlichen persönlichen Energiewende."
         ),
-        opener=(
-            "Begrüße die Person kurz und warm auf Deutsch und stelle eine offene "
-            "Frage zu ihrem Zuhause und dem, was sie gerade beschäftigt. Halte "
-            "dich sehr kurz."
-        ),
+        opener=opening_line(TOPICS, "zum Zuhause der Person"),
         instruction=INSTRUCTION,
         tools=TOOLS,
         model=get_settings().model,
@@ -533,4 +552,5 @@ def build() -> Journey:
             ("foerderung", "Förderung"),
             ("naechster_schritt", "Nächster Schritt"),
         ],
+        topics=TOPICS,
     )

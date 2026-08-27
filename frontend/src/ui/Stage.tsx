@@ -16,11 +16,13 @@ interface StageProps {
   surfaces: Surface[];
   titles: Map<string, string>;
   journeyLabel: string;
+  /** What this journey can help with — the same three the agent speaks. */
+  topics: string[];
   /** True once anything at all has arrived, including the profile. */
   hasAnySurface: boolean;
 }
 
-export function Stage({surfaces, titles, journeyLabel, hasAnySurface}: StageProps) {
+export function Stage({surfaces, titles, journeyLabel, topics, hasAnySurface}: StageProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const previousCount = useRef(0);
 
@@ -39,9 +41,27 @@ export function Stage({surfaces, titles, journeyLabel, hasAnySurface}: StageProp
         <div className="stage__empty">
           <span className="stage__empty-badge">{journeyLabel}</span>
           <h2>Ich höre zu.</h2>
+
+          {/*
+            The agent says these three out loud as it greets you. They are
+            here as well because three topics heard once are hard to hold on
+            to, and not knowing what you are allowed to say is the most common
+            way a voice conversation stalls before it starts.
+          */}
+          {topics.length > 0 ? (
+            <>
+              <p className="stage__empty-lead">Ich kann Ihnen sagen,</p>
+              <ul className="stage__topics">
+                {topics.map(topic => (
+                  <li key={topic}>{topic}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+
           <p>
-            Sobald ich Ihre Situation verstanden habe, entsteht hier Ihre persönliche
-            Beratungsansicht — passend zu dem, worüber wir gerade sprechen.
+            Erzählen Sie einfach von Ihrer Situation. Sobald ich sie verstanden habe, entsteht hier
+            Ihre persönliche Beratungsansicht.
           </p>
         </div>
       ) : null}

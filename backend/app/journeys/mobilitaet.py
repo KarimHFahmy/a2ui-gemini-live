@@ -10,7 +10,17 @@ from ..a2ui import composer_mobilitaet as compose
 from ..a2ui import composer_shared as shared
 from ..config import get_settings
 from ..domain import mobilitaet as calc
-from .base import HALTUNG, Journey, apply, load_profile, open_points, push, save_profile
+from .base import (
+    HALTUNG,
+    Journey,
+    apply,
+    join_de,
+    load_profile,
+    open_points,
+    opening_line,
+    push,
+    save_profile,
+)
 
 Laden = Literal["wallbox_zuhause", "steckdose_zuhause", "arbeitsplatz", "nur_oeffentlich"]
 Klasse = Literal["kompakt", "mittelklasse", "suv", "van"]
@@ -375,6 +385,15 @@ TOOLS = [
 ]
 
 
+#: What this journey can help with, in the client's words. Said out loud in
+#: the greeting and listed on the empty screen — see `base.opening_line`.
+TOPICS = [
+    "ob ein E-Auto zu Ihren Wegen passt",
+    "wo Sie laden würden und was das kostet",
+    "welches Fahrzeug zu Ihnen passt",
+]
+
+
 INSTRUCTION = f"""
 Du bist der persönliche Mobilitätsberater einer deutschen E-Mobilitäts-
 Experience. Du hilfst Menschen, die mit einem Elektroauto liebäugeln, aber
@@ -433,8 +452,12 @@ Strecke oder eine Ladequote, gilt dasselbe.
 
 ## Eröffnung
 
-Begrüße die Person warm und knapp und stelle **eine** offene Frage zu ihrem
-Alltag. Frag nicht nach einem Fahrzeugwunsch, sondern nach ihren Wegen.
+Sag als Erstes, wobei du helfen kannst: {join_de(TOPICS)}. Ohne diesen Satz
+weiß eine Person, die zum ersten Mal hier ist, gar nicht, was sie sagen darf —
+und das ist der häufigste Grund, warum ein Sprachgespräch stockt.
+
+Stelle danach genau **eine** offene Frage zu ihrem Alltag. Frag nicht nach
+einem Fahrzeugwunsch, sondern nach ihren Wegen. Zusammen höchstens drei Sätze.
 """.strip()
 
 
@@ -446,10 +469,7 @@ def build() -> Journey:
             "Von Reichweitenangst und Tarifdschungel zur passenden "
             "E-Mobilitätsentscheidung."
         ),
-        opener=(
-            "Begrüße die Person kurz und warm auf Deutsch und stelle eine offene "
-            "Frage zu ihrem Alltag und ihren typischen Wegen. Halte dich sehr kurz."
-        ),
+        opener=opening_line(TOPICS, "zum Alltag und den typischen Wegen der Person"),
         instruction=INSTRUCTION,
         tools=TOOLS,
         model=get_settings().model,
@@ -461,4 +481,5 @@ def build() -> Journey:
             ("kosten", "Kosten"),
             ("naechster_schritt", "Nächster Schritt"),
         ],
+        topics=TOPICS,
     )

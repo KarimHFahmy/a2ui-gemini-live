@@ -25,6 +25,8 @@ export interface AdvisoryController {
   surfaceTitles: Map<string, string>;
   /** The advisory arc, in order, as the backend defines it. */
   steps: JourneyStep[];
+  /** What this journey can help with, in the words the agent will speak. */
+  topics: string[];
   micActive: boolean;
   micLevel: number;
   agentLevel: number;
@@ -43,6 +45,7 @@ export function useAdvisory(): AdvisoryController {
   const [surfaces, setSurfaces] = useState<SurfaceModel<ReactComponentImplementation>[]>([]);
   const [surfaceTitles, setSurfaceTitles] = useState<Map<string, string>>(new Map());
   const [steps, setSteps] = useState<JourneyStep[]>([]);
+  const [topics, setTopics] = useState<string[]>([]);
   const [micActive, setMicActive] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const [agentLevel, setAgentLevel] = useState(0);
@@ -105,6 +108,7 @@ export function useAdvisory(): AdvisoryController {
       setError(null);
       setHandover(null);
       setSteps([]);
+      setTopics([]);
       setBusyTool(null);
       // A new conversation starts on an empty screen, whatever ended the last
       // one — the restart button, a dropped socket, or an error.
@@ -130,7 +134,10 @@ export function useAdvisory(): AdvisoryController {
           setSurfaceTitles(previous => new Map(previous).set(meta.surfaceId, meta.title));
           syncSurfaces();
         },
-        onSteps: next => setSteps(next),
+        onJourney: meta => {
+          setSteps(meta.steps);
+          setTopics(meta.topics);
+        },
         onTool: name => {
           setBusyTool(name);
           if (toolTimer.current) clearTimeout(toolTimer.current);
@@ -173,6 +180,7 @@ export function useAdvisory(): AdvisoryController {
     setAgentLevel(0);
     setBusyTool(null);
     setSteps([]);
+    setTopics([]);
     setState('closed');
   }, [clearSurfaces]);
 
@@ -197,6 +205,7 @@ export function useAdvisory(): AdvisoryController {
     surfaces,
     surfaceTitles,
     steps,
+    topics,
     micActive,
     micLevel,
     agentLevel,

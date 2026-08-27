@@ -26,6 +26,11 @@
     "label": "Nächster Schritt"
    }
   ],
+  "topics": [
+   "ob eine Wärmepumpe zu Ihrem Haus passt",
+   "was der Umstieg kostet und ab wann er sich lohnt",
+   "welche Förderung Sie bekommen"
+  ],
   "messages": [
    {
     "version": "v0.9.1",
@@ -1940,6 +1945,11 @@
     "surfaceId": "naechster_schritt",
     "label": "Nächster Schritt"
    }
+  ],
+  "topics": [
+   "ob ein E-Auto zu Ihren Wegen passt",
+   "wo Sie laden würden und was das kostet",
+   "welches Fahrzeug zu Ihnen passt"
   ],
   "messages": [
    {

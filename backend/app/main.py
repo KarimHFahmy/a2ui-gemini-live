@@ -166,6 +166,10 @@ async def advisory_socket(
                 "id": selected.id,
                 "label": selected.label,
                 "tagline": selected.tagline,
+                # What the agent will say it can help with. The client lists
+                # the same three on the empty screen, because three topics said
+                # once out loud are hard to hold on to.
+                "topics": selected.topics,
                 # The advisory arc, so the client can show where the
                 # conversation stands without guessing at surface ids.
                 "steps": [
