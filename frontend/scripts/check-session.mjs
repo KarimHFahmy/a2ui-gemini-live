@@ -33,6 +33,14 @@ const JOURNEYS = [
   {id: 'mobilitaet', label: 'Meine Mobilität', tagline: 'Reichweite, Laden, Kosten'},
 ];
 
+/*
+ * How long the stub waits between the session frame and the first surface.
+ * Long enough to look at the empty screen, which is the only moment the
+ * topics are on it — and the moment a first-time client decides whether they
+ * know what to say.
+ */
+const OPENING_PAUSE = 250;
+
 const fixtures = JSON.parse(
   fs.readFileSync(path.resolve(import.meta.dirname, '../fixtures.json'), 'utf8'),
 );
@@ -77,7 +85,7 @@ await page.route('**fonts.gstatic.com**', r => r.abort());
  * real ones, and only the transport is fake.
  */
 await page.addInitScript(
-  ({fixtures: captured}) => {
+  ({fixtures: captured, pause}) => {
     navigator.mediaDevices.getUserMedia = () => Promise.reject(new Error('no mic in this check'));
     window.__sockets = 0;
     class FakeSocket {
@@ -86,12 +94,22 @@ await page.addInitScript(
         this.binaryType = 'arraybuffer';
         window.__sockets += 1;
         const id = new URL(url.replace(/^ws/, 'http')).searchParams.get('journey');
+        const send = payload => this.onmessage?.({data: JSON.stringify(payload)});
         setTimeout(() => {
           this.onopen?.();
-          const send = payload => this.onmessage?.({data: JSON.stringify(payload)});
-          send({type: 'session', journey: {id, label: id, steps: captured[id].steps}});
-          for (const message of captured[id].messages) send({type: 'a2ui', payload: message});
+          send({
+            type: 'session',
+            journey: {
+              id,
+              label: id,
+              steps: captured[id].steps,
+              topics: captured[id].topics,
+            },
+          });
         }, 20);
+        setTimeout(() => {
+          for (const message of captured[id].messages) send({type: 'a2ui', payload: message});
+        }, 20 + pause);
       }
       send() {}
       close() {
@@ -101,7 +119,7 @@ await page.addInitScript(
     }
     window.WebSocket = FakeSocket;
   },
-  {fixtures},
+  {fixtures, pause: OPENING_PAUSE},
 );
 
 const surfaceIds = () =>
@@ -110,10 +128,18 @@ const surfaceIds = () =>
 async function startJourney(label) {
   await page.getByRole('button', {name: new RegExp(label)}).click();
   await page.waitForSelector('.session__bar', {timeout: 8000});
+
+  // The empty screen, before any surface lands: the only place the topics
+  // appear, and the moment someone decides whether they know what to say.
+  const opening = await page.$$eval('.stage__topics li', nodes =>
+    nodes.map(n => n.textContent.trim()),
+  );
+
   await page.waitForFunction(() => document.querySelectorAll('[data-surface-id]').length > 0, {
     timeout: 8000,
   });
   await page.waitForTimeout(300);
+  return opening;
 }
 
 async function restart() {
@@ -125,8 +151,16 @@ async function restart() {
 await page.goto('http://localhost:4174/', {waitUntil: 'networkidle'});
 
 // --- First conversation ----------------------------------------------------
-await startJourney('Mein Zuhause');
+const opening = await startJourney('Mein Zuhause');
 const first = await surfaceIds();
+
+// The agent says what it can help with; the empty screen has to say the same,
+// because three topics heard once are hard to hold on to.
+if (opening.length === 0) {
+  problems.push('the empty screen offered no topics, so nobody knows what to say');
+} else if (JSON.stringify(opening) !== JSON.stringify(fixtures.energie.topics)) {
+  problems.push(`the screen and the greeting disagree: ${opening.join(' | ')}`);
+}
 if (first.length === 0) problems.push('the first session rendered no surfaces at all');
 if (!first.includes('eignung')) {
   problems.push(`the first session is missing its own surfaces: ${first.join(', ')}`);

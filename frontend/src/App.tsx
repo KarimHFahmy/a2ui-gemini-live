@@ -186,6 +186,7 @@ export default function App() {
             surfaces={flow}
             titles={advisory.surfaceTitles}
             journeyLabel={active.label}
+            topics={advisory.topics}
             hasAnySurface={advisory.surfaces.length > 0}
           />
           <ContextAside profile={profile} steps={advisory.steps} present={present} />

@@ -303,16 +303,20 @@ HAPPY_SCRIPTS: dict[str, Script] = {
 
 
 def capture(scripts: dict[str, Script]) -> dict[str, dict[str, Any]]:
-    """One entry per journey: its arc, and the A2UI stream a run produces.
+    """One entry per journey: its arc, its topics, and the A2UI stream.
 
-    The arc travels with the fixtures so the preview renders the same context
-    column a live session does — otherwise the one screen used for design
-    review would be the one screen the progress indicator is missing from.
+    The metadata travels with the fixtures so the preview and the session check
+    render the same shell a live session does — otherwise the one screen used
+    for design review would be the one screen missing the progress indicator.
     """
-    arcs = {
-        journey.id: [
-            {"surfaceId": surface_id, "label": label} for surface_id, label in journey.steps
-        ]
+    meta = {
+        journey.id: {
+            "steps": [
+                {"surfaceId": surface_id, "label": label}
+                for surface_id, label in journey.steps
+            ],
+            "topics": journey.topics,
+        }
         for journey in all_journeys()
     }
     fixtures: dict[str, dict[str, Any]] = {}
@@ -325,7 +329,7 @@ def capture(scripts: dict[str, Script]) -> dict[str, dict[str, Any]]:
             tool(tool_context=context, **args)  # type: ignore[arg-type]
             messages.extend(context.drain())
 
-        fixtures[journey_id] = {"steps": arcs[journey_id], "messages": messages}
+        fixtures[journey_id] = {**meta[journey_id], "messages": messages}
 
     return fixtures
 

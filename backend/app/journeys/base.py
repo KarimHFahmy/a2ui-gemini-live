@@ -138,6 +138,30 @@ kein Nachtrag zum Gespräch, sondern Teil davon.
 """.strip()
 
 
+def opening_line(topics: list[str], frage_nach: str) -> str:
+    """The nudge that starts the conversation.
+
+    Composed from the journey's own topics rather than written separately, so
+    what the agent says out loud and what the empty screen lists can never drift
+    apart. Naming the three things first is the whole point: a warm greeting and
+    an open question leave a first-time client with nothing to grab onto, and
+    the most common failure of a voice product is a person who does not know
+    what they are allowed to say.
+    """
+    return (
+        "Begrüße die Person kurz und warm auf Deutsch. Sag ihr dann in einem "
+        "Satz, wobei du helfen kannst: " + join_de(topics) + ". Stelle danach "
+        f"genau eine offene Frage {frage_nach}. Insgesamt höchstens drei Sätze."
+    )
+
+
+def join_de(items: list[str]) -> str:
+    """`a, b und c` — a spoken list, not a bulleted one."""
+    if len(items) < 2:
+        return "".join(items)
+    return ", ".join(items[:-1]) + " und " + items[-1]
+
+
 class Journey:
     """One advisory journey: its identity, its agent, its opening line."""
 
@@ -152,11 +176,16 @@ class Journey:
         tools: list[Any],
         model: str,
         steps: list[tuple[str, str]],
+        topics: list[str],
     ) -> None:
         self.id = journey_id
         self.label = label
         self.tagline = tagline
         self.opener = opener
+        #: What this journey can actually help with, in the client's words.
+        #: Spoken in the greeting and listed on the empty screen — one source,
+        #: so someone who missed the audio can read the same three things.
+        self.topics = topics
         #: The advisory arc as (surface id, label) pairs, in order. The client
         #: marks a step done when its surface has arrived, which is why these
         #: are surface ids and not tool names: a step counts once the person

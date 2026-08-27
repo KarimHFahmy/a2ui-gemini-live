@@ -13,6 +13,11 @@ uncomfortable thing when the numbers call for it.
 The first thing you say. Everything else follows from it, so it is worth
 picking one on purpose rather than improvising at the microphone.
 
+The agent opens by naming the three things it can help with, and the empty
+screen lists the same three — so you can also just wait, read them, and answer.
+The lines below are what to say if you want to steer the run somewhere
+specific.
+
 Each line is written the way a real client opens — a situation and a worry, not
 a list of parameters — and each lands somewhere different. The outcomes below
 are what the domain modules actually produce, not what would be nice.
@@ -103,7 +108,11 @@ Short answers that keep a demo moving, for the questions that come up most:
 
 ## 01 — Der persönliche Energieberater
 
-Pick **Mein Zuhause**. The agent greets and asks one open question.
+Pick **Mein Zuhause**. The agent greets you, says in one sentence what it can
+help with — whether a heat pump suits your house, what the switch costs and when
+it pays back, and what funding you get — and then asks one open question. The
+same three are listed on the empty screen while it speaks, so nobody has to hold
+them in their head.
 
 **Say:**
 > „Unser Haus ist von 1985, etwa 160 Quadratmeter, vier Personen. Wir heizen mit

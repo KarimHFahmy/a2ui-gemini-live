@@ -22,6 +22,12 @@ export interface JourneyStep {
   label: string;
 }
 
+/** What the journey opens with: its arc, and what it can help with. */
+export interface JourneyMeta {
+  steps: JourneyStep[];
+  topics: string[];
+}
+
 export interface SessionCallbacks {
   onState: (state: ConnectionState, detail?: string) => void;
   onAudio: (pcm16: ArrayBuffer) => void;
@@ -29,7 +35,7 @@ export interface SessionCallbacks {
   onTurnComplete: () => void;
   onA2ui: (message: A2uiMessage) => void;
   onSurfaceMeta: (meta: SurfaceMeta & {isNew: boolean}) => void;
-  onSteps: (steps: JourneyStep[]) => void;
+  onJourney: (meta: JourneyMeta) => void;
   onTool: (name: string) => void;
   onHandover: (summary: unknown) => void;
   onError: (message: string) => void;
@@ -114,10 +120,14 @@ export class AdvisorySocket {
         this.callbacks.onError(String(event.message ?? 'Unbekannter Fehler'));
         break;
       case 'session': {
-        // The advisory arc arrives with the session, so the client never has
-        // to guess which surfaces are steps and which are asides.
-        const journey = event.journey as {steps?: JourneyStep[]} | undefined;
-        this.callbacks.onSteps(journey?.steps ?? []);
+        // The arc and the topics arrive with the session, so the client never
+        // has to guess which surfaces are steps or restate what the agent can
+        // do in its own words.
+        const journey = event.journey as Partial<JourneyMeta> | undefined;
+        this.callbacks.onJourney({
+          steps: journey?.steps ?? [],
+          topics: journey?.topics ?? [],
+        });
         break;
       }
       case 'status':

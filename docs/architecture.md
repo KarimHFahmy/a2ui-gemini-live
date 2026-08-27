@@ -149,6 +149,13 @@ sends `createSurface` + `updateDataModel` + `updateComponents`; every later call
 to the same tool sends only the two updates, so the card the client is already
 reading changes in place instead of a near-duplicate appearing below it.
 
+The conversation opens by saying what it is for. `Journey.topics` is the one
+source: `base.opening_line()` composes the greeting from it, the standing
+instruction repeats it so a resumed session does not drop the scope, and the
+client lists the same three on the empty screen. Three topics heard once are
+hard to hold on to, and a person who does not know what they are allowed to say
+is the most common way a voice product stalls before it starts.
+
 The context column beside the conversation holds the two things that are true
 throughout rather than at a moment: where the conversation stands, and what the
 agent currently believes about the client. Everything else stacks in the stage

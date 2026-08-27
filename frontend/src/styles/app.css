@@ -574,6 +574,41 @@
   font-size: 15px;
 }
 
+/* Scoped, not `!important`: `.stage__empty p` above would otherwise win. */
+.stage__empty .stage__empty-lead {
+  margin-top: var(--space-4);
+  color: var(--text);
+  font-weight: 500;
+}
+
+/*
+ * What the agent has just said it can help with. Left-aligned inside a centred
+ * block on purpose: three clauses are a list to read down, not a paragraph.
+ */
+.stage__topics {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-5);
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.stage__topics li {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: var(--space-3);
+  font-size: 15px;
+  color: var(--text);
+}
+
+.stage__topics li::before {
+  content: '→';
+  font-family: var(--font-mono);
+  color: var(--brand-accent);
+}
+
 /* ---------- Profile aside ---------- */
 
 .aside {

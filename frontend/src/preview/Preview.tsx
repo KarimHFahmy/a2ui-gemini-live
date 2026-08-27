@@ -79,6 +79,7 @@ export default function Preview() {
             surfaces={flow}
             titles={titles}
             journeyLabel={JOURNEY_LABELS[active] ?? active}
+            topics={[]}
             hasAnySurface={surfaces.length > 0}
           />
           <ContextAside profile={profile} steps={steps} present={present} />
