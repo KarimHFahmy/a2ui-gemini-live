@@ -26,7 +26,18 @@ interface LandingProps {
   starting: string | null;
 }
 
+/**
+ * The experiment journeys — see `docs/experiment-generative-ui.md` — are the
+ * same two advisories with the composers removed. They are offered here so the
+ * two can be run side by side, but set apart: an experiment that looks like a
+ * fourth product invites someone to demo it by accident.
+ */
+const isExperiment = (journey: JourneyOption) => journey.id.endsWith('_frei');
+
 export function Landing({journeys, brandName, onSelect, starting}: LandingProps) {
+  const advisories = journeys.filter(journey => !isExperiment(journey));
+  const experiments = journeys.filter(isExperiment);
+
   return (
     <main className="landing">
       <div className="landing__inner">
@@ -42,7 +53,7 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
         <HeroDemo />
 
         <div className="landing__choices">
-          {journeys.map(journey => (
+          {advisories.map(journey => (
             <button
               type="button"
               key={journey.id}
@@ -64,7 +75,9 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
                   strokeLinejoin="round"
                   aria-hidden="true"
                 >
-                  <path d={ACCENT_ICONS[journey.id] ?? ACCENT_ICONS.energie} />
+                  <path
+                    d={ACCENT_ICONS[journey.id.replace(/_frei$/, '')] ?? ACCENT_ICONS.energie}
+                  />
                 </svg>
                 {journey.label}
               </span>
@@ -88,6 +101,32 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
             </button>
           ))}
         </div>
+
+        {experiments.length > 0 ? (
+          <section className="landing__experiments">
+            <p className="landing__experiments-label">
+              Experiment · dieselbe Beratung ohne Composer
+            </p>
+            <div className="landing__choices">
+              {experiments.map(journey => (
+                <button
+                  type="button"
+                  key={journey.id}
+                  className="choice choice--experiment"
+                  onClick={() => onSelect(journey.id)}
+                  disabled={starting !== null}
+                  aria-busy={starting === journey.id}
+                >
+                  <span className="choice__label">{journey.label}</span>
+                  <span className="choice__tagline">{journey.tagline}</span>
+                  <span className="choice__cta">
+                    {starting === journey.id ? 'Verbinde …' : 'Frei generiert starten'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <footer className="landing__foot">
           <p>

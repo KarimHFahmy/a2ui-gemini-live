@@ -132,6 +132,11 @@ requirement, not a nice-to-have. When the composer is the only thing that
 writes a surface, the visual quality and the factual content are both bounded
 by code review rather than by prompt engineering.
 
+**And the other route is built, so the argument can be checked.** Both journeys
+exist a second time with the composers removed and the model emitting the trees
+itself — same renderer, same figures, same audio. See
+`docs/experiment-generative-ui.md` for what changes and what to measure.
+
 The cost is expressiveness: the agent can only show what a composer knows how
 to build. For a demo with two well-understood journeys that is the right trade.
 A general assistant would want the opposite.

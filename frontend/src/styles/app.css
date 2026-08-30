@@ -311,6 +311,43 @@
   font-size: 14px;
 }
 
+/*
+ * The experiment, set apart. Quieter than the two advisories on purpose: it is
+ * there to be compared against them, not chosen instead of one.
+ */
+.landing__experiments {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
+}
+
+.landing__experiments-label {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+.choice--experiment {
+  background: transparent;
+  border-style: dashed;
+  box-shadow: none;
+}
+
+.choice--experiment .choice__label {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.choice--experiment:hover:not(:disabled),
+.choice--experiment:focus-visible {
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-card);
+}
+
 .landing__foot {
   margin-top: var(--space-6);
   text-align: center;

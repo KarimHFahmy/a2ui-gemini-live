@@ -31,6 +31,26 @@ const MIME = {
 const JOURNEYS = [
   {id: 'energie', label: 'Mein Zuhause', tagline: 'Wärmepumpe, Sanierung, Förderung'},
   {id: 'mobilitaet', label: 'Meine Mobilität', tagline: 'Reichweite, Laden, Kosten'},
+  /*
+   * The generative-UI experiment (docs/experiment-generative-ui.md). It is
+   * listed here so the landing page has to keep it apart from the two real
+   * advisories; the check below is the only thing that notices when it stops
+   * doing that and the page silently becomes a grid of four products.
+   *
+   * No session is started for them — the stub replays captured A2UI, and the
+   * whole point of these journeys is that nothing about their surfaces is
+   * captured in advance.
+   */
+  {
+    id: 'energie_frei',
+    label: 'Mein Zuhause · frei generiert',
+    tagline: 'Experiment: das Modell baut die Oberfläche selbst.',
+  },
+  {
+    id: 'mobilitaet_frei',
+    label: 'Meine Mobilität · frei generiert',
+    tagline: 'Experiment: das Modell baut die Oberfläche selbst.',
+  },
 ];
 
 /*
@@ -126,7 +146,13 @@ const surfaceIds = () =>
   page.$$eval('[data-surface-id]', nodes => nodes.map(n => n.dataset.surfaceId).sort());
 
 async function startJourney(label) {
-  await page.getByRole('button', {name: new RegExp(label)}).click();
+  // Scoped to the first row: the experiment row carries the same two labels
+  // with a suffix, and only the composed journeys have a captured stream.
+  await page
+    .locator('.landing__choices')
+    .first()
+    .getByRole('button', {name: new RegExp(label)})
+    .click();
   await page.waitForSelector('.session__bar', {timeout: 8000});
 
   // The empty screen, before any surface lands: the only place the topics
@@ -149,6 +175,37 @@ async function restart() {
 }
 
 await page.goto('http://localhost:4174/', {waitUntil: 'networkidle'});
+
+// --- The landing page keeps the experiment out of the product row ----------
+// Four journeys come back from the API, but only two of them are things a
+// client is meant to be shown. If the split ever stops working the page turns
+// into a grid of four equal offers and someone demos the experiment by
+// accident, which is not something any later assertion here would notice.
+const rows = await page.$$eval('.landing__choices', groups =>
+  groups.map(group => Array.from(group.querySelectorAll('.choice'), b => b.className)),
+);
+if (rows.length !== 2) {
+  problems.push(`the landing page put the journeys in ${rows.length} group(s), expected 2`);
+} else {
+  const [products, experiments] = rows;
+  if (products.length !== 2 || products.some(c => c.includes('choice--experiment'))) {
+    problems.push(`the product row is not the two advisories: ${products.join(' | ')}`);
+  }
+  if (experiments.length !== 2 || !experiments.every(c => c.includes('choice--experiment'))) {
+    problems.push(`the experiment row is not marked as one: ${experiments.join(' | ')}`);
+  }
+}
+
+// Everything below drives the page by clicking those buttons, so a page that is
+// not shaped as expected produces a Playwright timeout instead of the reason
+// for it. Report and stop here.
+if (problems.length) {
+  for (const problem of problems) console.log(`  ${problem}`);
+  console.log(`\nFAILURES: ${problems.length}`);
+  await browser.close();
+  server.close();
+  process.exit(1);
+}
 
 // --- First conversation ----------------------------------------------------
 const opening = await startJourney('Mein Zuhause');
