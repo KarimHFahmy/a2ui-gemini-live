@@ -7,6 +7,8 @@
  */
 
 import {useState, type FormEvent} from 'react';
+import {useLocale} from '../LocaleContext';
+import type {TextKey} from '../i18n';
 
 import type {ConnectionState} from '../live/session';
 import {toolLabel} from './toolLabels';
@@ -23,12 +25,12 @@ interface VoiceDockProps {
   busyTool: string | null;
 }
 
-const STATE_LABEL: Record<ConnectionState, string> = {
-  idle: 'Bereit',
-  connecting: 'Verbinde …',
-  live: 'Verbunden',
-  closed: 'Beendet',
-  error: 'Verbindung unterbrochen',
+const STATE_KEY: Record<ConnectionState, TextKey> = {
+  idle: 'dock.idle',
+  connecting: 'dock.connecting',
+  live: 'dock.live',
+  closed: 'dock.closed',
+  error: 'dock.error',
 };
 
 export function VoiceDock({
@@ -41,6 +43,7 @@ export function VoiceDock({
   onSendText,
   busyTool,
 }: VoiceDockProps) {
+  const {t} = useLocale();
   const [draft, setDraft] = useState('');
 
   const submit = (event: FormEvent) => {
@@ -61,13 +64,13 @@ export function VoiceDock({
         {busyTool ? (
           <>
             <span className="dock__spinner" aria-hidden="true" />
-            <span className="dock__status-label">{toolLabel(busyTool)}</span>
+            <span className="dock__status-label">{toolLabel(t, busyTool)}</span>
           </>
         ) : (
           <>
             <span className={`dot dot--${state}`} aria-hidden="true" />
             <span className="dock__status-label">
-              {agentSpeaking ? 'Berater spricht' : STATE_LABEL[state]}
+              {agentSpeaking ? t('dock.speaking') : t(STATE_KEY[state])}
             </span>
           </>
         )}
@@ -78,7 +81,7 @@ export function VoiceDock({
         className={`mic ${micActive ? 'is-live' : 'is-muted'}`}
         onClick={onToggleMic}
         aria-pressed={micActive}
-        aria-label={micActive ? 'Mikrofon stummschalten' : 'Mikrofon aktivieren'}
+        aria-label={micActive ? t('dock.mic.off') : t('dock.mic.on')}
       >
         <span
           className="mic__pulse"

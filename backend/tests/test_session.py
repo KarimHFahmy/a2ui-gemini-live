@@ -190,15 +190,16 @@ class TestInbound:
 
 
 class TestRunConfig:
-    def test_the_config_is_german_and_audio_first(self):
-        config = build_run_config(Settings())
+    def test_the_config_speaks_the_session_language_and_is_audio_first(self):
+        config = build_run_config(Settings(), "de")
 
         assert config.response_modalities == ["AUDIO"]
         assert config.speech_config.language_code == "de-DE"
+        assert build_run_config(Settings(), "en").speech_config.language_code == "en-GB"
         assert config.input_audio_transcription is not None
         assert config.output_audio_transcription is not None
 
     def test_bidi_streaming_is_requested(self):
         from google.adk.agents.run_config import StreamingMode
 
-        assert build_run_config(Settings()).streaming_mode == StreamingMode.BIDI
+        assert build_run_config(Settings(), "de").streaming_mode == StreamingMode.BIDI

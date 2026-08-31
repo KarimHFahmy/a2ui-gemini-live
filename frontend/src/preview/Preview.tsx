@@ -18,7 +18,9 @@ import {MessageProcessor} from '@a2ui/web_core/v0_9';
 import type {ReactComponentImplementation} from '@a2ui/react/v0_9';
 
 import {A2uiHost} from '../a2ui/A2uiHost';
-import {CATALOGS} from '../a2ui/catalog';
+import {catalogsFor} from '../a2ui/catalog';
+import {LOCALES, readLocale, type Locale} from '../i18n';
+import {LocaleProvider} from '../LocaleContext';
 import {ContextAside} from '../ui/ContextAside';
 import {Stage} from '../ui/Stage';
 import {splitSurfaces} from '../ui/surfaces';
@@ -27,22 +29,21 @@ import fixtures from '../../fixtures.json';
 import type {JourneyStep} from '../live/session';
 
 type Capture = {steps: JourneyStep[]; messages: unknown[]};
-type Fixtures = Record<string, Capture>;
-
-const JOURNEY_LABELS: Record<string, string> = {
-  energie: 'Mein Zuhause',
-  mobilitaet: 'Meine Mobilität',
-};
+type Fixtures = Record<Locale, Record<string, Capture>>;
 
 export default function Preview() {
-  const journeys = Object.keys(fixtures as Fixtures);
+  // `?lang=` picks the language, so the catalog check can render each in turn
+  // in the same browser without a click.
+  const [locale, setLocale] = useState<Locale>(readLocale);
+  const journeys = Object.keys((fixtures as Fixtures)[locale]);
   const [active, setActive] = useState(journeys[0]);
 
   const {surfaces, titles, steps} = useMemo(() => {
-    const processor = new MessageProcessor<ReactComponentImplementation>(CATALOGS, action =>
-      console.info('action dispatched:', action),
+    const processor = new MessageProcessor<ReactComponentImplementation>(
+      catalogsFor(locale),
+      action => console.info('action dispatched:', action),
     );
-    const capture = (fixtures as Fixtures)[active];
+    const capture = (fixtures as Fixtures)[locale][active];
     processor.processMessages(capture.messages as never);
     const list = Array.from(processor.model.surfacesMap.values());
     return {
@@ -50,41 +51,53 @@ export default function Preview() {
       titles: new Map(list.map(surface => [surface.id, surface.id])),
       steps: capture.steps,
     };
-  }, [active]);
+  }, [active, locale]);
 
   const {profile, flow} = splitSurfaces(surfaces);
   const present = new Set(surfaces.map(surface => surface.id));
 
   return (
-    <A2uiHost>
-      <div className="session">
-        <header className="session__bar">
-          <span className="session__wordmark">Katalog-Vorschau</span>
-          {journeys.map(journey => (
-            <button
-              type="button"
-              key={journey}
-              className={`btn btn--ghost ${journey === active ? 'is-active' : ''}`}
-              onClick={() => setActive(journey)}
-              aria-pressed={journey === active}
-            >
-              {JOURNEY_LABELS[journey] ?? journey}
-            </button>
-          ))}
-          <span className="session__badge">Demo-Daten</span>
-        </header>
+    <LocaleProvider locale={locale}>
+      <A2uiHost>
+        <div className="session">
+          <header className="session__bar">
+            <span className="session__wordmark">Katalog-Vorschau</span>
+            {journeys.map(journey => (
+              <button
+                type="button"
+                key={journey}
+                className={`btn btn--ghost ${journey === active ? 'is-active' : ''}`}
+                onClick={() => setActive(journey)}
+                aria-pressed={journey === active}
+              >
+                {journey}
+              </button>
+            ))}
+            {LOCALES.map(option => (
+              <button
+                type="button"
+                key={option}
+                className={`btn btn--ghost ${option === locale ? 'is-active' : ''}`}
+                onClick={() => setLocale(option)}
+                aria-pressed={option === locale}
+              >
+                {option}
+              </button>
+            ))}
+          </header>
 
-        <div className="session__body">
-          <Stage
-            surfaces={flow}
-            titles={titles}
-            journeyLabel={JOURNEY_LABELS[active] ?? active}
-            topics={[]}
-            hasAnySurface={surfaces.length > 0}
-          />
-          <ContextAside profile={profile} steps={steps} present={present} />
+          <div className="session__body">
+            <Stage
+              surfaces={flow}
+              titles={titles}
+              journeyLabel={active}
+              topics={[]}
+              hasAnySurface={surfaces.length > 0}
+            />
+            <ContextAside profile={profile} steps={steps} present={present} />
+          </div>
         </div>
-      </div>
-    </A2uiHost>
+      </A2uiHost>
+    </LocaleProvider>
   );
 }

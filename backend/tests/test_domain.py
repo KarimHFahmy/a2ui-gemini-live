@@ -9,7 +9,13 @@ from __future__ import annotations
 
 import pytest
 
+from app.texts import Texts
 from app.domain import energie, mobilitaet
+
+
+#: The domain calculates; only its labels and assumption lines are worded,
+#: and those are covered per language in test_texts and test_readback.
+TEXTS = Texts("de")
 
 
 class TestWaermebedarf:
@@ -81,7 +87,7 @@ class TestSzenarien:
 
     def test_cumulative_costs_only_grow(self):
         profil = energie.Gebaeudeprofil()
-        verlauf = energie.kostenverlauf(energie.szenarien(profil))
+        verlauf = energie.kostenverlauf(energie.szenarien(profil), TEXTS)
 
         for serie in verlauf["serien"]:
             assert serie["werte"] == sorted(serie["werte"])
@@ -116,11 +122,11 @@ class TestReichweite:
 
     def test_a_trip_within_range_needs_no_stop(self):
         profil = mobilitaet.Mobilitaetsprofil(langstrecke_km=120)
-        assert mobilitaet.langstrecke(profil)["ladestopps"] == 0
+        assert mobilitaet.langstrecke(profil, TEXTS)["ladestopps"] == 0
 
     def test_a_longer_trip_needs_more_stops(self):
-        kurz = mobilitaet.langstrecke(mobilitaet.Mobilitaetsprofil(langstrecke_km=300))
-        lang = mobilitaet.langstrecke(mobilitaet.Mobilitaetsprofil(langstrecke_km=900))
+        kurz = mobilitaet.langstrecke(mobilitaet.Mobilitaetsprofil(langstrecke_km=300), TEXTS)
+        lang = mobilitaet.langstrecke(mobilitaet.Mobilitaetsprofil(langstrecke_km=900), TEXTS)
         assert lang["ladestopps"] > kurz["ladestopps"]
 
 
@@ -134,38 +140,38 @@ class TestLadenUndKosten:
         """The demo's core insight: where you charge, not which car you buy."""
         zuhause = mobilitaet.kostenvergleich(
             mobilitaet.Mobilitaetsprofil(lademoeglichkeit="wallbox_zuhause")
-        )
+        , TEXTS)
         oeffentlich = mobilitaet.kostenvergleich(
             mobilitaet.Mobilitaetsprofil(lademoeglichkeit="nur_oeffentlich")
-        )
+        , TEXTS)
 
         assert zuhause["differenz_eur"] > oeffentlich["differenz_eur"]
         assert zuhause["differenz_eur"] > 0
 
     def test_electric_saves_co2_against_the_grid_mix(self):
-        result = mobilitaet.kostenvergleich(mobilitaet.Mobilitaetsprofil())
+        result = mobilitaet.kostenvergleich(mobilitaet.Mobilitaetsprofil(), TEXTS)
         assert result["co2_ersparnis_kg_a"] > 0
 
     def test_the_cost_items_add_up_to_the_total(self):
-        result = mobilitaet.kostenvergleich(mobilitaet.Mobilitaetsprofil())
+        result = mobilitaet.kostenvergleich(mobilitaet.Mobilitaetsprofil(), TEXTS)
         elektro = next(s for s in result["serien"] if s["label"] == "Elektro")
         assert sum(elektro["werte"]) == pytest.approx(result["gesamt_elektro_eur"], abs=1)
 
 
 class TestFahrzeugvorschlaege:
     def test_suggestions_come_back_ranked(self):
-        vorschlaege = mobilitaet.fahrzeugvorschlaege(mobilitaet.Mobilitaetsprofil())
+        vorschlaege = mobilitaet.fahrzeugvorschlaege(mobilitaet.Mobilitaetsprofil(), TEXTS)
         scores = [v["score"] for v in vorschlaege]
         assert scores == sorted(scores, reverse=True)
 
     def test_every_suggestion_names_a_trade_off(self):
         # Advice that only lists upsides is advertising, not advice.
-        for v in mobilitaet.fahrzeugvorschlaege(mobilitaet.Mobilitaetsprofil()):
+        for v in mobilitaet.fahrzeugvorschlaege(mobilitaet.Mobilitaetsprofil(), TEXTS):
             assert v["contra"]
             assert v["pro"]
 
     def test_a_car_over_budget_is_ranked_lower(self):
         profil = mobilitaet.Mobilitaetsprofil(budget_eur_monat=360)
-        vorschlaege = mobilitaet.fahrzeugvorschlaege(profil, anzahl=4)
+        vorschlaege = mobilitaet.fahrzeugvorschlaege(profil, TEXTS, anzahl=4)
         gefunden = {v["id"]: v["score"] for v in vorschlaege}
         assert gefunden["kompakt"] > gefunden["van"]

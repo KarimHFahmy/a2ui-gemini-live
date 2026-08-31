@@ -15,6 +15,8 @@
 import {z} from 'zod';
 import {CommonSchemas} from '@a2ui/web_core/v0_9';
 
+import type {Locale} from '../i18n';
+
 const {ComponentId, DynamicString, DynamicValue} = CommonSchemas;
 
 /**
@@ -86,10 +88,24 @@ export const StatCardApi = {
 export type Tone = 'positive' | 'neutral' | 'caution';
 
 /** What each tone means, for the people who cannot see the colour. */
-export const TONE_LABEL: Record<Tone, string> = {
-  positive: 'Spricht dafür',
-  neutral: 'Zur Einordnung',
-  caution: 'Zu beachten',
+/**
+ * What a tone means, for a reader who cannot see the colour.
+ *
+ * Read out before the card's title, so it has to be in the client's language
+ * like everything else — this is the one string on a surface that the backend
+ * does not compose.
+ */
+export const TONE_LABEL: Record<Locale, Record<Tone, string>> = {
+  de: {
+    positive: 'Spricht dafür',
+    neutral: 'Zur Einordnung',
+    caution: 'Zu beachten',
+  },
+  en: {
+    positive: 'In favour',
+    neutral: 'For context',
+    caution: 'Worth noting',
+  },
 };
 
 export function asTone(value: unknown): Tone {

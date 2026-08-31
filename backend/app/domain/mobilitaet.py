@@ -11,8 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from ..texts import Texts
 from . import demo_data as dd
-from ..format_de import de
 
 Lademoeglichkeit = Literal[
     "wallbox_zuhause", "steckdose_zuhause", "arbeitsplatz", "nur_oeffentlich"
@@ -91,14 +91,14 @@ def reichweite(profil: Mobilitaetsprofil) -> dict[str, Any]:
     }
 
 
-def wochenprofil(profil: Mobilitaetsprofil) -> dict[str, Any]:
+def wochenprofil(profil: Mobilitaetsprofil, t: Texts) -> dict[str, Any]:
     """Die typische Woche als Diagramm — Fahrbedarf gegen Winterreichweite.
 
     Seeing five commuting days sit well under the winter range does more to
     answer "ist das praktikabel?" than any spec sheet.
     """
     r = reichweite(profil)
-    tage = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    tage = t.list("mob.tage")
     pendeltage = min(profil.pendeltage_pro_woche, 5)
 
     fahrbedarf: list[float] = []
@@ -115,9 +115,9 @@ def wochenprofil(profil: Mobilitaetsprofil) -> dict[str, Any]:
     return {
         "kategorien": tage,
         "serien": [
-            {"label": "Fahrbedarf", "werte": fahrbedarf},
+            {"label": t("mob.alltag.serie_bedarf"), "werte": fahrbedarf},
             {
-                "label": "Reichweite im Winter",
+                "label": t("mob.alltag.serie_reichweite"),
                 "werte": [r["reichweite_winter_km"]] * len(tage),
             },
         ],
@@ -127,7 +127,7 @@ def wochenprofil(profil: Mobilitaetsprofil) -> dict[str, Any]:
     }
 
 
-def langstrecke(profil: Mobilitaetsprofil) -> dict[str, Any]:
+def langstrecke(profil: Mobilitaetsprofil, t: Texts) -> dict[str, Any]:
     """Die ausgewählte Langstrecke als Timeline mit echten Ladestopps."""
     r = reichweite(profil)
     fahrzeug = dd.FAHRZEUG_KLASSEN[profil.fahrzeugklasse]
@@ -145,35 +145,46 @@ def langstrecke(profil: Mobilitaetsprofil) -> dict[str, Any]:
     ladedauer_min = int(nachgeladen_kwh / mittlere_leistung * 60)
 
     fahrzeit_min = int(strecke / 115 * 60)
+    gesamt_min = fahrzeit_min + stopps * ladedauer_min
     schritte: list[dict[str, Any]] = [
         {
-            "titel": "Start mit 100 %",
-            "detail": f"Vollgeladen zu Hause losgefahren – {r['reichweite_autobahn_winter_km']} km Autobahnreichweite im Winter.",
-            "dauer": "0 min",
+            "titel": t("mob.ls.start"),
+            "detail": t(
+                "mob.ls.start_detail",
+                km=t.num(r["reichweite_autobahn_winter_km"]),
+            ),
+            "dauer": t("mob.ls.min", minuten=0),
             "status": "start",
         }
     ]
     for i in range(stopps):
         schritte.append(
             {
-                "titel": f"Ladestopp {i + 1}",
-                "detail": (
-                    f"{int(nachgeladen_kwh)} kWh in {ladedauer_min} Minuten "
-                    f"bei rund {int(mittlere_leistung)} kW – Zeit für Kaffee und Pause."
+                "titel": t("mob.ls.stopp", nr=i + 1),
+                "detail": t(
+                    "mob.ls.stopp_detail",
+                    kwh=t.num(nachgeladen_kwh),
+                    minuten=ladedauer_min,
+                    kw=int(mittlere_leistung),
                 ),
-                "dauer": f"{ladedauer_min} min",
+                "dauer": t("mob.ls.min", minuten=ladedauer_min),
                 "status": "laden",
             }
         )
     schritte.append(
         {
-            "titel": "Ankunft",
-            "detail": (
-                f"{int(strecke)} km gesamt, reine Fahrzeit rund "
-                f"{fahrzeit_min // 60} h {fahrzeit_min % 60} min."
+            "titel": t("mob.ls.ankunft"),
+            "detail": t(
+                "mob.ls.ankunft_detail",
+                km=t.num(strecke),
+                stunden=fahrzeit_min // 60,
+                minuten=fahrzeit_min % 60,
             ),
-            "dauer": f"{(fahrzeit_min + stopps * ladedauer_min) // 60} h "
-            f"{(fahrzeit_min + stopps * ladedauer_min) % 60} min gesamt",
+            "dauer": t(
+                "mob.ls.ankunft_dauer",
+                stunden=gesamt_min // 60,
+                minuten=gesamt_min % 60,
+            ),
             "status": "ziel",
         }
     )
@@ -208,10 +219,10 @@ _PREIS_JE_QUELLE: dict[str, float] = {
 }
 
 _QUELLE_LABEL: dict[str, str] = {
-    "zuhause": "Zuhause",
-    "arbeit": "Arbeitgeber",
-    "ac": "Öffentlich AC",
-    "dc": "Schnellladen DC",
+    "zuhause": "mob.quelle.zuhause",
+    "arbeit": "mob.quelle.arbeit",
+    "ac": "mob.quelle.ac_oeffentlich",
+    "dc": "mob.quelle.dc_schnell",
 }
 
 
@@ -237,7 +248,7 @@ def mischpreis_eur_kwh(profil: Mobilitaetsprofil) -> float:
     )
 
 
-def ladeoptionen(profil: Mobilitaetsprofil) -> dict[str, Any]:
+def ladeoptionen(profil: Mobilitaetsprofil, t: Texts) -> dict[str, Any]:
     """Vergleicht die realistischen Ladeszenarien für dieses Profil.
 
     The single biggest cost lever for a German EV buyer is where they charge,
@@ -253,26 +264,26 @@ def ladeoptionen(profil: Mobilitaetsprofil) -> dict[str, Any]:
     for schluessel, label, invest, verfuegbar in (
         (
             "wallbox_zuhause",
-            "Wallbox zu Hause",
+            "mob.lade.wallbox_zuhause",
             dd.WALLBOX_INVEST_EUR,
             profil.stellplatz_vorhanden,
         ),
-        ("arbeitsplatz", "Laden beim Arbeitgeber", 0.0, True),
-        ("nur_oeffentlich", "Nur öffentlich laden", 0.0, True),
+        ("arbeitsplatz", "mob.lade.arbeitsplatz", 0.0, True),
+        ("nur_oeffentlich", "mob.lade.nur_oeffentlich.lang", 0.0, True),
     ):
         preis = ladepreis_eur_kwh(schluessel)
         kosten_a = jahres_kwh * preis
         optionen.append(
             {
                 "id": schluessel,
-                "label": label,
+                "label": t(label),
                 "verfuegbar": verfuegbar,
                 "mischpreis_eur_kwh": round(preis, 3),
                 "kosten_eur_a": round(kosten_a),
                 "kosten_eur_100km": round(kosten_a / jahres_km * 100, 2),
                 "investition_eur": invest,
                 "mix": [
-                    {"label": _QUELLE_LABEL[q], "anteil": a}
+                    {"label": t(_QUELLE_LABEL[q]), "anteil": a}
                     for q, a in _LADEMIX[schluessel].items()
                     if a > 0
                 ],
@@ -297,7 +308,7 @@ def ladeoptionen(profil: Mobilitaetsprofil) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def kostenvergleich(profil: Mobilitaetsprofil) -> dict[str, Any]:
+def kostenvergleich(profil: Mobilitaetsprofil, t: Texts) -> dict[str, Any]:
     """Gesamtkosten E-Auto gegen Verbrenner über die Haltedauer."""
     fahrzeug = dd.FAHRZEUG_KLASSEN[profil.fahrzeugklasse]
     referenz = dd.VERBRENNER_REFERENZ[profil.fahrzeugklasse]
@@ -328,22 +339,22 @@ def kostenvergleich(profil: Mobilitaetsprofil) -> dict[str, Any]:
         return sum(wert for _, wert in posten)
 
     posten_e: list[tuple[str, float]] = [
-        ("Wertverlust", round(wertverlust_e)),
-        ("Energie", round(energie_e * jahre)),
-        ("Wartung", round(dd.WARTUNG_EUR_A_FAHRZEUG["elektro"] * jahre)),
-        ("Versicherung", round(dd.VERSICHERUNG_EUR_A["elektro"] * jahre)),
-        ("Kfz-Steuer", round(dd.KFZ_STEUER_EUR_A["elektro"] * jahre)),
-        ("Wallbox", round(wallbox)),
-        ("THG-Quote", -round(dd.THG_QUOTE_EUR_A * jahre)),
+        ("mob.kosten.posten.wertverlust", round(wertverlust_e)),
+        ("mob.kosten.posten.energie", round(energie_e * jahre)),
+        ("mob.kosten.posten.wartung", round(dd.WARTUNG_EUR_A_FAHRZEUG["elektro"] * jahre)),
+        ("mob.kosten.posten.versicherung", round(dd.VERSICHERUNG_EUR_A["elektro"] * jahre)),
+        ("mob.kosten.posten.steuer", round(dd.KFZ_STEUER_EUR_A["elektro"] * jahre)),
+        ("mob.kosten.posten.wallbox", round(wallbox)),
+        ("mob.kosten.posten.thg", -round(dd.THG_QUOTE_EUR_A * jahre)),
     ]
     posten_v: list[tuple[str, float]] = [
-        ("Wertverlust", round(wertverlust_v)),
-        ("Energie", round(energie_v * jahre)),
-        ("Wartung", round(dd.WARTUNG_EUR_A_FAHRZEUG["verbrenner"] * jahre)),
-        ("Versicherung", round(dd.VERSICHERUNG_EUR_A["verbrenner"] * jahre)),
-        ("Kfz-Steuer", round(dd.KFZ_STEUER_EUR_A["verbrenner"] * jahre)),
-        ("Wallbox", 0.0),
-        ("THG-Quote", 0.0),
+        ("mob.kosten.posten.wertverlust", round(wertverlust_v)),
+        ("mob.kosten.posten.energie", round(energie_v * jahre)),
+        ("mob.kosten.posten.wartung", round(dd.WARTUNG_EUR_A_FAHRZEUG["verbrenner"] * jahre)),
+        ("mob.kosten.posten.versicherung", round(dd.VERSICHERUNG_EUR_A["verbrenner"] * jahre)),
+        ("mob.kosten.posten.steuer", round(dd.KFZ_STEUER_EUR_A["verbrenner"] * jahre)),
+        ("mob.kosten.posten.wallbox", 0.0),
+        ("mob.kosten.posten.thg", 0.0),
     ]
 
     gesamt_e = summe(posten_e)
@@ -352,10 +363,13 @@ def kostenvergleich(profil: Mobilitaetsprofil) -> dict[str, Any]:
     return {
         "haltedauer_jahre": jahre,
         "jahres_km": jahres_km,
-        "kategorien": [label for label, _ in posten_e],
+        "kategorien": [t(label) for label, _ in posten_e],
         "serien": [
-            {"label": "Elektro", "werte": [wert for _, wert in posten_e]},
-            {"label": "Verbrenner", "werte": [wert for _, wert in posten_v]},
+            {"label": t("mob.kosten.serie_elektro"), "werte": [wert for _, wert in posten_e]},
+            {
+                "label": t("mob.kosten.serie_verbrenner"),
+                "werte": [wert for _, wert in posten_v],
+            },
         ],
         "gesamt_elektro_eur": round(gesamt_e),
         "gesamt_verbrenner_eur": round(gesamt_v),
@@ -380,15 +394,17 @@ def kostenvergleich(profil: Mobilitaetsprofil) -> dict[str, Any]:
     }
 
 
-def fahrzeugvorschlaege(profil: Mobilitaetsprofil, *, anzahl: int = 3) -> list[dict[str, Any]]:
+def fahrzeugvorschlaege(
+    profil: Mobilitaetsprofil, t: Texts, *, anzahl: int = 3
+) -> list[dict[str, Any]]:
     """Rangfolge passender Fahrzeugklassen mit offen gezeigten Trade-offs."""
     vorschlaege: list[dict[str, Any]] = []
 
     for klasse, daten in dd.FAHRZEUG_KLASSEN.items():
         kandidat = Mobilitaetsprofil(**{**profil.__dict__, "fahrzeugklasse": klasse})
         r = reichweite(kandidat)
-        ls = langstrecke(kandidat)
-        kosten = kostenvergleich(kandidat)
+        ls = langstrecke(kandidat, t)
+        kosten = kostenvergleich(kandidat, t)
 
         score = 60.0
         pro: list[str] = []
@@ -398,50 +414,63 @@ def fahrzeugvorschlaege(profil: Mobilitaetsprofil, *, anzahl: int = 3) -> list[d
         if puffer >= 3:
             score += 20
             pro.append(
-                f"{r['reichweite_winter_km']} km Winterreichweite – "
-                f"{puffer:.0f}× Ihr täglicher Bedarf"
+                t(
+                    "mob.pro.reichweite_gut",
+                    km=t.num(r["reichweite_winter_km"]),
+                    faktor=t.num(puffer),
+                )
             )
         elif puffer >= 1.5:
             score += 10
-            pro.append(f"{r['reichweite_winter_km']} km im Winter reichen für Ihre Pendelstrecke")
+            pro.append(
+                t("mob.pro.reichweite_ok", km=t.num(r["reichweite_winter_km"]))
+            )
         else:
             score -= 20
-            contra.append("Im Winter müssten Sie fast täglich laden")
+            contra.append(t("mob.contra.taeglich_laden"))
 
         if ls["ladestopps"] <= 1:
             score += 12
             pro.append(
-                f"Ihre {int(profil.langstrecke_km)}-km-Strecke mit "
-                f"{ls['ladestopps']} Ladestopp"
+                t(
+                    "mob.pro.langstrecke",
+                    km=t.num(profil.langstrecke_km),
+                    stopps=ls["ladestopps"],
+                )
             )
         else:
             score -= 6
-            contra.append(f"{ls['ladestopps']} Ladestopps auf der Langstrecke")
+            contra.append(t("mob.contra.langstrecke", stopps=ls["ladestopps"]))
 
         if profil.budget_eur_monat:
             monatlich = daten["leasing_eur_monat"]
             if monatlich <= profil.budget_eur_monat:
                 score += 12
-                pro.append(f"Liegt mit {monatlich:.0f} €/Monat in Ihrem Budget")
+                pro.append(t("mob.pro.budget", rate=t.euro(monatlich)))
             else:
                 score -= 18
                 contra.append(
-                    f"{monatlich:.0f} €/Monat liegen über Ihrem Budget von "
-                    f"{profil.budget_eur_monat:.0f} €"
+                    t(
+                        "mob.contra.budget",
+                        rate=t.euro(monatlich),
+                        budget=t.euro(profil.budget_eur_monat),
+                    )
                 )
 
         if kosten["differenz_eur"] > 0:
             pro.append(
-                f"Über {profil.haltedauer_jahre} Jahre rund "
-                f"{de(kosten['differenz_eur'])} € günstiger als ein "
-                "vergleichbarer Verbrenner"
+                t(
+                    "mob.pro.guenstiger",
+                    jahre=profil.haltedauer_jahre,
+                    betrag=t.euro(kosten["differenz_eur"]),
+                )
             )
         else:
-            contra.append("Teurer als ein vergleichbarer Verbrenner")
+            contra.append(t("mob.contra.teurer"))
 
         if klasse == profil.fahrzeugklasse:
             score += 8
-            pro.append("Entspricht Ihrer gewünschten Fahrzeugklasse")
+            pro.append(t("mob.pro.klasse"))
 
         vorschlaege.append(
             {
@@ -454,7 +483,7 @@ def fahrzeugvorschlaege(profil: Mobilitaetsprofil, *, anzahl: int = 3) -> list[d
                 "preis_eur": daten["preis_eur"],
                 "score": max(5, min(100, round(score))),
                 "pro": pro,
-                "contra": contra or ["Keine relevanten Einschränkungen für Ihr Profil"],
+                "contra": contra or [t("mob.contra.keine")],
             }
         )
 
@@ -462,7 +491,7 @@ def fahrzeugvorschlaege(profil: Mobilitaetsprofil, *, anzahl: int = 3) -> list[d
     return vorschlaege[:anzahl]
 
 
-def annahmen(profil: Mobilitaetsprofil) -> list[str]:
+def annahmen(profil: Mobilitaetsprofil, t: Texts) -> list[str]:
     """Die Annahmenliste, die unter jeder Zahl im UI steht.
 
     Sobald der Kunde selbst eine Ladequote gesetzt hat, steht seine hier — sonst
@@ -470,18 +499,28 @@ def annahmen(profil: Mobilitaetsprofil) -> list[str]:
     """
     preis = mischpreis_eur_kwh(profil)
     herkunft = (
-        f"{profil.anteil_zuhause_laden:.0f} % zu Hause, von Ihnen gesetzt"
+        t("mob.annahmen.herkunft_eigen", anteil=t.pct(profil.anteil_zuhause_laden / 100))
         if profil.anteil_zuhause_laden is not None
-        else f"Mix für „{profil.lademoeglichkeit}“"
+        else t(
+            "mob.annahmen.herkunft_mix",
+            lademoeglichkeit=t(f"mob.lade.{profil.lademoeglichkeit}"),
+        )
     )
     return [
-        f"Jahresfahrleistung {de(profil.jahresfahrleistung_km())} km",
-        f"Mischladepreis {de(preis, decimals=2)} €/kWh ({herkunft})",
-        f"Winter-Mehrverbrauch {dd.WINTER_MEHRVERBRAUCH:.0%}, "
-        f"Autobahn-Mehrverbrauch {dd.LANGSTRECKE_MEHRVERBRAUCH:.0%}",
-        f"Ladefenster 10–80 % SoC, Haltedauer {profil.haltedauer_jahre} Jahre",
-        f"Kraftstoff Benzin {dd.BENZIN_EUR_L:.2f} €/l, Diesel {dd.DIESEL_EUR_L:.2f} €/l",
-        dd.DISCLAIMER,
+        t("mob.annahmen.km", km=t.num(profil.jahresfahrleistung_km())),
+        t("mob.annahmen.preis", preis=t.num(preis, decimals=2), herkunft=herkunft),
+        t(
+            "mob.annahmen.mehrverbrauch",
+            winter=t.pct(dd.WINTER_MEHRVERBRAUCH),
+            autobahn=t.pct(dd.LANGSTRECKE_MEHRVERBRAUCH),
+        ),
+        t("mob.annahmen.ladefenster", jahre=profil.haltedauer_jahre),
+        t(
+            "mob.annahmen.kraftstoff",
+            benzin=t.num(dd.BENZIN_EUR_L, decimals=2),
+            diesel=t.num(dd.DIESEL_EUR_L, decimals=2),
+        ),
+        t("data.disclaimer"),
     ]
 
 

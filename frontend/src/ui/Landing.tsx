@@ -6,6 +6,8 @@
  * thing does, then hand over to the voice. `HeroDemo` does the showing.
  */
 
+import {LOCALES, type Locale} from '../i18n';
+import {useLocale} from '../LocaleContext';
 import {HeroDemo} from './HeroDemo';
 
 export interface JourneyOption {
@@ -24,19 +26,40 @@ interface LandingProps {
   brandName: string;
   onSelect: (journeyId: string) => void;
   starting: string | null;
+  onLocale: (locale: Locale) => void;
 }
 
-export function Landing({journeys, brandName, onSelect, starting}: LandingProps) {
+export function Landing({journeys, brandName, onSelect, starting, onLocale}: LandingProps) {
+  const {locale, t} = useLocale();
+
   return (
     <main className="landing">
       <div className="landing__inner">
         <header className="landing__head">
           <span className="landing__wordmark">{brandName}</span>
-          <h1 className="landing__title">Die Beratung entsteht, während Sie sprechen.</h1>
-          <p className="landing__lede">
-            Erzählen Sie von Ihrer Situation. Was Sie sagen, wird gerechnet — und steht Satz für
-            Satz vor Ihnen.
-          </p>
+          <h1 className="landing__title">{t('landing.title')}</h1>
+          <p className="landing__lede">{t('landing.lede')}</p>
+
+          {/*
+            The language belongs on the landing page rather than inside a
+            session: it changes the voice, the prompt and every composed
+            surface, so it is a choice made before the conversation starts
+            and not a setting to flip halfway through one.
+          */}
+          <div className="landing__lang" role="group" aria-label={t('landing.language')}>
+            {LOCALES.map(option => (
+              <button
+                type="button"
+                key={option}
+                className={`landing__lang-option${option === locale ? ' is-active' : ''}`}
+                onClick={() => onLocale(option)}
+                aria-pressed={option === locale}
+                lang={option}
+              >
+                {t(`landing.language.${option}` as const)}
+              </button>
+            ))}
+          </div>
         </header>
 
         <HeroDemo />
@@ -70,7 +93,7 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
               </span>
               <span className="choice__tagline">{journey.tagline}</span>
               <span className="choice__cta">
-                {starting === journey.id ? 'Verbinde …' : 'Gespräch starten'}
+                {starting === journey.id ? t('landing.connecting') : t('landing.start')}
                 <svg
                   viewBox="0 0 24 24"
                   width="16"
@@ -90,11 +113,7 @@ export function Landing({journeys, brandName, onSelect, starting}: LandingProps)
         </div>
 
         <footer className="landing__foot">
-          <p>
-            Sie sprechen mit einem KI-Berater und brauchen ein Mikrofon. Das Gespräch bleibt in
-            dieser Sitzung und wird nicht gespeichert. Alle Zahlen sind gekennzeichnete
-            Demo-Beispielwerte und ersetzen keine Fachberatung.
-          </p>
+          <p>{t('landing.disclaimer')}</p>
         </footer>
       </div>
     </main>

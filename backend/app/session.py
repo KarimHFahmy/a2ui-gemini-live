@@ -20,6 +20,8 @@ from google.genai import types
 
 from .config import Settings
 from .journeys import A2UI_PROVIDER, Journey
+from .journeys.base import LOCALE_KEY
+from .texts import Texts
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +31,8 @@ EventSink = Callable[[dict[str, Any]], Awaitable[None]]
 APP_NAME = "adaptive-advisory"
 
 
-def build_run_config(settings: Settings) -> RunConfig:
-    """Audio in, audio out, German, with both sides transcribed.
+def build_run_config(settings: Settings, locale: str) -> RunConfig:
+    """Audio in, audio out, in the session's language, with both sides transcribed.
 
     Optional native-audio features are attached defensively: model support for
     them moves during preview, and a rejected config would take the whole
@@ -40,7 +42,7 @@ def build_run_config(settings: Settings) -> RunConfig:
         streaming_mode=StreamingMode.BIDI,
         response_modalities=["AUDIO"],
         speech_config=types.SpeechConfig(
-            language_code=settings.language_code,
+            language_code=settings.language_code(locale),
             voice_config=types.VoiceConfig(
                 prebuilt_voice_config=types.PrebuiltVoiceConfig(
                     voice_name=settings.voice_name
@@ -86,6 +88,7 @@ class AdvisorySession:
         self._audio_sink = audio_sink
         self._event_sink = event_sink
 
+        self._t = Texts(journey.locale)
         self._runner = InMemoryRunner(agent=journey.agent, app_name=APP_NAME)
         self._queue = LiveRequestQueue()
         self._mime = f"audio/pcm;rate={settings.input_sample_rate}"
@@ -115,11 +118,11 @@ class AdvisorySession:
         context = action.get("context") or {}
         werte = ", ".join(f"{key} = {value}" for key, value in context.items())
         self.push_text(
-            "[Interaktion auf dem Bildschirm] Die Person hat "
-            f"„{action.get('name', '')}“ ausgelöst"
-            + (f" mit diesen Werten: {werte}." if werte else ".")
-            + " Reagiere kurz und passend darauf. Wenn ein Werkzeug genau diese "
-            "Werte entgegennimmt, rufe es mit ihnen auf – unverändert."
+            self._t(
+                "prompt.interaction",
+                name=action.get("name", ""),
+                werte=self._t("prompt.interaction.values", werte=werte) if werte else ".",
+            )
         )
 
     def close(self) -> None:
@@ -132,9 +135,14 @@ class AdvisorySession:
         """Opens the live connection and streams until the browser disconnects."""
         try:
             session = await self._runner.session_service.create_session(
-                app_name=APP_NAME, user_id="demo"
+                app_name=APP_NAME,
+                user_id="demo",
+                # The tools are module-level functions shared by every session
+                # of a journey, so the language has to reach them through the
+                # session rather than through a closure. See `base.texts_for`.
+                state={LOCALE_KEY: self._journey.locale},
             )
-            await self._event_sink({"type": "status", "status": "verbunden"})
+            await self._event_sink({"type": "status", "status": self._t("status.connected")})
 
             # Kick off the greeting so the client hears a voice immediately.
             self.push_text(self._journey.opener)
@@ -143,7 +151,7 @@ class AdvisorySession:
                 user_id="demo",
                 session_id=session.id,
                 live_request_queue=self._queue,
-                run_config=build_run_config(self._settings),
+                run_config=build_run_config(self._settings, self._journey.locale),
             ):
                 await self._handle_event(event)
 
@@ -154,15 +162,12 @@ class AdvisorySession:
             await self._event_sink(
                 {
                     "type": "error",
-                    "message": (
-                        "Die Verbindung zum Sprachdienst ist abgebrochen. "
-                        "Bitte laden Sie die Seite neu."
-                    ),
+                    "message": self._t("error.connection"),
                     "detail": f"{type(exc).__name__}: {exc}",
                 }
             )
         finally:
-            await self._event_sink({"type": "status", "status": "beendet"})
+            await self._event_sink({"type": "status", "status": self._t("status.ended")})
 
     async def _handle_event(self, event: Event) -> None:
         """Translates one ADK event into what the browser needs."""

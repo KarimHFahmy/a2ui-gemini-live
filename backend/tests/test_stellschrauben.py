@@ -19,7 +19,13 @@ from typing import Any
 import pytest
 
 from app.a2ui import composer_energie, composer_mobilitaet
+from app.texts import Texts
 from app.domain import energie, mobilitaet
+
+
+#: These tests are about tone, bindings and arithmetic, none of which is
+#: language-specific; the bilingual coverage is in test_readback and test_texts.
+TEXTS = Texts("de")
 
 
 # ---------------------------------------------------------------------------
@@ -81,7 +87,7 @@ def energie_surface():
     szenarien = energie.szenarien(profil)
     bestand = next(s for s in szenarien if s.id == "bestand")
     fokus = next(s for s in szenarien if s.id == "waermepumpe")
-    surface = composer_energie.stellschrauben_surface(profil, bestand, fokus)
+    surface = composer_energie.stellschrauben_surface(TEXTS, profil, bestand, fokus)
     return surface, bestand, fokus
 
 
@@ -151,7 +157,7 @@ class TestEnergieStellschrauben:
 @pytest.fixture
 def mobilitaet_surface():
     profil = mobilitaet.Mobilitaetsprofil()
-    return composer_mobilitaet.stellschrauben_surface(profil), profil
+    return composer_mobilitaet.stellschrauben_surface(TEXTS, profil), profil
 
 
 class TestMobilitaetStellschrauben:
@@ -178,7 +184,7 @@ class TestMobilitaetStellschrauben:
         assert km == pytest.approx(profil.jahresfahrleistung_km(), abs=1)
 
         # The cost view carries the same energy figures over the holding period.
-        kosten = mobilitaet.kostenvergleich(profil)
+        kosten = mobilitaet.kostenvergleich(profil, TEXTS)
         jahre = profil.haltedauer_jahre
         assert strom == pytest.approx(kosten["serien"][0]["werte"][1] / jahre, abs=2)
         assert kraftstoff == pytest.approx(
@@ -193,7 +199,7 @@ class TestMobilitaetStellschrauben:
         km, strom, _, _ = [evaluate(value, data) for value in live_values(surface)]
 
         profil = mobilitaet.Mobilitaetsprofil(taeglich_km=30, anteil_zuhause_laden=80)
-        kosten = mobilitaet.kostenvergleich(profil)
+        kosten = mobilitaet.kostenvergleich(profil, TEXTS)
         assert km == pytest.approx(profil.jahresfahrleistung_km(), abs=1)
         assert strom == pytest.approx(
             kosten["serien"][0]["werte"][1] / profil.haltedauer_jahre, abs=2
@@ -236,7 +242,7 @@ class TestAnnahmenUebernehmen:
         assert bestand.energiekosten_eur_a > fokus.energiekosten_eur_a * 2
 
         # And the visible assumptions must say whose numbers these are.
-        assert any("Ihre eigenen Annahmen" in a for a in energie.annahmen(profil))
+        assert any("Ihre eigenen Annahmen" in a for a in energie.annahmen(profil, TEXTS))
 
     def test_mobilitaet_values_reach_every_later_view(self, ctx):
         from app.journeys import mobilitaet as journey
@@ -255,7 +261,7 @@ class TestAnnahmenUebernehmen:
         assert mobilitaet.mischpreis_eur_kwh(profil) < mobilitaet.ladepreis_eur_kwh(
             "nur_oeffentlich"
         )
-        assert any("von Ihnen gesetzt" in a for a in mobilitaet.annahmen(profil))
+        assert any("von Ihnen gesetzt" in a for a in mobilitaet.annahmen(profil, TEXTS))
 
     def test_the_view_the_person_is_looking_at_is_rebuilt(self, ctx):
         """Stale figures next to fresh ones would be worse than no update."""

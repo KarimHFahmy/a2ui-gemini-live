@@ -14,6 +14,7 @@
  */
 
 import type {JourneyStep} from '../live/session';
+import {useLocale} from '../LocaleContext';
 
 interface JourneyProgressProps {
   steps: JourneyStep[];
@@ -22,6 +23,7 @@ interface JourneyProgressProps {
 }
 
 export function JourneyProgress({steps, present}: JourneyProgressProps) {
+  const {t} = useLocale();
   if (steps.length === 0) return null;
 
   const done = steps.filter(step => present.has(step.surfaceId)).length;
@@ -32,7 +34,7 @@ export function JourneyProgress({steps, present}: JourneyProgressProps) {
   return (
     <nav
       className="progress"
-      aria-label="Fortschritt der Beratung"
+      aria-label={t('progress.aria')}
       data-done={done}
       data-total={steps.length}
     >
@@ -49,7 +51,7 @@ export function JourneyProgress({steps, present}: JourneyProgressProps) {
         ))}
       </ol>
       <p className="progress__caption">
-        {next ? `Als Nächstes: ${next.label}` : 'Alle Schritte durchlaufen'}
+        {next ? t('progress.next', {label: next.label}) : t('progress.done')}
         <span className="progress__count">
           {done} / {steps.length}
         </span>

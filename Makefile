@@ -67,8 +67,9 @@ test-frontend: ## TypeScript typecheck and formatting
 check-catalog: build ## Render every surface in a browser and check for gaps
 	cd frontend && npm run check:catalog
 
-check-session: build ## Drive the shell through restart and check the screen clears
-	cd frontend && npm run check:session
+check-session: build ## Drive the shell through restart, in both languages
+	cd frontend && CHECK_LOCALE=de npm run check:session
+	cd frontend && CHECK_LOCALE=en npm run check:session
 
 docker-build: ## Build the container image
 	docker build -t $(SERVICE):local .

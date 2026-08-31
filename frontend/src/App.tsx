@@ -8,6 +8,8 @@
 import {useCallback, useEffect, useMemo, useState} from 'react';
 
 import {A2uiHost} from './a2ui/A2uiHost';
+import {BCP47, readLocale, storeLocale, texts, type Locale} from './i18n';
+import {LocaleProvider} from './LocaleContext';
 import {ContextAside} from './ui/ContextAside';
 import {Landing, type JourneyOption} from './ui/Landing';
 import {Stage} from './ui/Stage';
@@ -17,19 +19,39 @@ import {useAdvisory} from './useAdvisory';
 
 const BRAND_NAME = import.meta.env.VITE_BRAND_NAME ?? 'Adaptive Advisory';
 
-/** Used until /api/journeys answers, so the first paint is never empty. */
-const FALLBACK_JOURNEYS: JourneyOption[] = [
-  {
-    id: 'energie',
-    label: 'Mein Zuhause',
-    tagline: 'Von komplexen Sanierungsfragen zur verständlichen persönlichen Energiewende.',
-  },
-  {
-    id: 'mobilitaet',
-    label: 'Meine Mobilität',
-    tagline: 'Von Reichweitenangst und Tarifdschungel zur passenden E-Mobilitätsentscheidung.',
-  },
-];
+/**
+ * Used until /api/journeys answers, so the first paint is never empty.
+ *
+ * Only the ids are fixed: the label and tagline are written per language on
+ * the backend, so hard-coding German ones here would flash them at an English
+ * client for as long as the request takes.
+ */
+const FALLBACK_JOURNEYS: Record<Locale, JourneyOption[]> = {
+  de: [
+    {
+      id: 'energie',
+      label: 'Mein Zuhause',
+      tagline: 'Von komplexen Sanierungsfragen zur verständlichen persönlichen Energiewende.',
+    },
+    {
+      id: 'mobilitaet',
+      label: 'Meine Mobilität',
+      tagline: 'Von Reichweitenangst und Tarifdschungel zur passenden E-Mobilitätsentscheidung.',
+    },
+  ],
+  en: [
+    {
+      id: 'energie',
+      label: 'My Home',
+      tagline: 'From a tangle of renovation questions to an energy transition you can follow.',
+    },
+    {
+      id: 'mobilitaet',
+      label: 'My Mobility',
+      tagline: 'From range anxiety and tariff confusion to the electric decision that fits.',
+    },
+  ],
+};
 
 function RestartIcon() {
   return (
@@ -50,16 +72,25 @@ function RestartIcon() {
 }
 
 export default function App() {
-  const [journeys, setJourneys] = useState<JourneyOption[]>(FALLBACK_JOURNEYS);
+  const [locale, setLocale] = useState<Locale>(readLocale);
+  const [journeys, setJourneys] = useState<JourneyOption[]>(FALLBACK_JOURNEYS[locale]);
   const [active, setActive] = useState<JourneyOption | null>(null);
   const [starting, setStarting] = useState<string | null>(null);
   const [confirmRestart, setConfirmRestart] = useState(false);
 
-  const advisory = useAdvisory();
+  const advisory = useAdvisory(locale);
+  const t = useMemo(() => texts(locale), [locale]);
+
+  // Screen readers and hyphenation both key off this, and a German page
+  // announced as English is read out with the wrong phonemes.
+  useEffect(() => {
+    document.documentElement.lang = BCP47[locale];
+  }, [locale]);
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/journeys')
+    setJourneys(FALLBACK_JOURNEYS[locale]);
+    fetch(`/api/journeys?lang=${locale}`)
       .then(response => (response.ok ? response.json() : null))
       .then(data => {
         if (!cancelled && data?.journeys?.length) setJourneys(data.journeys);
@@ -70,6 +101,11 @@ export default function App() {
     return () => {
       cancelled = true;
     };
+  }, [locale]);
+
+  const handleLocale = useCallback((next: Locale) => {
+    setLocale(next);
+    storeLocale(next);
   }, []);
 
   const handleSelect = useCallback(
@@ -110,99 +146,108 @@ export default function App() {
 
   if (!active) {
     return (
-      <Landing
-        journeys={journeys}
-        brandName={BRAND_NAME}
-        onSelect={handleSelect}
-        starting={starting}
-      />
+      <LocaleProvider locale={locale}>
+        <Landing
+          journeys={journeys}
+          brandName={BRAND_NAME}
+          onSelect={handleSelect}
+          starting={starting}
+          onLocale={handleLocale}
+        />
+      </LocaleProvider>
     );
   }
 
   return (
-    <A2uiHost>
-      <div className="session">
-        <header className="session__bar">
-          <span className="session__wordmark">{BRAND_NAME}</span>
-          <span className="session__journey">{active.label}</span>
+    <LocaleProvider locale={locale}>
+      <A2uiHost>
+        <div className="session">
+          <header className="session__bar">
+            <span className="session__wordmark">{BRAND_NAME}</span>
+            <span className="session__journey">{active.label}</span>
 
-          <div className="session__actions">
-            {confirmRestart ? (
-              <span className="session__confirm" role="group" aria-label="Neu starten bestätigen">
-                <span className="session__confirm-text">Gespräch verwerfen?</span>
-                <button
-                  type="button"
-                  className="session__control session__control--danger"
-                  onClick={handleRestart}
+            <div className="session__actions">
+              {confirmRestart ? (
+                <span
+                  className="session__confirm"
+                  role="group"
+                  aria-label={t('session.restart.aria')}
                 >
-                  Ja, neu starten
-                </button>
+                  <span className="session__confirm-text">{t('session.discard')}</span>
+                  <button
+                    type="button"
+                    className="session__control session__control--danger"
+                    onClick={handleRestart}
+                  >
+                    {t('session.restart.confirm')}
+                  </button>
+                  <button
+                    type="button"
+                    className="session__control"
+                    onClick={() => setConfirmRestart(false)}
+                  >
+                    {t('session.cancel')}
+                  </button>
+                </span>
+              ) : (
                 <button
                   type="button"
                   className="session__control"
-                  onClick={() => setConfirmRestart(false)}
+                  onClick={() => setConfirmRestart(true)}
+                  title={t('session.restart.title')}
                 >
-                  Abbrechen
+                  <RestartIcon />
+                  {t('session.restart')}
                 </button>
-              </span>
-            ) : (
-              <button
-                type="button"
-                className="session__control"
-                onClick={() => setConfirmRestart(true)}
-                title="Beratung beenden und eine andere wählen"
+              )}
+
+              {/*
+               * Two things the client is entitled to know at a glance, and the
+               * reason they are a permanent part of the frame rather than a
+               * one-off notice: they speak to an AI, and the figures are
+               * illustrative.
+               */}
+              <span
+                className="session__badge session__badge--ai"
+                title={t('session.badge.ai.title')}
               >
-                <RestartIcon />
-                Neu starten
-              </button>
-            )}
+                {t('session.badge.ai')}
+              </span>
+              <span className="session__badge" title={t('session.badge.demo.title')}>
+                {t('session.badge.demo')}
+              </span>
+            </div>
+          </header>
 
-            {/*
-             * Two things the client is entitled to know at a glance, and the
-             * reason they are a permanent part of the frame rather than a
-             * one-off notice: they speak to an AI, and the figures are
-             * illustrative.
-             */}
-            <span
-              className="session__badge session__badge--ai"
-              title="Sie sprechen mit einem KI-Berater. Die Beratung ist unverbindlich und ersetzt keine Fachberatung."
-            >
-              KI-Beratung
-            </span>
-            <span className="session__badge" title="Alle Zahlen sind Demo-Beispielwerte">
-              Demo-Daten
-            </span>
+          {advisory.error ? (
+            <div className="banner banner--error" role="alert">
+              {advisory.error}
+            </div>
+          ) : null}
+
+          <div className={`session__body${hasContext ? '' : ' session__body--solo'}`}>
+            <Stage
+              surfaces={flow}
+              titles={advisory.surfaceTitles}
+              journeyLabel={active.label}
+              topics={advisory.topics}
+              hasAnySurface={advisory.surfaces.length > 0}
+            />
+            <ContextAside profile={profile} steps={advisory.steps} present={present} />
           </div>
-        </header>
 
-        {advisory.error ? (
-          <div className="banner banner--error" role="alert">
-            {advisory.error}
-          </div>
-        ) : null}
-
-        <div className={`session__body${hasContext ? '' : ' session__body--solo'}`}>
-          <Stage
-            surfaces={flow}
-            titles={advisory.surfaceTitles}
-            journeyLabel={active.label}
-            topics={advisory.topics}
-            hasAnySurface={advisory.surfaces.length > 0}
+          <VoiceDock
+            state={advisory.state}
+            micActive={advisory.micActive}
+            micLevel={advisory.micLevel}
+            agentLevel={advisory.agentLevel}
+            agentSpeaking={advisory.agentSpeaking}
+            onToggleMic={advisory.toggleMic}
+            onSendText={advisory.sendText}
+            busyTool={advisory.busyTool}
           />
-          <ContextAside profile={profile} steps={advisory.steps} present={present} />
         </div>
-
-        <VoiceDock
-          state={advisory.state}
-          micActive={advisory.micActive}
-          micLevel={advisory.micLevel}
-          agentLevel={advisory.agentLevel}
-          agentSpeaking={advisory.agentSpeaking}
-          onToggleMic={advisory.toggleMic}
-          onSendText={advisory.sendText}
-          busyTool={advisory.busyTool}
-        />
-      </div>
-    </A2uiHost>
+      </A2uiHost>
+    </LocaleProvider>
   );
 }

@@ -73,10 +73,20 @@ class Settings:
     model: str = os.getenv("GEMINI_LIVE_MODEL", "gemini-live-2.5-flash-native-audio")
 
     # --- Voice / locale ---------------------------------------------------
-    # The demo targets the German market: German prompts, German UI copy,
-    # de-DE speech in and out.
-    language_code: str = os.getenv("LIVE_LANGUAGE_CODE", "de-DE")
+    # The whole experience runs in German or in English, chosen per session.
+    # German is the default because that is the market the content is written
+    # for; the client picks on the landing page and the choice travels in the
+    # WebSocket query string.
+    default_locale: str = os.getenv("DEFAULT_LOCALE", "de")
+    language_code_de: str = os.getenv("LIVE_LANGUAGE_CODE_DE", "de-DE")
+    language_code_en: str = os.getenv("LIVE_LANGUAGE_CODE_EN", "en-GB")
+    # Aoede is multilingual, so one voice keeps the demo recognisable across
+    # both languages rather than sounding like two different products.
     voice_name: str = os.getenv("LIVE_VOICE_NAME", "Aoede")
+
+    def language_code(self, locale: str) -> str:
+        """The BCP-47 tag the Live API needs for this locale."""
+        return self.language_code_en if locale == "en" else self.language_code_de
 
     # --- Audio ------------------------------------------------------------
     input_sample_rate: int = int(os.getenv("INPUT_SAMPLE_RATE", "16000"))

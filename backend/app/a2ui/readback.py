@@ -22,18 +22,14 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..format_de import de
+from ..texts import Texts
 from .surface import Surface
 
 #: Enough for the largest surface in the demo, and a ceiling so a future one
 #: cannot quietly push the conversation out of context.
 MAX_CHARS = 1800
 
-_TONE_WORD = {
-    "positive": "spricht dafür",
-    "caution": "Nachteil",
-    "neutral": "neutral",
-}
+
 
 
 # ---------------------------------------------------------------------------
@@ -85,25 +81,21 @@ def _number(value: Any) -> float | None:
 # ---------------------------------------------------------------------------
 
 
-def _chart(component: dict[str, Any], data: dict[str, Any]) -> str | None:
+def _chart(t: Texts, component: dict[str, Any], data: dict[str, Any]) -> str | None:
     categories = _resolve(component.get("categories"), data)
     series = _resolve(component.get("series"), data)
     if not isinstance(categories, list) or not isinstance(series, list) or not series:
         return None
 
-    kind = {
-        "line": "Liniendiagramm",
-        "bar": "Balkendiagramm",
-        "groupedBar": "gruppiertes Balkendiagramm",
-        "stackedBar": "gestapeltes Balkendiagramm",
-    }.get(str(component.get("chartType") or "bar"), "Diagramm")
+    chart_type = str(component.get("chartType") or "bar")
+    kind = t.get(f"readback.chart.{chart_type}") or t("readback.chart.other")
 
     title = _text(component.get("title"), data)
     unit = _text(component.get("unit"), data)
-    head = f"{kind}" + (f" „{title}“" if title else "")
+    head = t("readback.chart.named", kind=kind, titel=title) if title else kind
     labels = [str(c) for c in categories]
 
-    lines = [f"{head}; Achse: {', '.join(labels)}."]
+    lines = [t("readback.chart.axis", kind=head, kategorien=", ".join(labels))]
 
     is_line = component.get("chartType") == "line"
     plotted: list[tuple[str, list[float]]] = []
@@ -115,19 +107,21 @@ def _chart(component: dict[str, Any], data: dict[str, Any]) -> str | None:
             continue
         label = str(entry.get("label") or entry.get("id") or "?")
         plotted.append((label, values))
-        lines.append(f"  · {label}: {_shape(values, labels, unit, as_line=is_line)}")
+        lines.append(f"  · {label}: {_shape(t, values, labels, unit, as_line=is_line)}")
 
     if not plotted:
         return None
 
     if is_line:
-        crossing = _crossing(plotted, labels)
+        crossing = _crossing(t, plotted, labels)
         if crossing:
             lines.append(f"  · {crossing}")
     return "\n".join(lines)
 
 
-def _shape(values: list[float], labels: list[str], unit: str | None, *, as_line: bool) -> str:
+def _shape(
+    t: Texts, values: list[float], labels: list[str], unit: str | None, *, as_line: bool
+) -> str:
     """One series in a phrase, said the way that kind of chart is read.
 
     A line is read as a movement, so its ends carry the meaning. Bars are read
@@ -138,7 +132,13 @@ def _shape(values: list[float], labels: list[str], unit: str | None, *, as_line:
     decimals = _decimals(values)
 
     def fmt(value: float) -> str:
-        return de(value, decimals=decimals, unit=unit)
+        # The renderer formats a euro axis through its own currency formatter,
+        # which puts the sign where the locale puts it — ahead of the figure in
+        # English. Appending "€" here would have the agent describing the chart
+        # differently from how the client sees it.
+        if unit == "€":
+            return t.euro(value, decimals=decimals)
+        return t.num(value, decimals=decimals, unit=unit)
 
     if len(values) == 1:
         return fmt(values[0])
@@ -147,7 +147,7 @@ def _shape(values: list[float], labels: list[str], unit: str | None, *, as_line:
     # week, say. It has no shape to describe and no tallest bar; a range from
     # a value to itself reads as broken.
     if min(values) == max(values):
-        return f"{fmt(values[0])}, durchgehend"
+        return t("readback.series.flat", wert=fmt(values[0]))
 
     peak = max(range(len(values)), key=lambda i: values[i])
     where = f" ({labels[peak]})" if peak < len(labels) else ""
@@ -156,12 +156,20 @@ def _shape(values: list[float], labels: list[str], unit: str | None, *, as_line:
         # A curve that only rises peaks at its own endpoint, and saying so
         # twice is noise. Worth a phrase only where it turns.
         if peak in (len(values) - 1, 0):
-            return f"{fmt(values[0])} → {fmt(values[-1])}"
-        return f"{fmt(values[0])} → {fmt(values[-1])}, Höchstwert {fmt(values[peak])}{where}"
+            return t("readback.series.line", start=fmt(values[0]), ende=fmt(values[-1]))
+        return t(
+            "readback.series.line_peak",
+            start=fmt(values[0]),
+            ende=fmt(values[-1]),
+            peak=fmt(values[peak]),
+            wo=where,
+        )
     # Only plotted points, never a total: a sum is a figure the client cannot
     # find anywhere on the chart, and stating one would be the agent asserting
     # something the picture does not say.
-    return f"{fmt(min(values))} bis {fmt(values[peak])}, am höchsten{where}"
+    return t(
+        "readback.series.bars", min=fmt(min(values)), peak=fmt(values[peak]), wo=where
+    )
 
 
 def _decimals(values: list[float]) -> int:
@@ -174,7 +182,9 @@ def _decimals(values: list[float]) -> int:
     return 0 if all(v == int(v) for v in values) else 1
 
 
-def _crossing(plotted: list[tuple[str, list[float]]], labels: list[str]) -> str | None:
+def _crossing(
+    t: Texts, plotted: list[tuple[str, list[float]]], labels: list[str]
+) -> str | None:
     """Where the first two lines swap places — the thing a client points at.
 
     Reported as the interval between two plotted points, never as an
@@ -194,14 +204,16 @@ def _crossing(plotted: list[tuple[str, list[float]]], labels: list[str]) -> str 
         if before == 0 or (before > 0) == (after > 0):
             continue
         ahead = second_label if after > 0 else first_label
-        return (
-            f"die Linien kreuzen sich zwischen „{labels[index - 1]}“ und "
-            f"„{labels[index]}“; danach liegt „{ahead}“ günstiger"
+        return t(
+            "readback.crossing",
+            vorher=labels[index - 1],
+            nachher=labels[index],
+            fuehrend=ahead,
         )
     return None
 
 
-def _table(component: dict[str, Any], data: dict[str, Any]) -> str | None:
+def _table(t: Texts, component: dict[str, Any], data: dict[str, Any]) -> str | None:
     columns = _resolve(component.get("columns"), data)
     rows = _resolve(component.get("rows"), data)
     if not isinstance(columns, list) or not isinstance(rows, list):
@@ -222,9 +234,15 @@ def _table(component: dict[str, Any], data: dict[str, Any]) -> str | None:
         None,
     )
 
-    lines = ["Vergleichstabelle" + (f" „{title}“" if title else "") + f"; Spalten: {', '.join(headers)}."]
+    lines = [
+        t(
+            "readback.table",
+            titel=t("readback.table.named", titel=title) if title else "",
+            spalten=", ".join(headers),
+        )
+    ]
     if marked:
-        lines.append(f"  · hervorgehoben ist die Spalte „{marked}“")
+        lines.append(t("readback.table.highlight", spalte=marked))
     for row in rows:
         if not isinstance(row, dict):
             continue
@@ -234,7 +252,7 @@ def _table(component: dict[str, Any], data: dict[str, Any]) -> str | None:
     return "\n".join(lines)
 
 
-def _stat(component: dict[str, Any], data: dict[str, Any]) -> str | None:
+def _stat(t: Texts, component: dict[str, Any], data: dict[str, Any]) -> str | None:
     title = _text(component.get("title"), data)
     if not title:
         return None
@@ -247,12 +265,18 @@ def _stat(component: dict[str, Any], data: dict[str, Any]) -> str | None:
         # What the agent needs is that the card is live, so it invites the
         # client to drag instead of announcing a number.
         if _is_expression(component.get("metric")):
-            return f"Kennzahl „{title}“: rechnet live mit den Reglern mit"
-        return f"Kennzahlkarte „{title}“"
+            return t("readback.stat.live", titel=title)
+        return t("readback.stat.plain", titel=title)
 
     label = _text(component.get("metricLabel"), data)
-    tone = _TONE_WORD.get(str(_text(component.get("tone"), data) or "neutral"), "neutral")
-    return f"Kennzahl „{title}“: {metric}" + (f" {label}" if label else "") + f" [{tone}]"
+    tone = str(_text(component.get("tone"), data) or "neutral")
+    return t(
+        "readback.stat",
+        titel=title,
+        metric=metric,
+        label=f" {label}" if label else "",
+        tone=t.get(f"readback.tone.{tone}") or t("readback.tone.neutral"),
+    )
 
 
 def _is_expression(value: Any) -> bool:
@@ -260,7 +284,7 @@ def _is_expression(value: Any) -> bool:
     return isinstance(value, dict) and "path" not in value
 
 
-def _slider(component: dict[str, Any], data: dict[str, Any]) -> str | None:
+def _slider(t: Texts, component: dict[str, Any], data: dict[str, Any]) -> str | None:
     label = _text(component.get("label"), data)
     value = _number(_resolve(component.get("value"), data))
     if not label:
@@ -268,12 +292,12 @@ def _slider(component: dict[str, Any], data: dict[str, Any]) -> str | None:
     span = ""
     low, high = _number(component.get("min")), _number(component.get("max"))
     if low is not None and high is not None:
-        span = f", Bereich {de(low)}–{de(high)}"
-    now = f" steht bei {de(value)}" if value is not None else ""
-    return f"Regler „{label}“{span}{now} — die Person kann ihn selbst bewegen"
+        span = t("readback.slider.range", min=t.num(low), max=t.num(high))
+    now = t("readback.slider.value", wert=t.num(value)) if value is not None else ""
+    return t("readback.slider", label=label, bereich=span, stand=now)
 
 
-def _picker(component: dict[str, Any], data: dict[str, Any]) -> str | None:
+def _picker(t: Texts, component: dict[str, Any], data: dict[str, Any]) -> str | None:
     label = _text(component.get("label"), data)
     options = _resolve(component.get("options"), data)
     if not isinstance(options, list):
@@ -282,8 +306,13 @@ def _picker(component: dict[str, Any], data: dict[str, Any]) -> str | None:
     if not names:
         return None
     chosen = _text(component.get("value"), data)
-    head = f"Auswahl „{label}“" if label else "Auswahl"
-    return f"{head}: {', '.join(names)}" + (f" (gewählt: {chosen})" if chosen else "")
+    joined = ", ".join(names)
+    head = (
+        t("readback.picker", label=label, optionen=joined)
+        if label
+        else t("readback.picker.plain", optionen=joined)
+    )
+    return head + (t("readback.picker.chosen", wert=chosen) if chosen else "")
 
 
 _DESCRIBERS = {
@@ -300,7 +329,7 @@ _DESCRIBERS = {
 # ---------------------------------------------------------------------------
 
 
-def describe(surface: Surface) -> str:
+def describe(surface: Surface, t: Texts) -> str:
     """Reads back the surface in the order the client's eye meets it.
 
     Document order, because that is the order the composer laid out and the
@@ -314,14 +343,14 @@ def describe(surface: Surface) -> str:
         describer = _DESCRIBERS.get(str(component.get("component")))
         if describer is None:
             continue
-        described = describer(component, data)
+        described = describer(t, component, data)
         if described:
             lines.append(described)
 
     if not lines:
-        return f"„{surface.title}“ — Text ohne Kennzahlen."
+        return t("readback.empty", titel=surface.title)
 
     body = "\n".join(lines)
     if len(body) > MAX_CHARS:
-        body = body[:MAX_CHARS].rsplit("\n", 1)[0] + "\n  … (gekürzt)"
-    return f"„{surface.title}“:\n{body}"
+        body = body[:MAX_CHARS].rsplit("\n", 1)[0] + "\n" + t("readback.truncated")
+    return t("readback.surface", titel=surface.title) + "\n" + body
