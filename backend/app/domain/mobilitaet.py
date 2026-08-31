@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from . import demo_data as dd
+from ..format_de import de
 
 Lademoeglichkeit = Literal[
     "wallbox_zuhause", "steckdose_zuhause", "arbeitsplatz", "nur_oeffentlich"
@@ -432,9 +433,8 @@ def fahrzeugvorschlaege(profil: Mobilitaetsprofil, *, anzahl: int = 3) -> list[d
         if kosten["differenz_eur"] > 0:
             pro.append(
                 f"Über {profil.haltedauer_jahre} Jahre rund "
-                f"{kosten['differenz_eur']:,.0f} € günstiger als ein vergleichbarer Verbrenner".replace(
-                    ",", "."
-                )
+                f"{de(kosten['differenz_eur'])} € günstiger als ein "
+                "vergleichbarer Verbrenner"
             )
         else:
             contra.append("Teurer als ein vergleichbarer Verbrenner")
@@ -475,8 +475,8 @@ def annahmen(profil: Mobilitaetsprofil) -> list[str]:
         else f"Mix für „{profil.lademoeglichkeit}“"
     )
     return [
-        f"Jahresfahrleistung {profil.jahresfahrleistung_km():,.0f} km".replace(",", "."),
-        f"Mischladepreis {preis:.2f} €/kWh ({herkunft})",
+        f"Jahresfahrleistung {de(profil.jahresfahrleistung_km())} km",
+        f"Mischladepreis {de(preis, decimals=2)} €/kWh ({herkunft})",
         f"Winter-Mehrverbrauch {dd.WINTER_MEHRVERBRAUCH:.0%}, "
         f"Autobahn-Mehrverbrauch {dd.LANGSTRECKE_MEHRVERBRAUCH:.0%}",
         f"Ladefenster 10–80 % SoC, Haltedauer {profil.haltedauer_jahre} Jahre",

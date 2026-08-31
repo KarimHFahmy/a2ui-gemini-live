@@ -20,6 +20,7 @@ from google.adk.agents import Agent
 from google.adk.events.ui_widget import UiWidget
 from google.adk.tools import ToolContext
 
+from ..a2ui import readback
 from ..a2ui.surface import Surface
 
 #: Marks widgets this application knows how to render.
@@ -32,12 +33,22 @@ _PROFILE_KEY = "_advisory_profile"
 T = TypeVar("T")
 
 
-def push(tool_context: ToolContext, surface: Surface) -> None:
-    """Streams a surface to the browser.
+def push(tool_context: ToolContext, surface: Surface) -> str:
+    """Streams a surface to the browser and answers with what is now on it.
 
     The first push of a surface creates it; later pushes replace its contents
     in place, so a refined answer updates the card the client is already
     reading instead of stacking a near-duplicate below it.
+
+    The return value is the surface read back in words (see
+    :mod:`app.a2ui.readback`). It exists because the agent chooses *when* to
+    show something and the composer chooses *what*, which left the agent
+    talking about a picture it had never seen: it knew the break-even year
+    because the tool returned it, but not that the chart draws four lines or
+    where they cross. Deriving the description from the composed tree rather
+    than writing it by hand is the point — two descriptions of one picture
+    drift, and the day they disagree the agent is confidently wrong about
+    something the client is looking at.
     """
     live: list[str] = list(tool_context.state.get(_SURFACES_KEY, []))
     exists = surface.surface_id in live
@@ -58,6 +69,23 @@ def push(tool_context: ToolContext, surface: Surface) -> None:
 
     if not exists:
         tool_context.state[_SURFACES_KEY] = [*live, surface.surface_id]
+
+    return readback.describe(surface)
+
+
+def shown(tool_context: ToolContext, *surfaces: Surface, **fields: Any) -> dict[str, Any]:
+    """Pushes surfaces and builds the tool's answer around what they show.
+
+    Every advisory tool ends this way, so the screen description cannot be
+    forgotten on a tool someone adds later — which is exactly what would
+    happen if it were one more key each of them had to remember.
+
+    Several surfaces because a tool can revise more than one: correcting a
+    price assumption redraws the what-if panel *and* the comparison built on
+    it, and the client can see both.
+    """
+    described = [push(tool_context, surface) for surface in surfaces]
+    return {**fields, "auf_dem_schirm": "\n\n".join(described)}
 
 
 def load_profile(tool_context: ToolContext, factory: type[T]) -> T:
@@ -127,6 +155,38 @@ kein Nachtrag zum Gespräch, sondern Teil davon.
   Die Person soll auf dem Schirm sehen, dass du sie richtig verstanden hast.
 - Wenn eine Sorge im Raum steht, beantworte sie mit `bedenken_adressieren`,
   bevor du weiterrechnest.
+
+## Was gerade auf dem Bildschirm steht
+
+Jedes Werkzeug gibt dir `auf_dem_schirm` zurück: was die Person in diesem
+Moment vor sich sieht, von oben nach unten — mit den Achsen der Diagramme, dem
+Verlauf jeder Linie und der Stelle, an der sich zwei Linien kreuzen.
+
+- Fragt jemand „was ist die obere Linie?“ oder „warum knickt das da?“, steht
+  die Antwort dort. Rate nicht.
+- Es ist eine Notiz für dich, keine Sprechvorlage. Lies sie nicht vor.
+- Zeig mit Worten hin — „die obere Linie“, „die letzte Zeile“. Die Reihenfolge
+  stimmt mit dem Bildschirm überein.
+- `[Nachteil]` heißt: die Zahl spricht **gegen** die Person. Nicht schönreden.
+- „rechnet live mit den Reglern mit“ heißt: diese Karte hat gerade keinen
+  festen Wert. Nenne keinen, lade zum Ziehen ein.
+
+## Wie du führst
+
+Die Person weiß nicht, was sie sagen darf. Führen heißt: nach jedem Schritt
+weiß sie, was als Nächstes kommt.
+
+- **Gib den Ball konkret zurück.** Nicht „Haben Sie noch Fragen?“, sondern
+  „Wenn Sie wollen, rechne ich als Nächstes durch, ab wann sich das lohnt.“
+- **Ein Schritt, dann Pause.** Nie zwei Ansichten hintereinander ohne ein Wort
+  dazwischen.
+- **Regler gehören der Person.** Steht einer auf dem Schirm, sag einmal, dass
+  sie selbst ziehen kann und alles sofort mitrechnet.
+- **Sag, wo ihr steht**, wenn ein Abschnitt endet: „Technisch passt es —
+  bleibt die Frage, ob es sich rechnet.“
+- **Bei Schweigen** wiederhol dich nicht, biete den nächsten Schritt an.
+- **Bei „weiß ich nicht“** rechne mit einem klaren Näherungswert weiter, sag
+  welchen, und zeig die Regler. Niemand kennt seinen Verbrauch auswendig.
 
 ## Grenzen
 

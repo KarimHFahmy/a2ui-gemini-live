@@ -132,6 +132,24 @@ requirement, not a nice-to-have. When the composer is the only thing that
 writes a surface, the visual quality and the factual content are both bounded
 by code review rather than by prompt engineering.
 
+**What it costs, and the fix.** Decoupling has one real price: the agent
+decides *when* a view appears and never sees *what* appeared. It knew the
+break-even year because the tool returned it, but not that the chart draws
+four lines or where they cross — so "was ist die obere Linie?" had no answer.
+
+`app.a2ui.readback` closes that. After a composer is done, it walks the
+composed tree and resolves the same bindings the renderer resolves, producing a
+compact German description of what is now on screen: axes, every series with
+its endpoints, where two lines swap places, each metric with its tone, each
+slider with its range. `journeys.base.shown()` puts it in every tool result as
+`auf_dem_schirm`, so it cannot be forgotten on a tool added later.
+
+The description is *derived*, never written by hand next to a composer. Two
+descriptions of one picture drift, and the day they disagree the agent is
+confidently wrong about something the client is looking at. It also states
+only plotted values — no sums, no interpolated crossings — because a figure
+the client cannot find on the chart is a figure the agent should not say.
+
 The cost is expressiveness: the agent can only show what a composer knows how
 to build. For a demo with two well-understood journeys that is the right trade.
 A general assistant would want the opposite.

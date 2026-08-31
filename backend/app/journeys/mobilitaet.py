@@ -18,11 +18,13 @@ from .base import (
     load_profile,
     open_points,
     opening_line,
-    push,
     save_profile,
+    shown,
 )
 
-Laden = Literal["wallbox_zuhause", "steckdose_zuhause", "arbeitsplatz", "nur_oeffentlich"]
+Laden = Literal[
+    "wallbox_zuhause", "steckdose_zuhause", "arbeitsplatz", "nur_oeffentlich"
+]
 Klasse = Literal["kompakt", "mittelklasse", "suv", "van"]
 
 
@@ -91,11 +93,12 @@ def profil_aktualisieren(
     save_profile(tool_context, profil)
     offen = open_points(tool_context, offene_punkte)
 
-    push(tool_context, compose.profil_surface(profil, offen))
-    return {
-        "jahres_km": profil.jahresfahrleistung_km(),
-        "hinweis": "Bestätige kurz, was du verstanden hast, ohne alle Werte vorzulesen.",
-    }
+    return shown(
+        tool_context,
+        compose.profil_surface(profil, offen),
+        jahres_km=profil.jahresfahrleistung_km(),
+        hinweis="Bestätige kurz, was du verstanden hast, ohne alle Werte vorzulesen.",
+    )
 
 
 def alltagstauglichkeit_zeigen(tool_context: ToolContext) -> dict[str, Any]:
@@ -109,15 +112,16 @@ def alltagstauglichkeit_zeigen(tool_context: ToolContext) -> dict[str, Any]:
     r = calc.reichweite(profil)
     ls = calc.langstrecke(profil)
 
-    push(tool_context, compose.alltag_surface(profil))
-    return {
-        "reichweite_winter_km": r["reichweite_winter_km"],
-        "reichweite_autobahn_winter_km": r["reichweite_autobahn_winter_km"],
-        "puffer_faktor_winter": r["puffer_faktor_winter"],
-        "taeglich_laden_noetig": r["taeglich_laden_noetig"],
-        "ladestopps_langstrecke": ls["ladestopps"],
-        "mehrzeit_min": ls["mehrzeit_min"],
-    }
+    return shown(
+        tool_context,
+        compose.alltag_surface(profil),
+        reichweite_winter_km=r["reichweite_winter_km"],
+        reichweite_autobahn_winter_km=r["reichweite_autobahn_winter_km"],
+        puffer_faktor_winter=r["puffer_faktor_winter"],
+        taeglich_laden_noetig=r["taeglich_laden_noetig"],
+        ladestopps_langstrecke=ls["ladestopps"],
+        mehrzeit_min=ls["mehrzeit_min"],
+    )
 
 
 def ladeloesungen_vergleichen(tool_context: ToolContext) -> dict[str, Any]:
@@ -130,12 +134,13 @@ def ladeloesungen_vergleichen(tool_context: ToolContext) -> dict[str, Any]:
     profil = _profil(tool_context)
     lade = calc.ladeoptionen(profil)
 
-    push(tool_context, compose.laden_surface(profil))
-    return {
-        "aktuell": lade["aktuell_id"],
-        "beste_option": lade["beste_id"],
-        "ersparnis_eur_a": lade["ersparnis_beste_eur_a"],
-        "optionen": [
+    return shown(
+        tool_context,
+        compose.laden_surface(profil),
+        aktuell=lade["aktuell_id"],
+        beste_option=lade["beste_id"],
+        ersparnis_eur_a=lade["ersparnis_beste_eur_a"],
+        optionen=[
             {
                 "id": o["id"],
                 "label": o["label"],
@@ -145,7 +150,7 @@ def ladeloesungen_vergleichen(tool_context: ToolContext) -> dict[str, Any]:
             }
             for o in lade["optionen"]
         ],
-    }
+    )
 
 
 def fahrzeuge_vorschlagen(tool_context: ToolContext) -> dict[str, Any]:
@@ -157,9 +162,10 @@ def fahrzeuge_vorschlagen(tool_context: ToolContext) -> dict[str, Any]:
     profil = _profil(tool_context)
     vorschlaege = calc.fahrzeugvorschlaege(profil)
 
-    push(tool_context, compose.fahrzeuge_surface(profil))
-    return {
-        "vorschlaege": [
+    return shown(
+        tool_context,
+        compose.fahrzeuge_surface(profil),
+        vorschlaege=[
             {
                 "label": v["label"],
                 "score": v["score"],
@@ -169,8 +175,8 @@ def fahrzeuge_vorschlagen(tool_context: ToolContext) -> dict[str, Any]:
                 "contra": v["contra"],
             }
             for v in vorschlaege
-        ]
-    }
+        ],
+    )
 
 
 def kosten_vergleichen(tool_context: ToolContext) -> dict[str, Any]:
@@ -182,20 +188,21 @@ def kosten_vergleichen(tool_context: ToolContext) -> dict[str, Any]:
     profil = _profil(tool_context)
     k = calc.kostenvergleich(profil)
 
-    push(tool_context, compose.kosten_surface(profil))
-    return {
-        "gesamt_elektro_eur": k["gesamt_elektro_eur"],
-        "gesamt_verbrenner_eur": k["gesamt_verbrenner_eur"],
-        "differenz_eur": k["differenz_eur"],
-        "differenz_eur_monat": k["differenz_eur_monat"],
-        "elektro_guenstiger": k["differenz_eur"] > 0,
-        "energie_elektro_eur_100km": k["energie_elektro_eur_100km"],
-        "energie_verbrenner_eur_100km": k["energie_verbrenner_eur_100km"],
-        "hinweis": (
+    return shown(
+        tool_context,
+        compose.kosten_surface(profil),
+        gesamt_elektro_eur=k["gesamt_elektro_eur"],
+        gesamt_verbrenner_eur=k["gesamt_verbrenner_eur"],
+        differenz_eur=k["differenz_eur"],
+        differenz_eur_monat=k["differenz_eur_monat"],
+        elektro_guenstiger=k["differenz_eur"] > 0,
+        energie_elektro_eur_100km=k["energie_elektro_eur_100km"],
+        energie_verbrenner_eur_100km=k["energie_verbrenner_eur_100km"],
+        hinweis=(
             "Wenn das E-Auto teurer ist, benenne das offen und zeig über die "
             "Ladeoptionen, was sich ändern müsste."
         ),
-    }
+    )
 
 
 def stellschrauben_zeigen(tool_context: ToolContext) -> dict[str, Any]:
@@ -210,16 +217,17 @@ def stellschrauben_zeigen(tool_context: ToolContext) -> dict[str, Any]:
     hast. Sag danach in einem Satz, dass die Person selbst ziehen kann.
     """
     profil = _profil(tool_context)
-    push(tool_context, compose.stellschrauben_surface(profil))
     werte = calc.stellschrauben(profil)
-    return {
-        "taeglich_km": werte["taeglich_km"],
-        "anteil_zuhause": werte["anteil_zuhause"],
-        "hinweis": (
+    return shown(
+        tool_context,
+        compose.stellschrauben_surface(profil),
+        taeglich_km=werte["taeglich_km"],
+        anteil_zuhause=werte["anteil_zuhause"],
+        hinweis=(
             "Die Person kann die Regler selbst bewegen. Lade sie dazu ein, "
             "statt Zahlen vorzulesen."
         ),
-    }
+    )
 
 
 def annahmen_uebernehmen(
@@ -251,22 +259,22 @@ def annahmen_uebernehmen(
 
     # Alles, was schon auf dem Schirm steht, rechnet mit den alten Werten —
     # also neu aufbauen, damit nichts Widersprüchliches stehen bleibt.
-    push(tool_context, compose.stellschrauben_surface(profil))
-    push(tool_context, compose.kosten_surface(profil))
-
     k = calc.kostenvergleich(profil)
-    return {
-        "uebernommen": {"taeglich_km": taeglich_km, "anteil_zuhause": anteil_zuhause},
-        "jahres_km": profil.jahresfahrleistung_km(),
-        "mischpreis_eur_kwh": round(calc.mischpreis_eur_kwh(profil), 3),
-        "differenz_eur_monat": k["differenz_eur_monat"],
-        "elektro_guenstiger": k["differenz_eur"] > 0,
-        "hinweis": (
+    return shown(
+        tool_context,
+        compose.stellschrauben_surface(profil),
+        compose.kosten_surface(profil),
+        uebernommen={"taeglich_km": taeglich_km, "anteil_zuhause": anteil_zuhause},
+        jahres_km=profil.jahresfahrleistung_km(),
+        mischpreis_eur_kwh=round(calc.mischpreis_eur_kwh(profil), 3),
+        differenz_eur_monat=k["differenz_eur_monat"],
+        elektro_guenstiger=k["differenz_eur"] > 0,
+        hinweis=(
             "Bestätige kurz, dass ab jetzt mit den Werten der Person gerechnet "
             "wird, und nenne, was sich dadurch verschoben hat. Rufe danach "
             "`profil_aktualisieren` auf, damit die Zusammenfassung stimmt."
         ),
-    }
+    )
 
 
 def bedenken_adressieren(
@@ -288,11 +296,11 @@ def bedenken_adressieren(
             hat 'titel', 'text' und optional 'tone' mit den Werten 'positive'
             (entlastet), 'neutral' oder 'caution' (echte Einschränkung).
     """
-    push(
+    return shown(
         tool_context,
         shared.bedenken_surface(titel=titel, einordnung=einordnung, punkte=punkte),
+        status="angezeigt",
     )
-    return {"status": "angezeigt"}
 
 
 _SCHRITT_LABEL = {
@@ -320,7 +328,7 @@ def naechsten_schritt_anbieten(
         offene_punkte: Was vor einer Entscheidung noch zu klären ist.
     """
     offen = offene_punkte or open_points(tool_context, None)
-    push(
+    return shown(
         tool_context,
         shared.handover_surface(
             journey="mobilitaet",
@@ -331,8 +339,9 @@ def naechsten_schritt_anbieten(
             schritt_label=_SCHRITT_LABEL[schritt],
             schritt_event=f"handover_{schritt}",
         ),
+        status="abgeschlossen",
+        zusammenfassung=summary(tool_context),
     )
-    return {"status": "abgeschlossen", "zusammenfassung": summary(tool_context)}
 
 
 def summary(tool_context: ToolContext) -> dict[str, Any]:

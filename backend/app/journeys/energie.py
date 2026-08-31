@@ -24,8 +24,8 @@ from .base import (
     load_profile,
     open_points,
     opening_line,
-    push,
     save_profile,
+    shown,
 )
 
 Heizung = Literal["gas", "oel", "fernwaerme", "nachtspeicher", "waermepumpe"]
@@ -115,11 +115,12 @@ def profil_aktualisieren(
     save_profile(tool_context, profil)
     offen = open_points(tool_context, offene_punkte)
 
-    push(tool_context, compose.profil_surface(profil, offen))
-    return {
-        "waermebedarf_kwh_a": calc.waermebedarf_kwh_a(profil),
-        "hinweis": "Bestätige kurz, was du verstanden hast, ohne alle Werte vorzulesen.",
-    }
+    return shown(
+        tool_context,
+        compose.profil_surface(profil, offen),
+        waermebedarf_kwh_a=calc.waermebedarf_kwh_a(profil),
+        hinweis="Bestätige kurz, was du verstanden hast, ohne alle Werte vorzulesen.",
+    )
 
 
 def waermepumpen_eignung_zeigen(tool_context: ToolContext) -> dict[str, Any]:
@@ -132,16 +133,17 @@ def waermepumpen_eignung_zeigen(tool_context: ToolContext) -> dict[str, Any]:
     """
     profil = _profil(tool_context)
     check = calc.eignung(profil)
-    push(tool_context, compose.eignung_surface(profil))
-    return {
-        "urteil": check["urteil"],
-        "score": check["score"],
-        "vorlauftemperatur_c": check["vorlauftemperatur_c"],
-        "jaz": check["jaz"],
-        "heizlast_kw": check["heizlast_kw"],
-        "hinweise": check["hinweise"],
-        "massnahmen": check["massnahmen"],
-    }
+    return shown(
+        tool_context,
+        compose.eignung_surface(profil),
+        urteil=check["urteil"],
+        score=check["score"],
+        vorlauftemperatur_c=check["vorlauftemperatur_c"],
+        jaz=check["jaz"],
+        heizlast_kw=check["heizlast_kw"],
+        hinweise=check["hinweise"],
+        massnahmen=check["massnahmen"],
+    )
 
 
 def szenarien_vergleichen(
@@ -163,10 +165,11 @@ def szenarien_vergleichen(
     verfuegbar = {s.id for s in szenarien}
     gewaehlt = _gewaehlt(tool_context, empfohlen if empfohlen in verfuegbar else None)
 
-    push(tool_context, compose.szenarien_surface(_profil(tool_context), szenarien, empfohlen_id=gewaehlt))
-    return {
-        "hervorgehoben": gewaehlt,
-        "szenarien": [
+    return shown(
+        tool_context,
+        compose.szenarien_surface(_profil(tool_context), szenarien, empfohlen_id=gewaehlt),
+        hervorgehoben=gewaehlt,
+        szenarien=[
             {
                 "id": s.id,
                 "label": s.label,
@@ -176,7 +179,7 @@ def szenarien_vergleichen(
             }
             for s in szenarien
         ],
-    }
+    )
 
 
 def wirtschaftlichkeit_zeigen(
@@ -200,17 +203,15 @@ def wirtschaftlichkeit_zeigen(
     fokus = next(s for s in szenarien if s.id == fokus_id)
     amort = calc.amortisation(bestand, fokus)
 
-    push(
+    return shown(
         tool_context,
         compose.wirtschaftlichkeit_surface(_profil(tool_context), szenarien, fokus_id=fokus_id),
+        szenario=fokus.label,
+        eigenanteil_eur=fokus.eigenanteil_eur,
+        ersparnis_eur_a=round(bestand.betriebskosten_eur_a - fokus.betriebskosten_eur_a),
+        break_even_jahre=amort["jahre"],
+        break_even_erreichbar=amort["erreichbar"],
     )
-    return {
-        "szenario": fokus.label,
-        "eigenanteil_eur": fokus.eigenanteil_eur,
-        "ersparnis_eur_a": round(bestand.betriebskosten_eur_a - fokus.betriebskosten_eur_a),
-        "break_even_jahre": amort["jahre"],
-        "break_even_erreichbar": amort["erreichbar"],
-    }
 
 
 def foerderung_und_fahrplan_zeigen(
@@ -241,13 +242,14 @@ def foerderung_und_fahrplan_zeigen(
         einkommensbonus=einkommensbonus,
     )
 
-    push(tool_context, compose.foerderung_surface(_profil(tool_context), gewaehlt, details))
-    return {
-        "foerderquote": details["satz"],
-        "betrag_eur": details["betrag_eur"],
-        "eigenanteil_eur": gewaehlt.eigenanteil_eur,
-        "hinweis": "Antrag muss vor Beauftragung gestellt werden — sprich das aus.",
-    }
+    return shown(
+        tool_context,
+        compose.foerderung_surface(_profil(tool_context), gewaehlt, details),
+        foerderquote=details["satz"],
+        betrag_eur=details["betrag_eur"],
+        eigenanteil_eur=gewaehlt.eigenanteil_eur,
+        hinweis="Antrag muss vor Beauftragung gestellt werden — sprich das aus.",
+    )
 
 
 def stellschrauben_zeigen(tool_context: ToolContext) -> dict[str, Any]:
@@ -271,17 +273,18 @@ def stellschrauben_zeigen(tool_context: ToolContext) -> dict[str, Any]:
     bestand = next(s for s in szenarien if s.id == "bestand")
     fokus = next(s for s in szenarien if s.id == fokus_id)
 
-    push(tool_context, compose.stellschrauben_surface(profil, bestand, fokus))
     werte = calc.stellschrauben(profil, bestand, fokus)
-    return {
-        "szenario": fokus.label,
-        "preis_alt_ct": werte["preis_alt_ct"],
-        "preis_strom_ct": werte["preis_strom_ct"],
-        "hinweis": (
+    return shown(
+        tool_context,
+        compose.stellschrauben_surface(profil, bestand, fokus),
+        szenario=fokus.label,
+        preis_alt_ct=werte["preis_alt_ct"],
+        preis_strom_ct=werte["preis_strom_ct"],
+        hinweis=(
             "Die Person kann die Regler selbst bewegen. Lade sie dazu ein, "
             "statt Zahlen vorzulesen."
         ),
-    }
+    )
 
 
 def annahmen_uebernehmen(
@@ -321,26 +324,21 @@ def annahmen_uebernehmen(
     bestand = next(s for s in szenarien if s.id == "bestand")
     fokus = next(s for s in szenarien if s.id == fokus_id)
 
-    push(tool_context, compose.stellschrauben_surface(profil, bestand, fokus))
-    push(tool_context, compose.szenarien_surface(profil, szenarien, empfohlen_id=fokus_id))
-    push(
-        tool_context,
-        compose.wirtschaftlichkeit_surface(profil, szenarien, fokus_id=fokus_id),
-    )
-
     amort = calc.amortisation(bestand, fokus)
-    return {
-        "uebernommen": {"preis_alt_ct": preis_alt_ct, "preis_strom_ct": preis_strom_ct},
-        "ersparnis_eur_a": round(
-            bestand.betriebskosten_eur_a - fokus.betriebskosten_eur_a
-        ),
-        "break_even_jahre": amort["jahre"],
-        "break_even_erreichbar": amort["erreichbar"],
-        "hinweis": (
+    return shown(
+        tool_context,
+        compose.stellschrauben_surface(profil, bestand, fokus),
+        compose.szenarien_surface(profil, szenarien, empfohlen_id=fokus_id),
+        compose.wirtschaftlichkeit_surface(profil, szenarien, fokus_id=fokus_id),
+        uebernommen={"preis_alt_ct": preis_alt_ct, "preis_strom_ct": preis_strom_ct},
+        ersparnis_eur_a=round(bestand.betriebskosten_eur_a - fokus.betriebskosten_eur_a),
+        break_even_jahre=amort["jahre"],
+        break_even_erreichbar=amort["erreichbar"],
+        hinweis=(
             "Bestätige kurz, dass ab jetzt mit den Preisen der Person gerechnet "
             "wird, und nenne, was sich dadurch verschoben hat."
         ),
-    }
+    )
 
 
 def bedenken_adressieren(
@@ -363,11 +361,11 @@ def bedenken_adressieren(
             hat 'titel', 'text' und optional 'tone' mit den Werten 'positive'
             (entlastet), 'neutral' oder 'caution' (echte Einschränkung).
     """
-    push(
+    return shown(
         tool_context,
         shared.bedenken_surface(titel=titel, einordnung=einordnung, punkte=punkte),
+        status="angezeigt",
     )
-    return {"status": "angezeigt"}
 
 
 _SCHRITT_LABEL = {
@@ -399,7 +397,7 @@ def naechsten_schritt_anbieten(
             benennen, nicht beschönigen.
     """
     offen = offene_punkte or open_points(tool_context, None)
-    push(
+    return shown(
         tool_context,
         shared.handover_surface(
             journey="energie",
@@ -410,8 +408,9 @@ def naechsten_schritt_anbieten(
             schritt_label=_SCHRITT_LABEL[schritt],
             schritt_event=f"handover_{schritt}",
         ),
+        status="abgeschlossen",
+        zusammenfassung=summary(tool_context),
     )
-    return {"status": "abgeschlossen", "zusammenfassung": summary(tool_context)}
 
 
 def summary(tool_context: ToolContext) -> dict[str, Any]:

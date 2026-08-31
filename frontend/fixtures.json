@@ -260,13 +260,13 @@
       {
        "id": "c6",
        "component": "Text",
-       "text": "Aus 1 kWh Strom werden 3.2 kWh Wärme – rund 7.000 kWh Strom im Jahr."
+       "text": "Aus 1 kWh Strom werden 3,2 kWh Wärme – rund 7.000 kWh Strom im Jahr."
       },
       {
        "id": "c7",
        "component": "StatCard",
        "title": "Erwartete Jahresarbeitszahl",
-       "metric": "3.2",
+       "metric": "3,2",
        "metricLabel": "JAZ",
        "tone": "neutral",
        "child": "c6",
@@ -281,7 +281,7 @@
        "id": "c9",
        "component": "StatCard",
        "title": "Benötigte Heizleistung",
-       "metric": "12.4 kW",
+       "metric": "12,4 kW",
        "metricLabel": "Norm-Heizlast",
        "tone": "neutral",
        "child": "c8",
@@ -356,7 +356,7 @@
       {
        "id": "c19",
        "component": "Text",
-       "text": "- Wärmebedarf 22.400 kWh/a\n- Strompreis Wärmepumpe 0.27 €/kWh, Erdgaspreis 0.120 €/kWh\n- Preissteigerung Strom 2% p. a., fossil 4.5% p. a.\n- Jahresarbeitszahl 3.2 bei 55 °C Vorlauf\n- Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Mit Standard-Heizkörpern läuft die Wärmepumpe gut, aber nicht optimal."
+       "text": "- Wärmebedarf 22.400 kWh/a\n- Strompreis Wärmepumpe 0,27 €/kWh, Erdgaspreis 0,120 €/kWh\n- Preissteigerung Strom 2% p. a., fossil 4.5% p. a.\n- Jahresarbeitszahl 3,2 bei 55 °C Vorlauf\n- Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Mit Standard-Heizkörpern läuft die Wärmepumpe gut, aber nicht optimal."
       },
       {
        "id": "c20",
@@ -469,10 +469,10 @@
        {
         "label": "CO₂ pro Jahr",
         "werte": [
-         "5.1 t",
-         "2.7 t",
-         "1.6 t",
-         "1.7 t"
+         "5,1 t",
+         "2,7 t",
+         "1,6 t",
+         "1,7 t"
         ]
        },
        {
@@ -625,7 +625,7 @@
       {
        "id": "c13",
        "component": "Text",
-       "text": "- Wärmebedarf 22.400 kWh/a\n- Strompreis Wärmepumpe 0.27 €/kWh, Erdgaspreis 0.120 €/kWh\n- Preissteigerung Strom 2% p. a., fossil 4.5% p. a.\n- Jahresarbeitszahl 3.2 bei 55 °C Vorlauf\n- Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
+       "text": "- Wärmebedarf 22.400 kWh/a\n- Strompreis Wärmepumpe 0,27 €/kWh, Erdgaspreis 0,120 €/kWh\n- Preissteigerung Strom 2% p. a., fossil 4.5% p. a.\n- Jahresarbeitszahl 3,2 bei 55 °C Vorlauf\n- Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
       },
       {
        "id": "c14",
@@ -852,7 +852,7 @@
       {
        "id": "c15",
        "component": "Text",
-       "text": "- Wärmebedarf 22.400 kWh/a\n- Strompreis Wärmepumpe 0.27 €/kWh, Erdgaspreis 0.120 €/kWh\n- Preissteigerung Strom 2% p. a., fossil 4.5% p. a.\n- Jahresarbeitszahl 3.2 bei 55 °C Vorlauf\n- Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
+       "text": "- Wärmebedarf 22.400 kWh/a\n- Strompreis Wärmepumpe 0,27 €/kWh, Erdgaspreis 0,120 €/kWh\n- Preissteigerung Strom 2% p. a., fossil 4.5% p. a.\n- Jahresarbeitszahl 3,2 bei 55 °C Vorlauf\n- Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
       },
       {
        "id": "c16",
@@ -2368,7 +2368,7 @@
       {
        "id": "c26",
        "component": "Text",
-       "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0.60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
+       "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0,60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
       },
       {
        "id": "c27",
@@ -2560,7 +2560,7 @@
       {
        "id": "c10",
        "component": "Text",
-       "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0.60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Jahresenergiebedarf rund 5.949 kWh"
+       "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0,60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Jahresenergiebedarf rund 5.949 kWh"
       },
       {
        "id": "c11",
@@ -2764,7 +2764,7 @@
       {
        "id": "c16",
        "component": "Text",
-       "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0.60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Passung berücksichtigt Winterreichweite, Ladestopps, Budget und Ihre Fahrzeugklasse.\n- Generische Fahrzeugklassen statt konkreter Modelle – bewusst herstellerneutral."
+       "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0,60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Passung berücksichtigt Winterreichweite, Ladestopps, Budget und Ihre Fahrzeugklasse.\n- Generische Fahrzeugklassen statt konkreter Modelle – bewusst herstellerneutral."
       },
       {
        "id": "c17",
@@ -2972,7 +2972,7 @@
       {
        "id": "c15",
        "component": "Text",
-       "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0.60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Gesamtkosten Elektro 39.093 €, Verbrenner 37.186 €\n- Wertverlust auf Basis angenommener Restwerte nach vier Jahren."
+       "text": "- Jahresfahrleistung 31.350 km\n- Mischladepreis 0,60 €/kWh (Mix für „nur_oeffentlich“)\n- Winter-Mehrverbrauch 25%, Autobahn-Mehrverbrauch 30%\n- Ladefenster 10–80 % SoC, Haltedauer 4 Jahre\n- Kraftstoff Benzin 1.78 €/l, Diesel 1.68 €/l\n- Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot.\n- Gesamtkosten Elektro 39.093 €, Verbrenner 37.186 €\n- Wertverlust auf Basis angenommener Restwerte nach vier Jahren."
       },
       {
        "id": "c16",

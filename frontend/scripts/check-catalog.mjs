@@ -165,6 +165,12 @@ for (const scheme of ['light', 'dark']) {
       console.log(`  [${scheme}] ${journey} tone: ${tone.problems.join('; ')}`);
     }
 
+    const numbers = await checkGermanNumbers(page);
+    if (numbers.problems.length) {
+      failures++;
+      console.log(`  [${scheme}] ${journey} numbers: ${numbers.problems.join('; ')}`);
+    }
+
     if (scheme === 'light') {
       const slug = journey === 'Mein Zuhause' ? 'energie' : 'mobilitaet';
       await page.screenshot({path: path.resolve(shotDir, `${slug}.png`), fullPage: true});
@@ -265,6 +271,41 @@ async function checkType(page) {
     const tick = document.querySelector('.chart__tick');
     if (tick && !getComputedStyle(tick).fontFamily.includes('IBM Plex Mono')) {
       problems.push('chart readings are not set in the mono');
+    }
+    return {problems};
+  });
+}
+
+/**
+ * Checks that every number on screen is written the way German writes numbers.
+ *
+ * A comma is the decimal separator and a point groups thousands, so `12.4 kW`
+ * does not read as twelve point four to a German client — it reads as broken,
+ * or as twelve thousand four hundred. Several composed figures were formatting
+ * with Python's defaults and shipped that way: the seasonal performance factor
+ * as `3.2`, the heat load as `12.4 kW`, the energy prices in the assumptions
+ * as `0.27 €/kWh`.
+ *
+ * The rule that separates the two: a point that groups thousands is followed
+ * by exactly three digits. A point followed by one or two is a decimal point
+ * that should have been a comma. Version strings and the catalog URN are the
+ * one place that pattern is legitimate, so they are excluded by their shape.
+ */
+async function checkGermanNumbers(page) {
+  return page.evaluate(() => {
+    const problems = [];
+    const text = document.querySelector('.stage')?.innerText ?? '';
+    const seen = new Set();
+
+    for (const line of text.split('\n')) {
+      // urn:…:1.0 and semver-ish strings legitimately carry a bare point.
+      const scrubbed = line.replace(/\b(?:urn:|v?\d+(?:\.\d+){2,})\S*/g, '');
+      for (const hit of scrubbed.match(/\d+\.\d{1,2}(?!\d)/g) ?? []) {
+        if (!seen.has(hit)) {
+          seen.add(hit);
+          problems.push(`"${hit}" uses a decimal point in ${JSON.stringify(line.trim().slice(0, 60))}`);
+        }
+      }
     }
     return {problems};
   });
