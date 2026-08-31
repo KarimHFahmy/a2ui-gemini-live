@@ -16,7 +16,13 @@ import pytest
 
 from app.a2ui import composer_energie, composer_mobilitaet
 from app.a2ui.builder import SurfaceBuilder
+from app.texts import Texts
 from app.domain import energie, mobilitaet
+
+
+#: These tests are about tone, bindings and arithmetic, none of which is
+#: language-specific; the bilingual coverage is in test_readback and test_texts.
+TEXTS = Texts("de")
 
 
 def stat_cards(surface) -> list[dict]:
@@ -35,7 +41,7 @@ def card_titled(surface, needle: str) -> dict:
 
 class TestToneReachesTheWire:
     def test_a_stat_card_carries_its_tone_as_a_property(self):
-        b = SurfaceBuilder("x", "x")
+        b = SurfaceBuilder("x", "x", TEXTS)
         b.root(
             b.stat_card(
                 title="Teurer",
@@ -52,7 +58,7 @@ class TestToneReachesTheWire:
         assert card["title"] == "Teurer"
 
     def test_the_body_stays_a_child_so_it_keeps_its_markdown(self):
-        b = SurfaceBuilder("x", "x")
+        b = SurfaceBuilder("x", "x", TEXTS)
         b.root(b.stat_card(title="T", body="**fett**", tone="neutral"))
         surface = b.finish()
 
@@ -62,7 +68,7 @@ class TestToneReachesTheWire:
         assert body["text"] == "**fett**"
 
     def test_a_card_without_a_metric_still_renders(self):
-        b = SurfaceBuilder("x", "x")
+        b = SurfaceBuilder("x", "x", TEXTS)
         b.root(b.stat_card(title="Nur Text", body="Kein Wert."))
         card = stat_cards(b.finish())[0]
 
@@ -78,30 +84,30 @@ class TestToneMatchesTheAdvice:
         saying so must not be able to look like good news.
         """
         profil = mobilitaet.Mobilitaetsprofil()
-        kosten = mobilitaet.kostenvergleich(profil)
+        kosten = mobilitaet.kostenvergleich(profil, TEXTS)
         assert kosten["differenz_eur"] < 0, "the demo profile is meant to be unfavourable"
 
-        surface = composer_mobilitaet.kosten_surface(profil)
+        surface = composer_mobilitaet.kosten_surface(TEXTS, profil)
         assert card_titled(surface, "Elektro gegen Verbrenner")["tone"] == "caution"
 
     def test_the_favourable_case_is_marked_as_an_advantage(self):
         profil = mobilitaet.Mobilitaetsprofil(
             taeglich_km=80, lademoeglichkeit="wallbox_zuhause", haltedauer_jahre=6
         )
-        kosten = mobilitaet.kostenvergleich(profil)
+        kosten = mobilitaet.kostenvergleich(profil, TEXTS)
         assert kosten["differenz_eur"] > 0
 
-        surface = composer_mobilitaet.kosten_surface(profil)
+        surface = composer_mobilitaet.kosten_surface(TEXTS, profil)
         assert card_titled(surface, "Elektro gegen Verbrenner")["tone"] == "positive"
 
     def test_a_house_that_needs_hot_radiators_is_flagged(self):
         profil = energie.Gebaeudeprofil(waermesystem="heizkoerper_klein_alt")
-        surface = composer_energie.eignung_surface(profil)
+        surface = composer_energie.eignung_surface(TEXTS, profil)
         assert card_titled(surface, "Vorlauftemperatur")["tone"] == "caution"
 
     def test_a_house_that_does_not_is_not(self):
         profil = energie.Gebaeudeprofil(waermesystem="fussbodenheizung")
-        surface = composer_energie.eignung_surface(profil)
+        surface = composer_energie.eignung_surface(TEXTS, profil)
         assert card_titled(surface, "Vorlauftemperatur")["tone"] == "positive"
 
 
@@ -119,7 +125,7 @@ class TestToneIsNotOverclaimed:
 
     def test_the_default_profile_does_not_claim_an_energy_win(self):
         """The demo case: 11,37 € against 11,39 € is a tie, not a saving."""
-        surface = composer_mobilitaet.kosten_surface(mobilitaet.Mobilitaetsprofil())
+        surface = composer_mobilitaet.kosten_surface(TEXTS, mobilitaet.Mobilitaetsprofil())
         assert card_titled(surface, "Energie je 100 km")["tone"] == "neutral"
 
 
@@ -128,16 +134,16 @@ class TestEveryToneIsUsedSomewhere:
     def test_tone_is_always_one_of_the_three(self, journey_surface):
         profil = mobilitaet.Mobilitaetsprofil()
         surface = (
-            composer_mobilitaet.kosten_surface(profil)
+            composer_mobilitaet.kosten_surface(TEXTS, profil)
             if journey_surface == "kosten"
-            else composer_mobilitaet.stellschrauben_surface(profil)
+            else composer_mobilitaet.stellschrauben_surface(TEXTS, profil)
         )
         for card in stat_cards(surface):
             assert card["tone"] in {"positive", "neutral", "caution"}
 
     def test_what_if_figures_make_no_claim(self):
         """They move as the client drags, so a fixed tone would be a lie."""
-        surface = composer_mobilitaet.stellschrauben_surface(
+        surface = composer_mobilitaet.stellschrauben_surface(TEXTS, 
             mobilitaet.Mobilitaetsprofil()
         )
         assert {c["tone"] for c in stat_cards(surface)} == {"neutral"}

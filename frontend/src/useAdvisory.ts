@@ -11,7 +11,8 @@ import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {MessageProcessor, type SurfaceModel} from '@a2ui/web_core/v0_9';
 import type {ReactComponentImplementation} from '@a2ui/react/v0_9';
 
-import {CATALOGS} from './a2ui/catalog';
+import {catalogsFor} from './a2ui/catalog';
+import {DEFAULT_LOCALE, texts, type Locale} from './i18n';
 import {MicrophoneCapture, SpeechPlayer} from './live/audio';
 import {AdvisorySocket, type ConnectionState, type JourneyStep} from './live/session';
 
@@ -39,7 +40,7 @@ export interface AdvisoryController {
   sendText: (text: string) => void;
 }
 
-export function useAdvisory(): AdvisoryController {
+export function useAdvisory(locale: Locale = DEFAULT_LOCALE): AdvisoryController {
   const [state, setState] = useState<ConnectionState>('idle');
   const [error, setError] = useState<string | null>(null);
   const [surfaces, setSurfaces] = useState<SurfaceModel<ReactComponentImplementation>[]>([]);
@@ -59,14 +60,14 @@ export function useAdvisory(): AdvisoryController {
 
   const processor = useMemo(
     () =>
-      new MessageProcessor<ReactComponentImplementation>(CATALOGS, action => {
+      new MessageProcessor<ReactComponentImplementation>(catalogsFor(locale), action => {
         socketRef.current?.sendAction({
           name: action.name,
           surfaceId: action.surfaceId,
           context: action.context ?? {},
         });
       }),
-    [],
+    [locale],
   );
 
   const syncSurfaces = useCallback(() => {
@@ -147,7 +148,7 @@ export function useAdvisory(): AdvisoryController {
         onError: message => setError(message),
       });
       socketRef.current = socket;
-      socket.connect(journeyId);
+      socket.connect(journeyId, locale);
 
       try {
         const mic = new MicrophoneCapture(
@@ -160,10 +161,10 @@ export function useAdvisory(): AdvisoryController {
         setMicActive(true);
       } catch {
         setMicActive(false);
-        setError('Ohne Mikrofonfreigabe kann ich Sie nicht hören. Sie können trotzdem tippen.');
+        setError(texts(locale)('dock.no_mic'));
       }
     },
-    [clearSurfaces, processor, syncSurfaces],
+    [clearSurfaces, locale, processor, syncSurfaces],
   );
 
   const stop = useCallback(() => {

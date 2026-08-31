@@ -51,12 +51,14 @@ export class AdvisorySocket {
     return this.socket?.readyState === WebSocket.OPEN;
   }
 
-  connect(journeyId: string): void {
+  connect(journeyId: string, locale: string): void {
     this.closedByUser = false;
     this.callbacks.onState('connecting');
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const url = `${protocol}//${window.location.host}/ws?journey=${encodeURIComponent(journeyId)}`;
+    const url =
+      `${protocol}//${window.location.host}/ws` +
+      `?journey=${encodeURIComponent(journeyId)}&lang=${encodeURIComponent(locale)}`;
 
     const socket = new WebSocket(url);
     socket.binaryType = 'arraybuffer';

@@ -10,16 +10,17 @@ from ..a2ui import composer_mobilitaet as compose
 from ..a2ui import composer_shared as shared
 from ..config import get_settings
 from ..domain import mobilitaet as calc
+from ..texts import DEFAULT_LOCALE, Locale, Texts
 from .base import (
-    HALTUNG,
     Journey,
     apply,
-    join_de,
+    join_list,
     load_profile,
     open_points,
     opening_line,
     save_profile,
     shown,
+    texts_for,
 )
 
 Laden = Literal[
@@ -75,6 +76,7 @@ def profil_aktualisieren(
         prioritaeten: Was der Person wichtig ist, in ihren Worten.
         offene_punkte: Was du noch nicht weißt und geschätzt hast.
     """
+    t = texts_for(tool_context)
     profil = apply(
         _profil(tool_context),
         taeglich_km=taeglich_km,
@@ -95,9 +97,9 @@ def profil_aktualisieren(
 
     return shown(
         tool_context,
-        compose.profil_surface(profil, offen),
+        compose.profil_surface(t, profil, offen),
         jahres_km=profil.jahresfahrleistung_km(),
-        hinweis="Bestätige kurz, was du verstanden hast, ohne alle Werte vorzulesen.",
+        hinweis=t("hinweis.profil"),
     )
 
 
@@ -108,13 +110,14 @@ def alltagstauglichkeit_zeigen(tool_context: ToolContext) -> dict[str, Any]:
     Das ist die Antwort auf Reichweitenangst. Rufe das auf, sobald du
     Tagesstrecke und Langstrecke kennst.
     """
+    t = texts_for(tool_context)
     profil = _profil(tool_context)
     r = calc.reichweite(profil)
-    ls = calc.langstrecke(profil)
+    ls = calc.langstrecke(profil, t)
 
     return shown(
         tool_context,
-        compose.alltag_surface(profil),
+        compose.alltag_surface(t, profil),
         reichweite_winter_km=r["reichweite_winter_km"],
         reichweite_autobahn_winter_km=r["reichweite_autobahn_winter_km"],
         puffer_faktor_winter=r["puffer_faktor_winter"],
@@ -131,12 +134,13 @@ def ladeloesungen_vergleichen(tool_context: ToolContext) -> dict[str, Any]:
     größten ist. Rufe das vor der Fahrzeugwahl auf — der Ladeort entscheidet
     stärker über die Kosten als das Modell.
     """
+    t = texts_for(tool_context)
     profil = _profil(tool_context)
-    lade = calc.ladeoptionen(profil)
+    lade = calc.ladeoptionen(profil, t)
 
     return shown(
         tool_context,
-        compose.laden_surface(profil),
+        compose.laden_surface(t, profil),
         aktuell=lade["aktuell_id"],
         beste_option=lade["beste_id"],
         ersparnis_eur_a=lade["ersparnis_beste_eur_a"],
@@ -159,12 +163,13 @@ def fahrzeuge_vorschlagen(tool_context: ToolContext) -> dict[str, Any]:
     Mit Winterreichweite, Ladestopps auf der Langstrecke, Monatsrate und offen
     benannten Vor- und Nachteilen.
     """
+    t = texts_for(tool_context)
     profil = _profil(tool_context)
-    vorschlaege = calc.fahrzeugvorschlaege(profil)
+    vorschlaege = calc.fahrzeugvorschlaege(profil, t)
 
     return shown(
         tool_context,
-        compose.fahrzeuge_surface(profil),
+        compose.fahrzeuge_surface(t, profil),
         vorschlaege=[
             {
                 "label": v["label"],
@@ -185,12 +190,13 @@ def kosten_vergleichen(tool_context: ToolContext) -> dict[str, Any]:
     Aufgeschlüsselt nach Wertverlust, Energie, Wartung, Versicherung, Steuer
     und THG-Quote. Nutze das für die Frage, ob es sich rechnet.
     """
+    t = texts_for(tool_context)
     profil = _profil(tool_context)
-    k = calc.kostenvergleich(profil)
+    k = calc.kostenvergleich(profil, t)
 
     return shown(
         tool_context,
-        compose.kosten_surface(profil),
+        compose.kosten_surface(t, profil),
         gesamt_elektro_eur=k["gesamt_elektro_eur"],
         gesamt_verbrenner_eur=k["gesamt_verbrenner_eur"],
         differenz_eur=k["differenz_eur"],
@@ -198,10 +204,7 @@ def kosten_vergleichen(tool_context: ToolContext) -> dict[str, Any]:
         elektro_guenstiger=k["differenz_eur"] > 0,
         energie_elektro_eur_100km=k["energie_elektro_eur_100km"],
         energie_verbrenner_eur_100km=k["energie_verbrenner_eur_100km"],
-        hinweis=(
-            "Wenn das E-Auto teurer ist, benenne das offen und zeig über die "
-            "Ladeoptionen, was sich ändern müsste."
-        ),
+        hinweis=t("hinweis.teurer"),
     )
 
 
@@ -216,17 +219,15 @@ def stellschrauben_zeigen(tool_context: ToolContext) -> dict[str, Any]:
     ist („so ungefähr", „mal so, mal so"), oder nachdem du die Kosten gezeigt
     hast. Sag danach in einem Satz, dass die Person selbst ziehen kann.
     """
+    t = texts_for(tool_context)
     profil = _profil(tool_context)
     werte = calc.stellschrauben(profil)
     return shown(
         tool_context,
-        compose.stellschrauben_surface(profil),
+        compose.stellschrauben_surface(t, profil),
         taeglich_km=werte["taeglich_km"],
         anteil_zuhause=werte["anteil_zuhause"],
-        hinweis=(
-            "Die Person kann die Regler selbst bewegen. Lade sie dazu ein, "
-            "statt Zahlen vorzulesen."
-        ),
+        hinweis=t("hinweis.regler"),
     )
 
 
@@ -247,6 +248,7 @@ def annahmen_uebernehmen(
     """
     # Auf ganze Einheiten gerundet: die Regler springen in Einerschritten, und
     # ein Wert dazwischen ließe Reglerstellung und Rechnung auseinanderlaufen.
+    t = texts_for(tool_context)
     taeglich_km = float(round(taeglich_km))
     anteil_zuhause = float(min(100, max(0, round(anteil_zuhause))))
 
@@ -259,21 +261,17 @@ def annahmen_uebernehmen(
 
     # Alles, was schon auf dem Schirm steht, rechnet mit den alten Werten —
     # also neu aufbauen, damit nichts Widersprüchliches stehen bleibt.
-    k = calc.kostenvergleich(profil)
+    k = calc.kostenvergleich(profil, t)
     return shown(
         tool_context,
-        compose.stellschrauben_surface(profil),
-        compose.kosten_surface(profil),
+        compose.stellschrauben_surface(t, profil),
+        compose.kosten_surface(t, profil),
         uebernommen={"taeglich_km": taeglich_km, "anteil_zuhause": anteil_zuhause},
         jahres_km=profil.jahresfahrleistung_km(),
         mischpreis_eur_kwh=round(calc.mischpreis_eur_kwh(profil), 3),
         differenz_eur_monat=k["differenz_eur_monat"],
         elektro_guenstiger=k["differenz_eur"] > 0,
-        hinweis=(
-            "Bestätige kurz, dass ab jetzt mit den Werten der Person gerechnet "
-            "wird, und nenne, was sich dadurch verschoben hat. Rufe danach "
-            "`profil_aktualisieren` auf, damit die Zusammenfassung stimmt."
-        ),
+        hinweis=t("hinweis.uebernommen.mobilitaet"),
     )
 
 
@@ -296,18 +294,14 @@ def bedenken_adressieren(
             hat 'titel', 'text' und optional 'tone' mit den Werten 'positive'
             (entlastet), 'neutral' oder 'caution' (echte Einschränkung).
     """
+    t = texts_for(tool_context)
     return shown(
         tool_context,
-        shared.bedenken_surface(titel=titel, einordnung=einordnung, punkte=punkte),
+        shared.bedenken_surface(t, titel=titel, einordnung=einordnung, punkte=punkte),
         status="angezeigt",
     )
 
 
-_SCHRITT_LABEL = {
-    "probefahrt": "Probefahrt vereinbaren",
-    "ladecheck": "Ladecheck zu Hause anfragen",
-    "angebot": "Persönliches Angebot anfordern",
-}
 
 
 def naechsten_schritt_anbieten(
@@ -327,16 +321,18 @@ def naechsten_schritt_anbieten(
         schritt: Der konkrete nächste Schritt.
         offene_punkte: Was vor einer Entscheidung noch zu klären ist.
     """
+    t = texts_for(tool_context)
     offen = offene_punkte or open_points(tool_context, None)
     return shown(
         tool_context,
         shared.handover_surface(
+            t,
             journey="mobilitaet",
-            titel="Ihr Weg zur E-Mobilität",
+            titel=t("handover.title.mobilitaet"),
             empfehlung=empfehlung,
             begruendung=begruendung,
             offene_punkte=offen,
-            schritt_label=_SCHRITT_LABEL[schritt],
+            schritt_label=t(f"schritt.{schritt}"),
             schritt_event=f"handover_{schritt}",
         ),
         status="abgeschlossen",
@@ -346,11 +342,12 @@ def naechsten_schritt_anbieten(
 
 def summary(tool_context: ToolContext) -> dict[str, Any]:
     """The structured handover payload a CRM or a human advisor picks up."""
+    t = texts_for(tool_context)
     profil = _profil(tool_context)
     r = calc.reichweite(profil)
-    lade = calc.ladeoptionen(profil)
-    kosten = calc.kostenvergleich(profil)
-    vorschlaege = calc.fahrzeugvorschlaege(profil, anzahl=1)
+    lade = calc.ladeoptionen(profil, t)
+    kosten = calc.kostenvergleich(profil, t)
+    vorschlaege = calc.fahrzeugvorschlaege(profil, t, anzahl=1)
     return {
         "journey": "mobilitaet",
         "profil": {
@@ -394,101 +391,29 @@ TOOLS = [
 ]
 
 
-#: What this journey can help with, in the client's words. Said out loud in
-#: the greeting and listed on the empty screen — see `base.opening_line`.
-TOPICS = [
-    "ob ein E-Auto zu Ihren Wegen passt",
-    "wo Sie laden würden und was das kostet",
-    "welches Fahrzeug zu Ihnen passt",
-]
+def build(locale: Locale = DEFAULT_LOCALE) -> Journey:
+    """One journey, in one language.
 
+    Everything the client reads or hears is looked up per locale; the tools and
+    the arithmetic are the same either way.
+    """
+    t = Texts(locale)
+    topics = t.list("journey.mobilitaet.topics")
+    steps = [tuple(step.split("|")) for step in t.list("journey.mobilitaet.steps")]
 
-INSTRUCTION = f"""
-Du bist der persönliche Mobilitätsberater einer deutschen E-Mobilitäts-
-Experience. Du hilfst Menschen, die mit einem Elektroauto liebäugeln, aber
-unsicher sind, ob es zu ihrem Alltag passt.
-
-Die typische Person pendelt täglich, fährt am Wochenende gelegentlich lange
-Strecken und hat keine eigene Wallbox. Ihre Fragen sind: „Reicht die
-Reichweite?", „Wo lade ich?" und „Rechnet sich das überhaupt?"
-
-Dein Leitsatz: Die Person soll kein Elektroauto verstehen müssen. Du verstehst
-ihren Alltag und zeigst, wie E-Mobilität konkret für sie funktioniert — oder
-eben nicht.
-
-{HALTUNG}
-
-## Dein Gesprächsbogen
-
-1. **Zuhören.** Lass die Person ihren Alltag beschreiben. Pendelstrecke,
-   Langstrecken und Lademöglichkeit ergeben sich meist von selbst.
-2. **Verstehen zeigen.** Sobald du die Fahrstrecken und die Ladesituation
-   kennst, rufe `profil_aktualisieren` auf.
-3. **Alltag zuerst.** `alltagstauglichkeit_zeigen` beantwortet die
-   Reichweitenfrage mit der eigenen Woche der Person und ihrer konkreten
-   Langstrecke. Das ist der Moment, in dem Reichweitenangst kippt.
-4. **Laden vor Auto.** `ladeloesungen_vergleichen` — wo geladen wird,
-   entscheidet stärker über die Kosten als das Modell. Diese Reihenfolge ist
-   wichtig, dreh sie nicht um.
-5. **Fahrzeuge.** `fahrzeuge_vorschlagen` zeigt passende Klassen mit offenen
-   Trade-offs.
-6. **Kosten.** `kosten_vergleichen` stellt Elektro und Verbrenner gegenüber.
-7. **Nachvollziehbar machen.** `stellschrauben_zeigen` gibt Tagesstrecke und
-   Ladequote an die Person ab. Nutze das, sobald sie bei einer der beiden
-   Zahlen unsicher ist — und sag dazu, dass sie selbst ziehen darf.
-8. **Abschluss.** `naechsten_schritt_anbieten`.
-
-## Fachliches
-
-- Nenne **realistische Reichweiten**, nie Katalogwerte. Der ehrlichste Wert ist
-  Autobahn im Winter — er nimmt der Reichweitenangst die Grundlage, weil er
-  überprüfbar ist.
-- Ohne eigene Lademöglichkeit rechnet sich ein E-Auto oft **nicht**. Wenn die
-  Rechnung das zeigt, sag es klar und zeig, was sich ändern müsste. Genau das
-  macht die Beratung glaubwürdig.
-- Auf der Langstrecke wird zwischen etwa 10 und 80 Prozent geladen, danach lädt
-  jedes Auto spürbar langsamer. Deshalb sind Ladestopps kürzer, als die meisten
-  erwarten.
-- Sprich über Ladestopps als Pausen, nicht als Wartezeit — aber nur, wenn es
-  ehrlich bleibt.
-
-## Wenn die Person am Bildschirm etwas einstellt
-
-Löst sie „Mit diesen Werten weiterrechnen" aus, bekommst du die eingestellten
-Werte als Interaktion gemeldet. Rufe dann `annahmen_uebernehmen` mit genau
-diesen Werten auf — nicht mit eigenen. Nennt sie im Gespräch selbst eine
-Strecke oder eine Ladequote, gilt dasselbe.
-
-## Eröffnung
-
-Sag als Erstes, wobei du helfen kannst: {join_de(TOPICS)}. Ohne diesen Satz
-weiß eine Person, die zum ersten Mal hier ist, gar nicht, was sie sagen darf —
-und das ist der häufigste Grund, warum ein Sprachgespräch stockt.
-
-Stelle danach genau **eine** offene Frage zu ihrem Alltag. Frag nicht nach
-einem Fahrzeugwunsch, sondern nach ihren Wegen. Zusammen höchstens drei Sätze.
-""".strip()
-
-
-def build() -> Journey:
     return Journey(
         journey_id="mobilitaet",
-        label="Meine Mobilität",
-        tagline=(
-            "Von Reichweitenangst und Tarifdschungel zur passenden "
-            "E-Mobilitätsentscheidung."
+        locale=t.locale,
+        label=t("journey.mobilitaet.label"),
+        tagline=t("journey.mobilitaet.tagline"),
+        opener=opening_line(t, topics, t("journey.mobilitaet.frage")),
+        instruction=t(
+            "journey.mobilitaet.instruction",
+            haltung=t("prompt.haltung"),
+            themen=join_list(t, topics),
         ),
-        opener=opening_line(TOPICS, "zum Alltag und den typischen Wegen der Person"),
-        instruction=INSTRUCTION,
         tools=TOOLS,
         model=get_settings().model,
-        steps=[
-            ("profil", "Ihr Alltag"),
-            ("alltag", "Reichweite"),
-            ("laden", "Laden"),
-            ("fahrzeuge", "Fahrzeuge"),
-            ("kosten", "Kosten"),
-            ("naechster_schritt", "Nächster Schritt"),
-        ],
-        topics=TOPICS,
+        steps=steps,
+        topics=topics,
     )

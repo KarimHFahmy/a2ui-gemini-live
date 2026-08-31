@@ -11,8 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from ..texts import Texts
 from . import demo_data as dd
-from ..format_de import de
 
 Heizung = Literal["gas", "oel", "fernwaerme", "nachtspeicher", "waermepumpe"]
 Sanierungsstand = Literal["unsaniert", "teilsaniert", "saniert"]
@@ -132,32 +132,22 @@ def eignung(profil: Gebaeudeprofil) -> dict[str, Any]:
 
     if vorlauf >= 65:
         score -= 35
-        hinweise.append(
-            "Die vorhandenen Heizkörper brauchen im Auslegungsfall eine hohe "
-            "Vorlauftemperatur. Das drückt die Effizienz spürbar."
-        )
-        massnahmen.append("Austausch einzelner Heizkörper gegen Niedertemperatur-Modelle")
+        hinweise.append("energie.hinweis.hoher_vorlauf")
+        massnahmen.append("energie.massnahme.heizkoerper")
     elif vorlauf >= 55:
         score -= 15
-        hinweise.append(
-            "Mit Standard-Heizkörpern läuft die Wärmepumpe gut, aber nicht optimal."
-        )
-        massnahmen.append("Hydraulischer Abgleich und Heizkurve absenken")
+        hinweise.append("energie.hinweis.standard_vorlauf")
+        massnahmen.append("energie.massnahme.abgleich")
     else:
-        hinweise.append(
-            "Das Wärmeverteilsystem passt sehr gut zu einer Wärmepumpe."
-        )
+        hinweise.append("energie.hinweis.guter_vorlauf")
 
     if spezifisch > 180:
         score -= 25
-        hinweise.append(
-            "Der spezifische Wärmebedarf ist hoch — die Gebäudehülle ist der "
-            "größere Hebel als die Heiztechnik."
-        )
-        massnahmen.append("Dachdämmung oder Fenstertausch vorziehen")
+        hinweise.append("energie.hinweis.hoher_bedarf")
+        massnahmen.append("energie.massnahme.daemmung")
     elif spezifisch > 130:
         score -= 10
-        massnahmen.append("Dachbodendämmung als günstige Einstiegsmaßnahme prüfen")
+        massnahmen.append("energie.massnahme.dachboden")
 
     if profil.sanierungsstand == "unsaniert":
         score -= 10
@@ -165,11 +155,11 @@ def eignung(profil: Gebaeudeprofil) -> dict[str, Any]:
     score = max(10.0, min(100.0, score))
 
     if score >= 75:
-        urteil = "gut geeignet"
+        urteil = "energie.urteil.gut"
     elif score >= 50:
-        urteil = "geeignet mit Vorbereitung"
+        urteil = "energie.urteil.vorbereitung"
     else:
-        urteil = "erst nach Vorbereitung sinnvoll"
+        urteil = "energie.urteil.erst_spaeter"
 
     # Auslegungsleistung: Norm-Heizlast grob aus dem Jahresbedarf.
     heizlast_kw = round(bedarf / 1800.0, 1)
@@ -183,7 +173,7 @@ def eignung(profil: Gebaeudeprofil) -> dict[str, Any]:
         "score": round(score),
         "urteil": urteil,
         "hinweise": hinweise,
-        "massnahmen": massnahmen or ["Keine Vorbereitung nötig"],
+        "massnahmen": massnahmen or ["energie.massnahmen.keine"],
         "strombedarf_kwh_a": round(bedarf / arbeitszahl),
     }
 
@@ -203,7 +193,7 @@ def foerderung(
     """Bildet die BEG-Heizungsförderung als Demo-Logik ab."""
     f = dd.FOERDERUNG
     bausteine: list[dict[str, Any]] = [
-        {"label": "Grundförderung", "satz": f["grundfoerderung"]}
+        {"label": "energie.foerderung.baustein.grund", "satz": f["grundfoerderung"]}
     ]
     satz = f["grundfoerderung"]
 
@@ -211,16 +201,20 @@ def foerderung(
         satz += f["klimageschwindigkeitsbonus"]
         bausteine.append(
             {
-                "label": "Klimageschwindigkeits-Bonus",
+                "label": "energie.foerderung.baustein.klima",
                 "satz": f["klimageschwindigkeitsbonus"],
             }
         )
     if einkommensbonus:
         satz += f["einkommensbonus"]
-        bausteine.append({"label": "Einkommens-Bonus", "satz": f["einkommensbonus"]})
+        bausteine.append(
+            {"label": "energie.foerderung.baustein.einkommen", "satz": f["einkommensbonus"]}
+        )
     if effizienzbonus:
         satz += f["effizienzbonus"]
-        bausteine.append({"label": "Effizienz-Bonus", "satz": f["effizienzbonus"]})
+        bausteine.append(
+            {"label": "energie.foerderung.baustein.effizienz", "satz": f["effizienzbonus"]}
+        )
 
     effektiver_satz = min(satz, f["max_satz"])
     foerderfaehig = min(investition_eur, f["hoechstkosten_efh_eur"])
@@ -233,7 +227,6 @@ def foerderung(
         "foerderfaehige_kosten_eur": round(foerderfaehig),
         "betrag_eur": betrag,
         "bausteine": bausteine,
-        "hinweis": f["hinweis"],
     }
 
 
@@ -250,11 +243,11 @@ def _bestand_energietraeger(profil: Gebaeudeprofil) -> tuple[str, float, float]:
     drehen kann.
     """
     traeger, preis, nutzungsgrad = {
-        "gas": ("Erdgas", dd.GAS_EUR_KWH, 0.88),
-        "oel": ("Heizöl", dd.HEIZOEL_EUR_L / dd.HEIZOEL_KWH_PRO_L, 0.85),
-        "fernwaerme": ("Fernwärme", dd.FERNWAERME_EUR_KWH, 1.0),
-        "nachtspeicher": ("Strom", dd.STROM_HAUSHALT_EUR_KWH, 1.0),
-        "waermepumpe": ("Strom", dd.STROM_WAERMEPUMPE_EUR_KWH, 3.5),
+        "gas": ("gas", dd.GAS_EUR_KWH, 0.88),
+        "oel": ("oel", dd.HEIZOEL_EUR_L / dd.HEIZOEL_KWH_PRO_L, 0.85),
+        "fernwaerme": ("fernwaerme", dd.FERNWAERME_EUR_KWH, 1.0),
+        "nachtspeicher": ("strom", dd.STROM_HAUSHALT_EUR_KWH, 1.0),
+        "waermepumpe": ("strom", dd.STROM_WAERMEPUMPE_EUR_KWH, 3.5),
     }[profil.heizung]
     if profil.preis_alt_ct is not None:
         preis = profil.preis_alt_ct / 100.0
@@ -308,11 +301,8 @@ def szenarien(
     ergebnis: list[Szenario] = [
         Szenario(
             id="bestand",
-            label="Weiter wie bisher",
-            beschreibung=(
-                "Die vorhandene Heizung bleibt. Keine Investition, aber steigende "
-                "Energiekosten und CO₂-Bepreisung."
-            ),
+            label="energie.szenario.bestand",
+            beschreibung="energie.szenario.bestand.beschreibung",
             investition_eur=0.0,
             foerderung_eur=0.0,
             energiekosten_eur_a=round(_energiekosten_bestand(profil, bedarf)),
@@ -320,28 +310,25 @@ def szenarien(
             co2_kg_a=round(_co2_bestand(profil, bedarf)),
             komfort_score=3,
             aufwand_score=1,
-            massnahmen=["Keine"],
+            massnahmen=["energie.massnahmen.keine"],
         )
     ]
 
     # Wärmepumpe, ggf. mit vorbereitenden Maßnahmen am Verteilsystem.
     braucht_heizkoerper = check["vorlauftemperatur_c"] >= 65
     invest_wp = dd.INVEST_EUR["waermepumpe_luft"] + dd.INVEST_EUR["hydraulischer_abgleich"]
-    massnahmen_wp = ["Luft/Wasser-Wärmepumpe", "Hydraulischer Abgleich"]
+    massnahmen_wp = ["energie.massnahmen.wp", "energie.massnahmen.abgleich"]
     if braucht_heizkoerper:
         invest_wp += dd.INVEST_EUR["heizkoerper_tausch"]
-        massnahmen_wp.append("Tausch kritischer Heizkörper")
+        massnahmen_wp.append("energie.massnahmen.heizkoerper")
 
     foerd_wp = foerderung(invest_wp, einkommensbonus=einkommensbonus)
     strom_wp = bedarf / arbeitszahl
     ergebnis.append(
         Szenario(
             id="waermepumpe",
-            label="Wärmepumpe",
-            beschreibung=(
-                "Heiztechnik tauschen, Gebäudehülle unverändert lassen. "
-                "Der schnellste Weg raus aus dem fossilen Brennstoff."
-            ),
+            label="energie.szenario.waermepumpe",
+            beschreibung="energie.szenario.waermepumpe.beschreibung",
             investition_eur=invest_wp,
             foerderung_eur=foerd_wp["betrag_eur"],
             energiekosten_eur_a=round(strom_wp * strompreis),
@@ -371,11 +358,8 @@ def szenarien(
     ergebnis.append(
         Szenario(
             id="waermepumpe_huelle",
-            label="Wärmepumpe + Dachdämmung",
-            beschreibung=(
-                "Erst den Bedarf senken, dann die Wärmepumpe kleiner auslegen. "
-                "Höhere Investition, dafür dauerhaft niedrigste Betriebskosten."
-            ),
+            label="energie.szenario.waermepumpe_huelle",
+            beschreibung="energie.szenario.waermepumpe_huelle.beschreibung",
             investition_eur=invest_huelle,
             foerderung_eur=foerd_huelle["betrag_eur"],
             energiekosten_eur_a=round(strom_huelle * strompreis),
@@ -384,9 +368,9 @@ def szenarien(
             komfort_score=5,
             aufwand_score=5,
             massnahmen=[
-                "Luft/Wasser-Wärmepumpe",
-                "Dachdämmung",
-                "Hydraulischer Abgleich",
+                "energie.massnahmen.wp",
+                "energie.massnahmen.daemmung",
+                "energie.massnahmen.abgleich",
             ],
         )
     )
@@ -406,11 +390,8 @@ def szenarien(
         ergebnis.append(
             Szenario(
                 id="waermepumpe_pv",
-                label="Wärmepumpe + PV & Speicher",
-                beschreibung=(
-                    "Wärme und Strom zusammen denken. Ein Teil des Wärmestroms "
-                    "kommt vom eigenen Dach, das entkoppelt von Strompreisen."
-                ),
+                label="energie.szenario.waermepumpe_pv",
+                beschreibung="energie.szenario.waermepumpe_pv.beschreibung",
                 investition_eur=invest_pv,
                 foerderung_eur=foerd_pv["betrag_eur"],
                 energiekosten_eur_a=round(
@@ -426,9 +407,9 @@ def szenarien(
                 komfort_score=5,
                 aufwand_score=4,
                 massnahmen=[
-                    "Luft/Wasser-Wärmepumpe",
-                    "PV-Anlage 10 kWp",
-                    "Batteriespeicher 8 kWh",
+                    "energie.massnahmen.wp",
+                    "energie.massnahmen.pv_anlage",
+                    "energie.massnahmen.speicher",
                 ],
             )
         )
@@ -437,14 +418,14 @@ def szenarien(
 
 
 def kostenverlauf(
-    szenarien_liste: list[Szenario], *, jahre: int = 20
+    szenarien_liste: list[Szenario], t: Texts, *, jahre: int = 20
 ) -> dict[str, Any]:
     """Kumulierte Gesamtkosten über die Betrachtungsdauer.
 
     Investition abzüglich Förderung plus fortgeschriebene Betriebskosten. Das
     ist die Kurve, an der ein Kunde erkennt, wann sich eine Entscheidung dreht.
     """
-    kategorien = [f"Jahr {j}" for j in range(0, jahre + 1, 5)]
+    kategorien = [t("energie.jahr", jahr=j) for j in range(0, jahre + 1, 5)]
     serien: list[dict[str, Any]] = []
 
     for szenario in szenarien_liste:
@@ -459,7 +440,7 @@ def kostenverlauf(
                 )
                 kumuliert += szenario.betriebskosten_eur_a * steigerung
             werte.append(round(kumuliert, -1))
-        serien.append({"label": szenario.label, "werte": werte, "id": szenario.id})
+        serien.append({"label": t(szenario.label), "werte": werte, "id": szenario.id})
 
     return {"kategorien": kategorien, "serien": serien, "einheit": "€"}
 
@@ -487,7 +468,7 @@ def amortisation(basis: Szenario, alternative: Szenario) -> dict[str, Any]:
     return {"jahre": None, "erreichbar": False}
 
 
-def annahmen(profil: Gebaeudeprofil) -> list[str]:
+def annahmen(profil: Gebaeudeprofil, t: Texts) -> list[str]:
     """Die Annahmenliste, die unter jeder Zahl im UI steht.
 
     Sobald der Kunde eigene Preise gesetzt hat, stehen seine hier — sonst
@@ -496,16 +477,26 @@ def annahmen(profil: Gebaeudeprofil) -> list[str]:
     traeger, preis_alt, _ = _bestand_energietraeger(profil)
     eigene = profil.preis_alt_ct is not None or profil.preis_strom_ct is not None
     return [
-        f"Wärmebedarf {de(waermebedarf_kwh_a(profil))} kWh/a",
-        f"Strompreis Wärmepumpe {de(strompreis_eur_kwh(profil), decimals=2)} €/kWh, "
-        f"{traeger}preis {de(preis_alt, decimals=3)} €/kWh"
-        + (" (Ihre eigenen Annahmen)" if eigene else ""),
-        f"Preissteigerung Strom {dd.PREISPFAD_STROM_P_A:.0%} p. a., "
-        f"fossil {dd.PREISPFAD_GAS_P_A:.1%} p. a.",
-        f"Jahresarbeitszahl {de(jaz(vorlauftemperatur(profil)), decimals=1)} bei "
-        f"{vorlauftemperatur(profil)} °C Vorlauf",
-        "Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik",
-        dd.DISCLAIMER,
+        t("energie.annahmen.bedarf", bedarf=t.num(waermebedarf_kwh_a(profil))),
+        t(
+            "energie.annahmen.preise",
+            strom=t.num(strompreis_eur_kwh(profil), decimals=2),
+            traeger=t(f"energie.traeger.{traeger}"),
+            alt=t.num(preis_alt, decimals=3),
+            eigene=t("energie.annahmen.eigene") if eigene else "",
+        ),
+        t(
+            "energie.annahmen.steigerung",
+            strom=t.pct(dd.PREISPFAD_STROM_P_A),
+            fossil=t.pct(dd.PREISPFAD_GAS_P_A, decimals=1),
+        ),
+        t(
+            "energie.annahmen.jaz",
+            jaz=t.num(jaz(vorlauftemperatur(profil)), decimals=1),
+            vorlauf=vorlauftemperatur(profil),
+        ),
+        t("energie.annahmen.dauer"),
+        t("data.disclaimer"),
     ]
 
 

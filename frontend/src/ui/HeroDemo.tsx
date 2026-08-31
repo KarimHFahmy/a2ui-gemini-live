@@ -16,59 +16,59 @@
  * the same thing the animation ends at.
  */
 
-const SPOKEN = 'Unser Haus ist von 1985. Reicht eine Wärmepumpe im Winter?';
+import {useLocale} from '../LocaleContext';
 
 /**
  * Each readout the check produces, in the order it appears.
  *
  * The unit is separate from the value because the mono sets them differently —
  * the figure carries the weight, the unit trails it, the way a gauge reads.
+ * The figures themselves are language-dependent — 3,8 against 3.8 — so they
+ * come from the catalog with everything else rather than being formatted here.
  */
-const READOUTS = [
-  {
-    label: 'Vorlauftemperatur',
-    value: '45',
-    unit: '°C',
-    note: 'Ihre Heizkörper sind großzügig ausgelegt',
-  },
-  {label: 'Jahresarbeitszahl', value: '3,8', unit: '', note: 'aus Vorlauf und Wärmebedarf'},
-];
+const READOUTS = [1, 2] as const;
 
 export function HeroDemo() {
+  const {locale, t} = useLocale();
+  const quote =
+    locale === 'de' ? `\u201e${t('hero.spoken')}\u201c` : `\u201c${t('hero.spoken')}\u201d`;
+
   return (
-    <div className="hero" aria-label="Beispiel für eine Beratung">
+    <div className="hero" aria-label={t('hero.aria')}>
       <figure className="hero__said">
         <span className="hero__ear" aria-hidden="true">
           <span className="hero__ear-dot" />
-          hört zu
+          {t('hero.listening')}
         </span>
-        <blockquote className="hero__quote">{`\u201e${SPOKEN}\u201c`}</blockquote>
+        <blockquote className="hero__quote">{quote}</blockquote>
       </figure>
 
       <div className="hero__panel">
-        <p className="hero__eyebrow">Wärmepumpen-Check</p>
+        <p className="hero__eyebrow">{t('hero.eyebrow')}</p>
         <h2 className="hero__verdict">
-          Ihr Haus ist <strong>gut geeignet</strong>
+          {t('hero.verdict.before')}
+          <strong>{t('hero.verdict.strong')}</strong>
         </h2>
 
         <dl className="hero__readouts">
-          {READOUTS.map(readout => (
-            <div className="hero__readout" key={readout.label}>
-              <dt>{readout.label}</dt>
-              <dd>
-                <span className="hero__value">
-                  {readout.value}
-                  {readout.unit ? <span className="hero__unit">{readout.unit}</span> : null}
-                </span>
-                <span className="hero__note">{readout.note}</span>
-              </dd>
-            </div>
-          ))}
+          {READOUTS.map(index => {
+            const unit = t(`hero.readout.${index}.unit` as const);
+            return (
+              <div className="hero__readout" key={index}>
+                <dt>{t(`hero.readout.${index}.label` as const)}</dt>
+                <dd>
+                  <span className="hero__value">
+                    {t(`hero.readout.${index}.value` as const)}
+                    {unit ? <span className="hero__unit">{unit}</span> : null}
+                  </span>
+                  <span className="hero__note">{t(`hero.readout.${index}.note` as const)}</span>
+                </dd>
+              </div>
+            );
+          })}
         </dl>
 
-        <p className="hero__caption">
-          Entstanden in dem Moment, in dem der Satz oben gesagt wurde – nicht vorher.
-        </p>
+        <p className="hero__caption">{t('hero.caption')}</p>
       </div>
     </div>
   );

@@ -8,6 +8,7 @@
  */
 
 import {A2uiSurface} from '@a2ui/react/v0_9';
+import {useLocale} from '../LocaleContext';
 
 import {JourneyProgress} from './JourneyProgress';
 import type {JourneyStep} from '../live/session';
@@ -21,13 +22,14 @@ interface ContextAsideProps {
 }
 
 export function ContextAside({profile, steps, present}: ContextAsideProps) {
+  const {t} = useLocale();
   // Nothing to be context *about* yet — before the session frame lands, or
   // against a backend that publishes no arc. An empty bordered column would
   // read as a rendering failure.
   if (steps.length === 0 && !profile) return null;
 
   return (
-    <aside className="aside" aria-label="Ihre Situation">
+    <aside className="aside" aria-label={t('aside.title')}>
       <div className="aside__inner surface">
         <JourneyProgress steps={steps} present={present} />
         {profile ? <A2uiSurface surface={profile} /> : null}

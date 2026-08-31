@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal, Sequence
+from typing import Literal, Sequence
 
-from ..domain import demo_data as dd
+from ..texts import Texts
 from .builder import TONE_MARK, SurfaceBuilder, bind
 from .surface import Surface
 
@@ -12,6 +12,7 @@ Journey = Literal["energie", "mobilitaet"]
 
 
 def bedenken_surface(
+    t: Texts,
     *,
     titel: str,
     einordnung: str,
@@ -22,7 +23,7 @@ def bedenken_surface(
     A worry gets its own surface rather than being buried in a paragraph:
     named in the client's words, then answered point by point.
     """
-    b = SurfaceBuilder("bedenken", "Ihre Frage")
+    b = SurfaceBuilder("bedenken", t("bedenken.eyebrow"), t)
 
     punkt = b.card(
         b.column([b.text(bind("titel")), b.text(bind("text"), variant="body")])
@@ -31,7 +32,7 @@ def bedenken_surface(
     b.root(
         b.column(
             [
-                b.heading("Ihre Frage", titel),
+                b.heading(t("bedenken.eyebrow"), titel),
                 b.card(b.text(einordnung)),
                 b.repeat(punkt, "/punkte"),
             ]
@@ -53,6 +54,7 @@ def bedenken_surface(
 
 
 def handover_surface(
+    t: Texts,
     *,
     journey: Journey,
     titel: str,
@@ -68,31 +70,31 @@ def handover_surface(
     open points travel with it instead of getting lost between channels.
     """
     zweit_label, zweit_event = (
-        ("Zusammenfassung per E-Mail", "zusammenfassung_senden")
+        (t("handover.second.energie"), "zusammenfassung_senden")
         if journey == "energie"
-        else ("Angebot anfordern", "angebot_anfordern")
+        else (t("handover.second.mobilitaet"), "angebot_anfordern")
     )
 
-    b = SurfaceBuilder("naechster_schritt", "Ihr nächster Schritt")
+    b = SurfaceBuilder("naechster_schritt", t("handover.eyebrow"), t)
     b.root(
         b.column(
             [
                 b.heading(
-                    "Ihr nächster Schritt",
+                    t("handover.eyebrow"),
                     titel,
-                    "Alles, was wir besprochen haben, in einer Übersicht.",
+                    t("handover.subtitle"),
                 ),
                 b.card(
                     b.column(
                         [
-                            b.text("Meine Empfehlung für Sie", variant="h3"),
+                            b.text(t("handover.recommendation"), variant="h3"),
                             b.text(empfehlung),
                             b.row(
                                 [
-                                    b.bullets(begruendung, heading="Dafür spricht"),
+                                    b.bullets(begruendung, heading=t("handover.pro")),
                                     b.bullets(
-                                        offene_punkte or ["Keine offenen Punkte"],
-                                        heading="Noch zu klären",
+                                        offene_punkte or [t("block.none_open")],
+                                        heading=t("handover.open"),
                                     ),
                                 ]
                             ),
@@ -103,10 +105,7 @@ def handover_surface(
                     b.column(
                         [
                             b.text(schritt_label, variant="h3"),
-                            b.text(
-                                "Sie entscheiden, wie es weitergeht – nichts davon "
-                                "ist verbindlich."
-                            ),
+                            b.text(t("handover.not_binding")),
                             b.row(
                                 [
                                     b.button(
@@ -127,13 +126,9 @@ def handover_surface(
                     )
                 ),
                 b.assumptions(
-                    [
-                        "Diese Beratung ist unverbindlich und ersetzt kein Angebot.",
-                        "Ihre Angaben bleiben in dieser Sitzung und werden nicht gespeichert.",
-                        dd.DISCLAIMER,
-                    ],
-                    source=dd.QUELLE_ENERGIE if journey == "energie" else dd.QUELLE_MOBILITAET,
-                    as_of=dd.STAND,
+                    [*t.list("handover.assumptions"), t("data.disclaimer")],
+                    source=t(f"data.source.{journey}"),
+                    as_of=t("data.as_of"),
                 ),
             ]
         )

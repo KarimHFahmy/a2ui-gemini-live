@@ -48,7 +48,8 @@ const browser = await chromium.launch(
 );
 let failures = 0;
 
-for (const scheme of ['light', 'dark']) {
+for (const locale of ['de', 'en'])
+  for (const scheme of ['light', 'dark']) {
   const ctx = await browser.newContext({
     viewport: {width: 1440, height: 1000},
     colorScheme: scheme,
@@ -74,17 +75,19 @@ for (const scheme of ['light', 'dark']) {
     r.abort();
   });
 
-  await page.goto('http://localhost:4173/preview.html', {waitUntil: 'networkidle'});
+  await page.goto(`http://localhost:4173/preview.html?lang=${locale}`, {
+    waitUntil: 'networkidle',
+  });
   await page.waitForSelector('.surface', {timeout: 8000});
 
   const type = await checkType(page);
   if (type.problems.length) {
     failures++;
-    console.log(`  [${scheme}] type: ${type.problems.join('; ')}`);
+    console.log(`  [${locale}/${scheme}] type: ${type.problems.join('; ')}`);
   }
 
-  for (const journey of ['Mein Zuhause', 'Meine Mobilität']) {
-    await page.getByRole('button', {name: journey}).click();
+  for (const journey of ['energie', 'mobilitaet']) {
+    await page.getByRole('button', {name: journey, exact: true}).click();
     await page.waitForTimeout(400);
     const stats = await page.evaluate(() => {
       const html = document.body.innerHTML;
@@ -146,38 +149,46 @@ for (const scheme of ['light', 'dark']) {
       stats.stats === 0 ||
       stats.clippedTicks;
     if (bad) failures++;
-    console.log(`[${scheme}] ${journey}:`, JSON.stringify(stats));
+    console.log(`[${locale}/${scheme}] ${journey}:`, JSON.stringify(stats));
     const aside = await checkContextAside(page);
     if (aside.problems.length) {
       failures++;
-      console.log(`  [${scheme}] ${journey} context column: ${aside.problems.join('; ')}`);
+      console.log(`  [${locale}/${scheme}] ${journey} context column: ${aside.problems.join('; ')}`);
     }
 
-    const whatIf = await checkWhatIf(page);
+    const whatIf = await checkWhatIf(page, locale);
     if (whatIf.problems.length) {
       failures++;
-      console.log(`  [${scheme}] ${journey} what-if: ${whatIf.problems.join('; ')}`);
+      console.log(`  [${locale}/${scheme}] ${journey} what-if: ${whatIf.problems.join('; ')}`);
     }
 
     const tone = await checkTone(page);
     if (tone.problems.length) {
       failures++;
-      console.log(`  [${scheme}] ${journey} tone: ${tone.problems.join('; ')}`);
+      console.log(`  [${locale}/${scheme}] ${journey} tone: ${tone.problems.join('; ')}`);
     }
 
-    const numbers = await checkGermanNumbers(page);
+    const language = await checkLanguage(page, locale);
+    if (language.problems.length) {
+      failures++;
+      console.log(`  [${locale}/${scheme}] ${journey} language: ${language.problems.join('; ')}`);
+    }
+
+    const numbers = await checkNumberFormat(page, locale);
     if (numbers.problems.length) {
       failures++;
-      console.log(`  [${scheme}] ${journey} numbers: ${numbers.problems.join('; ')}`);
+      console.log(`  [${locale}/${scheme}] ${journey} numbers: ${numbers.problems.join('; ')}`);
     }
 
     if (scheme === 'light') {
-      const slug = journey === 'Mein Zuhause' ? 'energie' : 'mobilitaet';
-      await page.screenshot({path: path.resolve(shotDir, `${slug}.png`), fullPage: true});
+      await page.screenshot({
+        path: path.resolve(shotDir, `${journey}-${locale}.png`),
+        fullPage: true,
+      });
     }
   }
   if (errors.length) {
-    console.log(`[${scheme}] PAGE ERRORS:`, errors.slice(0, 5));
+    console.log(`[${locale}/${scheme}] PAGE ERRORS:`, errors.slice(0, 5));
     failures++;
   }
   await ctx.close();
@@ -277,7 +288,54 @@ async function checkType(page) {
 }
 
 /**
- * Checks that every number on screen is written the way German writes numbers.
+ * Checks that the whole screen is in the language the client picked.
+ *
+ * This is the one check that makes bilingual honest. Every other guard here
+ * passes on a surface that is half-translated: the chart renders, the tone is
+ * right, nothing scrolls — and one card still says "Wärmebedarf" in the middle
+ * of an English session. Nothing else would notice, because a missing
+ * translation is not an error anywhere, it is just the other language.
+ *
+ * Two signals per direction: the characters German has and English does not,
+ * and function words that cannot appear in the other language's prose.
+ *
+ * What it does not catch, and the reason `test_texts.py` exists alongside it:
+ * a German phrase made only of nouns — "Kumulierte Gesamtkosten" has neither
+ * an umlaut nor a function word. The Python side covers that from the other
+ * end, by failing when an entry is byte-identical between the two catalogs.
+ * Between them the gap is a *different* German string typed into `en.py` by
+ * hand, which is narrow enough to live with.
+ */
+async function checkLanguage(page, locale) {
+  return page.evaluate(expected => {
+    const problems = [];
+    const text = document.querySelector('.session__body')?.innerText ?? '';
+
+    // Units and technical tokens are the same in both and carry no language.
+    const lines = text.split('\n').filter(line => line.trim().length > 12);
+
+    // Function words that cannot appear in the other language's prose, plus
+    // the characters German has and English does not.
+    const german =
+      /[äöüßÄÖÜ]|\b(der|die|das|und|von|mit|für|ist|sind|dem|den|eine|einen|nicht|auf|sich|Ihre|Ihr|pro Jahr|im Jahr|Sie)\b/;
+    const english =
+      /\b(the|and|your|with|from|would|this|that|which|about|per year|of the|you)\b/i;
+    const leak = expected === 'en' ? german : english;
+    const other = expected === 'en' ? 'German' : 'English';
+
+    for (const line of lines) {
+      if (leak.test(line)) {
+        problems.push(`${other} left in: ${JSON.stringify(line.slice(0, 70))}`);
+      }
+    }
+    // One example per language is enough to act on; a wholly untranslated
+    // surface would otherwise print forty near-identical lines.
+    return {problems: problems.slice(0, 4)};
+  }, locale);
+}
+
+/**
+ * Checks that every number on screen is written the way this locale writes it.
  *
  * A comma is the decimal separator and a point groups thousands, so `12.4 kW`
  * does not read as twelve point four to a German client — it reads as broken,
@@ -291,24 +349,31 @@ async function checkType(page) {
  * that should have been a comma. Version strings and the catalog URN are the
  * one place that pattern is legitimate, so they are excluded by their shape.
  */
-async function checkGermanNumbers(page) {
-  return page.evaluate(() => {
+async function checkNumberFormat(page, locale) {
+  return page.evaluate(expected => {
     const problems = [];
     const text = document.querySelector('.stage')?.innerText ?? '';
     const seen = new Set();
+    // Whichever separator this language uses to group thousands is followed by
+    // exactly three digits; the same character followed by one or two is a
+    // decimal separator, and therefore the wrong one.
+    const grouping = expected === 'de' ? '\\.' : ',';
+    const wrong = new RegExp(`\\d${grouping}\\d{1,2}(?!\\d)`, 'g');
 
     for (const line of text.split('\n')) {
       // urn:…:1.0 and semver-ish strings legitimately carry a bare point.
       const scrubbed = line.replace(/\b(?:urn:|v?\d+(?:\.\d+){2,})\S*/g, '');
-      for (const hit of scrubbed.match(/\d+\.\d{1,2}(?!\d)/g) ?? []) {
+      for (const hit of scrubbed.match(wrong) ?? []) {
         if (!seen.has(hit)) {
           seen.add(hit);
-          problems.push(`"${hit}" uses a decimal point in ${JSON.stringify(line.trim().slice(0, 60))}`);
+          problems.push(
+            `"${hit}" groups the wrong way for ${expected} in ${JSON.stringify(line.trim().slice(0, 60))}`,
+          );
         }
       }
     }
     return {problems};
-  });
+  }, locale);
 }
 
 /**
@@ -376,7 +441,7 @@ async function checkTone(page) {
  * or a wrong locale shows up here as a blank, a NaN or a dollar sign — none of
  * which any server-side test can see.
  */
-async function checkWhatIf(page) {
+async function checkWhatIf(page, locale) {
   const surface = page.locator('[data-surface-id="stellschrauben"]');
   if ((await surface.count()) === 0) return {problems: ['no what-if surface rendered']};
 
@@ -391,8 +456,17 @@ async function checkWhatIf(page) {
   for (const value of before) {
     if (!value) problems.push('a live figure rendered empty');
     else if (/NaN|Infinity|undefined/.test(value)) problems.push(`live figure reads "${value}"`);
-    // German formatting: 1.234 € or 25.950, never $1,234.00.
-    else if (/[$£]|\d,\d{3}/.test(value)) problems.push(`live figure is not German: "${value}"`);
+    // These are the figures the *renderer* formats, from the catalog functions
+    // rather than from a composer, so they are the ones that go wrong when the
+    // catalog is built with the wrong locale. A foreign currency sign means it
+    // fell back to the viewer's locale; the wrong grouping separator means it
+    // was pinned to the other language.
+    else if (/[$£]/.test(value)) problems.push(`live figure is not in euros: "${value}"`);
+    else if (locale === 'de' && /\d,\d{3}/.test(value)) {
+      problems.push(`live figure groups the English way in a German session: "${value}"`);
+    } else if (locale === 'en' && /\d\.\d{3}/.test(value)) {
+      problems.push(`live figure groups the German way in an English session: "${value}"`);
+    }
   }
 
   // Drag the first slider to its maximum and watch the figures follow, with no

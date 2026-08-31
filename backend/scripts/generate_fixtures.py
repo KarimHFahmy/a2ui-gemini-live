@@ -28,7 +28,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from google.adk.events import EventActions  # noqa: E402
 from google.adk.tools import ToolContext  # noqa: E402
 
-from app.journeys import all_journeys, energie, mobilitaet  # noqa: E402
+from app.journeys import LOCALES, all_journeys, energie, mobilitaet  # noqa: E402
+from app.journeys.base import LOCALE_KEY  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "frontend" / "fixtures.json"
 
@@ -302,7 +303,143 @@ HAPPY_SCRIPTS: dict[str, Script] = {
 }
 
 
-def capture(scripts: dict[str, Script]) -> dict[str, dict[str, Any]]:
+#: The free text in a script is what the *model* would say, so it has a language
+#: of its own — the tool arguments around it (a year built, a scenario id) do
+#: not. Kept apart rather than duplicating each script per locale: the arc, the
+#: profile and the tool order are what the fixtures are for, and those are the
+#: same conversation in either language.
+SPOKEN: dict[str, dict[str, dict[str, Any]]] = {
+    "de": {},  # the scripts above are already German
+    "en": {
+        "energie": {
+            "profil_aktualisieren": {
+                "prioritaeten": ["Value for money", "Independence"],
+                "bedenken": ["Will a heat pump be enough in winter?"],
+                "offene_punkte": ["Exact gas consumption over recent years"],
+            },
+            "bedenken_adressieren": {
+                "titel": "Will a heat pump really be enough in winter?",
+                "einordnung": (
+                    "That is the most common worry, and there is something to it. "
+                    "What decides it, though, is not the outside temperature but "
+                    "how hot the water in your radiators has to be."
+                ),
+                "punkte": [
+                    {
+                        "titel": "Your flow temperature is not a problem",
+                        "text": (
+                            "Your radiators need around **55 °C** on the coldest "
+                            "design day. A heat pump runs reliably at that, frost "
+                            "included."
+                        ),
+                        "tone": "positive",
+                    },
+                    {
+                        "titel": "No immersion heater needed",
+                        "text": (
+                            "Sized this way, the heat pump covers the load on its "
+                            "own even in January."
+                        ),
+                        "tone": "positive",
+                    },
+                    {
+                        "titel": "What is still worth doing",
+                        "text": (
+                            "Balancing the system hydraulically makes sure every "
+                            "room gets the heat it needs."
+                        ),
+                        "tone": "neutral",
+                    },
+                ],
+            },
+            "naechsten_schritt_anbieten": {
+                "empfehlung": (
+                    "A heat pump suits your house well. I would have it fitted "
+                    "without major preparatory work and look at roof insulation "
+                    "separately, later."
+                ),
+                "begruendung": [
+                    "Your radiators manage on 55 °C — the point that decides it",
+                    "After roughly 12 years you are ahead of the gas boiler",
+                    "The subsidy brings your own share down substantially",
+                ],
+                "offene_punkte": [
+                    "Actual gas consumption over the last three years",
+                    "Where the outdoor unit would go",
+                ],
+            },
+        },
+        "mobilitaet": {
+            "profil_aktualisieren": {
+                "bedenken": ["No wallbox", "Range on long trips"],
+                "offene_punkte": ["Charging at work"],
+            },
+            "bedenken_adressieren": {
+                "titel": "Is an electric car practical without a wallbox?",
+                "einordnung": (
+                    "The honest answer: practical yes, economic not at the moment. "
+                    "Your distances are not the problem — the price of charging is."
+                ),
+                "punkte": [
+                    {
+                        "titel": "Your week fits",
+                        "text": (
+                            "258 km of winter range against 55 km a day: you would "
+                            "charge about every four days."
+                        ),
+                        "tone": "positive",
+                    },
+                    {
+                        "titel": "The price does not, yet",
+                        "text": (
+                            "Charging only in public costs around **€11.37 per "
+                            "100 km** — about the same as petrol."
+                        ),
+                        "tone": "caution",
+                    },
+                    {
+                        "titel": "The lever",
+                        "text": (
+                            "Charging at work alone would halve that figure."
+                        ),
+                        "tone": "positive",
+                    },
+                ],
+            },
+            "naechsten_schritt_anbieten": {
+                "empfehlung": (
+                    "Settle the charging question first, not the car question. "
+                    "With somewhere to charge at home or at work, switching "
+                    "becomes clearly cheaper for you than the car you drive today."
+                ),
+                "begruendung": [
+                    "Your distances are entirely unremarkable for an electric car",
+                    "Where you charge is worth around €1,800 a year",
+                    "A compact car covers your profile completely",
+                ],
+                "offene_punkte": [
+                    "Is a wallbox technically possible at your parking space?",
+                    "Does your employer offer charging?",
+                ],
+            },
+        },
+    },
+}
+
+
+def in_locale(scripts: dict[str, Script], locale: str) -> dict[str, Script]:
+    """The same conversation with the model's words in `locale`."""
+    spoken = SPOKEN.get(locale, {})
+    return {
+        journey_id: [
+            (tool, {**args, **spoken.get(journey_id, {}).get(tool.__name__, {})})
+            for tool, args in script
+        ]
+        for journey_id, script in scripts.items()
+    }
+
+
+def capture(scripts: dict[str, Script], locale: str) -> dict[str, dict[str, Any]]:
     """One entry per journey: its arc, its topics, and the A2UI stream.
 
     The metadata travels with the fixtures so the preview and the session check
@@ -317,12 +454,13 @@ def capture(scripts: dict[str, Script]) -> dict[str, dict[str, Any]]:
             ],
             "topics": journey.topics,
         }
-        for journey in all_journeys()
+        for journey in all_journeys(locale)
     }
     fixtures: dict[str, dict[str, Any]] = {}
 
     for journey_id, script in scripts.items():
         context = CaptureContext()
+        context.state[LOCALE_KEY] = locale
         messages: list[dict[str, Any]] = []
 
         for tool, args in script:
@@ -343,12 +481,19 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    fixtures = capture(HAPPY_SCRIPTS if args.happy else SCRIPTS)
+    scripts = HAPPY_SCRIPTS if args.happy else SCRIPTS
+    # Both languages, because the whole experience runs in either and the
+    # catalog check renders what is captured here. A German-only fixture set
+    # would leave the English surfaces reviewed by nobody.
+    fixtures = {
+        locale: capture(in_locale(scripts, locale), locale) for locale in LOCALES
+    }
     OUTPUT.write_text(
         json.dumps(fixtures, ensure_ascii=False, indent=1) + "\n", encoding="utf-8"
     )
-    for journey_id, captured in fixtures.items():
-        print(f"{journey_id}: {len(captured['messages'])} A2UI messages")
+    for locale, captured in fixtures.items():
+        for journey_id, one in captured.items():
+            print(f"{locale}/{journey_id}: {len(one['messages'])} A2UI messages")
     print(f"written to {OUTPUT}")
 
 

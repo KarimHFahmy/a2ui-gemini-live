@@ -139,7 +139,7 @@ four lines or where they cross — so "was ist die obere Linie?" had no answer.
 
 `app.a2ui.readback` closes that. After a composer is done, it walks the
 composed tree and resolves the same bindings the renderer resolves, producing a
-compact German description of what is now on screen: axes, every series with
+compact description, in the session's language, of what is now on screen: axes, every series with
 its endpoints, where two lines swap places, each metric with its tone, each
 slider with its range. `journeys.base.shown()` puts it in every tool result as
 `auf_dem_schirm`, so it cannot be forgotten on a tool added later.
@@ -153,6 +153,43 @@ the client cannot find on the chart is a figure the agent should not say.
 The cost is expressiveness: the agent can only show what a composer knows how
 to build. For a demo with two well-understood journeys that is the right trade.
 A general assistant would want the opposite.
+
+### One experience, two languages
+
+The whole thing runs in German or in English, chosen on the landing page: the
+voice, the prompt, the composed surfaces, the shell, and the way numbers are
+written. It is one product in two languages, not two products.
+
+Copy lives in two flat catalogs with identical key sets — `backend/app/texts/`
+for everything the client reads or the agent is told, `frontend/src/i18n.ts`
+for the shell around it. Nothing composed carries a literal: the domain returns
+*keys* (`energie.szenario.waermepumpe`) and the composers resolve them, so the
+layer that calculates has no language and the layer that speaks has nothing
+else.
+
+The locale reaches the tools through session state rather than a closure,
+because the advisory tools are module-level functions shared by every session
+of a journey — one that captured a locale at import time would answer the
+second client in the first one's language.
+
+**What holds it together is the guards, because a missing translation is not an
+error.** It renders, it lays out, it just says the wrong thing, and only a
+person reading the screen would notice.
+
+- `test_texts.py` fails when the two catalogs drift: a key missing, a list a
+  different length, a `{placeholder}` dropped, or an entry left byte-identical.
+- `test_no_hardcoded_copy.py` fails when a German literal appears in a composer,
+  a journey or the domain at all. It exists because "Vor-Ort-Check anfragen"
+  shipped into the English handover with every other check passing, and was
+  found by looking at a screenshot.
+- `check-catalog.mjs` renders every surface in both languages and both colour
+  schemes and fails on German in an English session or the reverse, and on a
+  number grouped the wrong way round.
+- `check-session.mjs` drives the restart path in each language.
+
+Between them, the gap left is a *different* German sentence typed by hand into
+`en.py` with no umlaut and no function word. Narrow enough to live with, and
+named in the code so nobody mistakes it for coverage.
 
 ## Session model
 

@@ -16,16 +16,17 @@ from ..a2ui import composer_energie as compose
 from ..a2ui import composer_shared as shared
 from ..config import get_settings
 from ..domain import energie as calc
+from ..texts import DEFAULT_LOCALE, Locale, Texts
 from .base import (
-    HALTUNG,
     Journey,
     apply,
-    join_de,
+    join_list,
     load_profile,
     open_points,
     opening_line,
     save_profile,
     shown,
+    texts_for,
 )
 
 Heizung = Literal["gas", "oel", "fernwaerme", "nachtspeicher", "waermepumpe"]
@@ -99,6 +100,7 @@ def profil_aktualisieren(
         offene_punkte: Was du noch nicht weißt und geschätzt hast. Wird der
             Person transparent angezeigt.
     """
+    t = texts_for(tool_context)
     profil = apply(
         _profil(tool_context),
         baujahr=baujahr,
@@ -117,9 +119,9 @@ def profil_aktualisieren(
 
     return shown(
         tool_context,
-        compose.profil_surface(profil, offen),
+        compose.profil_surface(t, profil, offen),
         waermebedarf_kwh_a=calc.waermebedarf_kwh_a(profil),
-        hinweis="Bestätige kurz, was du verstanden hast, ohne alle Werte vorzulesen.",
+        hinweis=t("hinweis.profil"),
     )
 
 
@@ -131,11 +133,12 @@ def waermepumpen_eignung_zeigen(tool_context: ToolContext) -> dict[str, Any]:
     Winter reicht. Rufe das auf, sobald du Gebäude, Heizung und Wärmeverteilung
     kennst.
     """
+    t = texts_for(tool_context)
     profil = _profil(tool_context)
     check = calc.eignung(profil)
     return shown(
         tool_context,
-        compose.eignung_surface(profil),
+        compose.eignung_surface(t, profil),
         urteil=check["urteil"],
         score=check["score"],
         vorlauftemperatur_c=check["vorlauftemperatur_c"],
@@ -161,13 +164,14 @@ def szenarien_vergleichen(
         empfohlen: Welchen Weg du auf Basis des Gesprächs hervorhebst.
             Orientiere dich an den Prioritäten der Person.
     """
+    t = texts_for(tool_context)
     szenarien = _szenarien(tool_context)
     verfuegbar = {s.id for s in szenarien}
     gewaehlt = _gewaehlt(tool_context, empfohlen if empfohlen in verfuegbar else None)
 
     return shown(
         tool_context,
-        compose.szenarien_surface(_profil(tool_context), szenarien, empfohlen_id=gewaehlt),
+        compose.szenarien_surface(t, _profil(tool_context), szenarien, empfohlen_id=gewaehlt),
         hervorgehoben=gewaehlt,
         szenarien=[
             {
@@ -194,6 +198,7 @@ def wirtschaftlichkeit_zeigen(
     Args:
         szenario: Der Weg, der durchgerechnet werden soll.
     """
+    t = texts_for(tool_context)
     szenarien = _szenarien(tool_context)
     fokus_id = _gewaehlt(tool_context, szenario)
     if fokus_id not in {s.id for s in szenarien}:
@@ -205,7 +210,7 @@ def wirtschaftlichkeit_zeigen(
 
     return shown(
         tool_context,
-        compose.wirtschaftlichkeit_surface(_profil(tool_context), szenarien, fokus_id=fokus_id),
+        compose.wirtschaftlichkeit_surface(t, _profil(tool_context), szenarien, fokus_id=fokus_id),
         szenario=fokus.label,
         eigenanteil_eur=fokus.eigenanteil_eur,
         ersparnis_eur_a=round(bestand.betriebskosten_eur_a - fokus.betriebskosten_eur_a),
@@ -230,6 +235,7 @@ def foerderung_und_fahrplan_zeigen(
             gesagt hat, dass das Haushaltseinkommen unter der Bonusgrenze
             liegt. Frag nicht aktiv danach.
     """
+    t = texts_for(tool_context)
     tool_context.state["_einkommensbonus"] = einkommensbonus
     szenarien = _szenarien(tool_context)
     szenario_id = _gewaehlt(tool_context, szenario)
@@ -244,11 +250,11 @@ def foerderung_und_fahrplan_zeigen(
 
     return shown(
         tool_context,
-        compose.foerderung_surface(_profil(tool_context), gewaehlt, details),
+        compose.foerderung_surface(t, _profil(tool_context), gewaehlt, details),
         foerderquote=details["satz"],
         betrag_eur=details["betrag_eur"],
         eigenanteil_eur=gewaehlt.eigenanteil_eur,
-        hinweis="Antrag muss vor Beauftragung gestellt werden — sprich das aus.",
+        hinweis=t("hinweis.foerderung"),
     )
 
 
@@ -264,6 +270,7 @@ def stellschrauben_zeigen(tool_context: ToolContext) -> dict[str, Any]:
     `wirtschaftlichkeit_zeigen`, um die Rechnung überprüfbar zu machen. Sag
     danach in einem Satz, dass die Person selbst am Regler ziehen kann.
     """
+    t = texts_for(tool_context)
     profil = _profil(tool_context)
     szenarien = _szenarien(tool_context)
     fokus_id = _gewaehlt(tool_context, None)
@@ -276,14 +283,11 @@ def stellschrauben_zeigen(tool_context: ToolContext) -> dict[str, Any]:
     werte = calc.stellschrauben(profil, bestand, fokus)
     return shown(
         tool_context,
-        compose.stellschrauben_surface(profil, bestand, fokus),
+        compose.stellschrauben_surface(t, profil, bestand, fokus),
         szenario=fokus.label,
         preis_alt_ct=werte["preis_alt_ct"],
         preis_strom_ct=werte["preis_strom_ct"],
-        hinweis=(
-            "Die Person kann die Regler selbst bewegen. Lade sie dazu ein, "
-            "statt Zahlen vorzulesen."
-        ),
+        hinweis=t("hinweis.regler"),
     )
 
 
@@ -305,6 +309,7 @@ def annahmen_uebernehmen(
     """
     # Auf ganze Cent gerundet: die Regler springen in Einerschritten, und ein
     # Preis dazwischen ließe Reglerstellung und Rechnung auseinanderlaufen.
+    t = texts_for(tool_context)
     preis_alt_ct = float(round(preis_alt_ct))
     preis_strom_ct = float(round(preis_strom_ct))
 
@@ -327,17 +332,14 @@ def annahmen_uebernehmen(
     amort = calc.amortisation(bestand, fokus)
     return shown(
         tool_context,
-        compose.stellschrauben_surface(profil, bestand, fokus),
-        compose.szenarien_surface(profil, szenarien, empfohlen_id=fokus_id),
-        compose.wirtschaftlichkeit_surface(profil, szenarien, fokus_id=fokus_id),
+        compose.stellschrauben_surface(t, profil, bestand, fokus),
+        compose.szenarien_surface(t, profil, szenarien, empfohlen_id=fokus_id),
+        compose.wirtschaftlichkeit_surface(t, profil, szenarien, fokus_id=fokus_id),
         uebernommen={"preis_alt_ct": preis_alt_ct, "preis_strom_ct": preis_strom_ct},
         ersparnis_eur_a=round(bestand.betriebskosten_eur_a - fokus.betriebskosten_eur_a),
         break_even_jahre=amort["jahre"],
         break_even_erreichbar=amort["erreichbar"],
-        hinweis=(
-            "Bestätige kurz, dass ab jetzt mit den Preisen der Person gerechnet "
-            "wird, und nenne, was sich dadurch verschoben hat."
-        ),
+        hinweis=t("hinweis.uebernommen.energie"),
     )
 
 
@@ -361,18 +363,14 @@ def bedenken_adressieren(
             hat 'titel', 'text' und optional 'tone' mit den Werten 'positive'
             (entlastet), 'neutral' oder 'caution' (echte Einschränkung).
     """
+    t = texts_for(tool_context)
     return shown(
         tool_context,
-        shared.bedenken_surface(titel=titel, einordnung=einordnung, punkte=punkte),
+        shared.bedenken_surface(t, titel=titel, einordnung=einordnung, punkte=punkte),
         status="angezeigt",
     )
 
 
-_SCHRITT_LABEL = {
-    "beratungstermin": "Beratungstermin vereinbaren",
-    "vor_ort_check": "Vor-Ort-Check anfragen",
-    "foerder_check": "Förderfähigkeit prüfen lassen",
-}
 
 
 def naechsten_schritt_anbieten(
@@ -396,16 +394,18 @@ def naechsten_schritt_anbieten(
         offene_punkte: Was vor einer Entscheidung noch zu klären ist. Ehrlich
             benennen, nicht beschönigen.
     """
+    t = texts_for(tool_context)
     offen = offene_punkte or open_points(tool_context, None)
     return shown(
         tool_context,
         shared.handover_surface(
+            t,
             journey="energie",
-            titel="Ihr Weg zur neuen Heizung",
+            titel=t("handover.title.energie"),
             empfehlung=empfehlung,
             begruendung=begruendung,
             offene_punkte=offen,
-            schritt_label=_SCHRITT_LABEL[schritt],
+            schritt_label=t(f"schritt.{schritt}"),
             schritt_event=f"handover_{schritt}",
         ),
         status="abgeschlossen",
@@ -415,6 +415,7 @@ def naechsten_schritt_anbieten(
 
 def summary(tool_context: ToolContext) -> dict[str, Any]:
     """The structured handover payload a CRM or a human advisor picks up."""
+    t = texts_for(tool_context)
     profil = _profil(tool_context)
     check = calc.eignung(profil)
     szenarien = _szenarien(tool_context)
@@ -440,7 +441,9 @@ def summary(tool_context: ToolContext) -> dict[str, Any]:
             "szenario": gewaehlt.label,
             "eigenanteil_eur": gewaehlt.eigenanteil_eur,
             "energiekosten_eur_a": gewaehlt.energiekosten_eur_a,
-            "massnahmen": gewaehlt.massnahmen,
+            # Resolved rather than passed as keys: this payload leaves the
+            # system for a CRM or a human advisor, who has no catalog.
+            "massnahmen": [t(key) for key in gewaehlt.massnahmen],
         },
         "prioritaeten": profil.prioritaeten,
         "bedenken": profil.bedenken,
@@ -461,95 +464,29 @@ TOOLS = [
 ]
 
 
-#: What this journey can help with, in the client's words. Said out loud in
-#: the greeting and listed on the empty screen — see `base.opening_line`.
-TOPICS = [
-    "ob eine Wärmepumpe zu Ihrem Haus passt",
-    "was der Umstieg kostet und ab wann er sich lohnt",
-    "welche Förderung Sie bekommen",
-]
+def build(locale: Locale = DEFAULT_LOCALE) -> Journey:
+    """One journey, in one language.
 
+    Everything the client reads or hears is looked up per locale; the tools and
+    the arithmetic are the same either way.
+    """
+    t = Texts(locale)
+    topics = t.list("journey.energie.topics")
+    steps = [tuple(step.split("|")) for step in t.list("journey.energie.steps")]
 
-INSTRUCTION = f"""
-Du bist der persönliche Energieberater einer deutschen Energie-Experience.
-Du hilfst Menschen, die über Heizung, Sanierung und ihren Weg zur Energiewende
-nachdenken — und dabei oft überfordert sind.
-
-Die typische Person hat ein älteres Einfamilienhaus, eine Gasheizung, die in die
-Jahre kommt, und zwei Sorgen: „Reicht eine Wärmepumpe im Winter?" und „Lohnt
-sich das für mich überhaupt?" Deine Aufgabe ist es, aus dieser Unsicherheit ein
-verständliches Zukunftsbild zu machen.
-
-{HALTUNG}
-
-## Dein Gesprächsbogen
-
-1. **Zuhören.** Lass die Person ihre Situation schildern. Baujahr, Heizung,
-   Fläche und die eigentliche Sorge ergeben sich meist von selbst.
-2. **Verstehen zeigen.** Sobald du Gebäude und Heizung kennst, rufe
-   `profil_aktualisieren` auf. Fehlendes schätzt du plausibel und markierst es
-   als offenen Punkt — frag nicht alles ab.
-3. **Die Kernsorge zuerst.** Mit `waermepumpen_eignung_zeigen` beantwortest du,
-   ob das Haus geeignet ist. Das ist fast immer die eigentliche Frage.
-4. **Wege zeigen.** `szenarien_vergleichen` stellt die Optionen nebeneinander.
-5. **Rechnen.** `wirtschaftlichkeit_zeigen` für den gewählten Weg.
-6. **Nachvollziehbar machen.** `stellschrauben_zeigen` gibt die zwei
-   Preisannahmen an die Person ab. Nutze das, sobald jemand zweifelt — und
-   sag dazu, dass sie selbst ziehen darf.
-7. **Förderung und Reihenfolge.** `foerderung_und_fahrplan_zeigen`.
-8. **Abschluss.** `naechsten_schritt_anbieten` fasst zusammen und übergibt.
-
-Du musst diese Reihenfolge nicht erzwingen. Wenn jemand direkt nach Kosten
-fragt, geh dorthin. Aber lass keinen Schritt weg, den die Person braucht.
-
-## Fachliches
-
-- Entscheidend für die Eignung ist die **nötige Vorlauftemperatur**, nicht die
-  Außentemperatur. Das ist der wichtigste Satz dieser Beratung.
-- Frag nach der Art der Heizkörper (groß und flach, oder alt und schmal?) oder
-  ob eine Fußbodenheizung vorhanden ist — daraus folgt die Vorlauftemperatur.
-- Bei hohem spezifischen Wärmebedarf ist die Gebäudehülle der größere Hebel als
-  die Heiztechnik. Sag das offen, auch wenn es die teurere Antwort ist.
-- Die Förderung setzt voraus, dass der Antrag **vor** der Beauftragung gestellt
-  wird. Dieser Hinweis gehört in jede Beratung.
-
-## Wenn die Person am Bildschirm etwas einstellt
-
-Löst sie „Mit diesen Preisen weiterrechnen" aus, bekommst du die eingestellten
-Werte als Interaktion gemeldet. Rufe dann `annahmen_uebernehmen` mit genau
-diesen Werten auf — nicht mit eigenen. Danach gilt ihre Annahme, nicht meine.
-Nennt sie im Gespräch selbst einen Preis („bei uns kostet Gas eher 20 Cent"),
-gilt dasselbe.
-
-## Eröffnung
-
-Sag als Erstes, wobei du helfen kannst: {join_de(TOPICS)}. Ohne diesen Satz
-weiß eine Person, die zum ersten Mal hier ist, gar nicht, was sie sagen darf —
-und das ist der häufigste Grund, warum ein Sprachgespräch stockt.
-
-Stelle danach genau **eine** offene Frage zu ihrem Zuhause. Frage nicht nach
-Daten, sondern nach ihrer Situation. Zusammen höchstens drei Sätze.
-""".strip()
-
-
-def build() -> Journey:
     return Journey(
         journey_id="energie",
-        label="Mein Zuhause",
-        tagline=(
-            "Von komplexen Sanierungsfragen zur verständlichen persönlichen Energiewende."
+        locale=t.locale,
+        label=t("journey.energie.label"),
+        tagline=t("journey.energie.tagline"),
+        opener=opening_line(t, topics, t("journey.energie.frage")),
+        instruction=t(
+            "journey.energie.instruction",
+            haltung=t("prompt.haltung"),
+            themen=join_list(t, topics),
         ),
-        opener=opening_line(TOPICS, "zum Zuhause der Person"),
-        instruction=INSTRUCTION,
         tools=TOOLS,
         model=get_settings().model,
-        steps=[
-            ("profil", "Ihre Situation"),
-            ("eignung", "Eignung"),
-            ("szenarien", "Wege"),
-            ("wirtschaftlichkeit", "Wirtschaftlichkeit"),
-            ("foerderung", "Förderung"),
-            ("naechster_schritt", "Nächster Schritt"),
-        ],
-        topics=TOPICS,
+        steps=steps,
+        topics=topics,
     )

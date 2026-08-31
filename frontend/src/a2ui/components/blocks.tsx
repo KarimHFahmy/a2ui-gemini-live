@@ -20,6 +20,7 @@ import {
   type Column,
   type Row,
 } from '../schemas';
+import {useLocale} from '../../LocaleContext';
 import {Chart} from './Chart';
 
 /** The mark that carries tone where colour alone would not be enough. */
@@ -27,6 +28,7 @@ const TONE_MARK = {positive: '✓', neutral: '→', caution: '!'} as const;
 
 export const StatCard = createComponentImplementation(StatCardApi, ({props, buildChild}) => {
   const tone = asTone(props.tone);
+  const {locale} = useLocale();
 
   return (
     <section
@@ -37,7 +39,7 @@ export const StatCard = createComponentImplementation(StatCardApi, ({props, buil
         <span className="stat__mark" aria-hidden="true">
           {TONE_MARK[tone]}
         </span>
-        <span className="stat__tone-label">{TONE_LABEL[tone]}: </span>
+        <span className="stat__tone-label">{TONE_LABEL[locale][tone]}: </span>
         {props.title}
       </h4>
 

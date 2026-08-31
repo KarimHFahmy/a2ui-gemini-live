@@ -14,17 +14,9 @@ from __future__ import annotations
 
 from typing import Final
 
-#: Shown to the user next to every calculated figure.
-STAND: Final = "Demo-Annahmen, Stand Q3/2026"
-QUELLE_ENERGIE: Final = "Demo-Datensatz Energie (Beispielwerte, keine Angebotsgrundlage)"
-QUELLE_MOBILITAET: Final = (
-    "Demo-Datensatz E-Mobilität (Beispielwerte, keine Angebotsgrundlage)"
-)
-
-DISCLAIMER: Final = (
-    "Alle Zahlen sind Demo-Beispielwerte zur Veranschaulichung. "
-    "Sie ersetzen keine Fachberatung und sind kein verbindliches Angebot."
-)
+# The as-of date, the source labels and the disclaimer are words rather than
+# figures, so they live in `app.texts` with the rest of the copy — see
+# `data.as_of`, `data.source.*` and `data.disclaimer`.
 
 # ---------------------------------------------------------------------------
 # Energiepreise (Brutto, Endkunde)
@@ -123,10 +115,6 @@ FOERDERUNG: Final = {
     "effizienzbonus": 0.05,
     "max_satz": 0.70,
     "hoechstkosten_efh_eur": 30000.0,
-    "hinweis": (
-        "Förderhöhe abhängig von Antragstellung, Einkommensnachweis und "
-        "Gebäudetyp. Demo-Abbildung, bitte im Einzelfall prüfen."
-    ),
 }
 
 WARTUNG_EUR_A: Final = {

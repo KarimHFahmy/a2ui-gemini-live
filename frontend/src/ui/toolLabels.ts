@@ -3,25 +3,18 @@
  *
  * Shown while a tool runs so the pause before a surface appears reads as work
  * rather than as a hang. Keys are the tool function names in
- * `backend/app/journeys/`.
+ * `backend/app/journeys/`, prefixed — a tool the catalog has never heard of
+ * still gets a sentence rather than a bare spinner.
  */
-export const TOOL_LABEL: Record<string, string> = {
-  profil_aktualisieren: 'Fasst Ihre Situation zusammen …',
-  waermepumpen_eignung_zeigen: 'Prüft die Eignung Ihres Hauses …',
-  szenarien_vergleichen: 'Stellt die Wege gegenüber …',
-  wirtschaftlichkeit_zeigen: 'Rechnet über 20 Jahre …',
-  foerderung_und_fahrplan_zeigen: 'Ermittelt Förderung und Fahrplan …',
-  alltagstauglichkeit_zeigen: 'Legt Ihre Woche über die Reichweite …',
-  ladeloesungen_vergleichen: 'Vergleicht die Ladeoptionen …',
-  fahrzeuge_vorschlagen: 'Sucht passende Fahrzeugklassen …',
-  kosten_vergleichen: 'Rechnet die Gesamtkosten …',
-  stellschrauben_zeigen: 'Macht die Rechnung verstellbar …',
-  annahmen_uebernehmen: 'Rechnet mit Ihren Werten neu …',
-  bedenken_adressieren: 'Geht auf Ihre Frage ein …',
-  naechsten_schritt_anbieten: 'Fasst alles zusammen …',
-};
 
-export function toolLabel(name: string | null): string | null {
+import type {TextKey, Texts} from '../i18n';
+
+export function toolLabel(t: Texts, name: string | null): string | null {
   if (!name) return null;
-  return TOOL_LABEL[name] ?? 'Baut die Ansicht …';
+  const key = `tool.${name}` as TextKey;
+  try {
+    return t(key) ?? t('tool.default');
+  } catch {
+    return t('tool.default');
+  }
 }

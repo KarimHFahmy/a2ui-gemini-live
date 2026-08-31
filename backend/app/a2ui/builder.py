@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import Any, Literal, Sequence
 
+from ..texts import Texts
 from .surface import Surface
 
 Component = dict[str, Any]
@@ -99,11 +100,18 @@ def template(text: str) -> dict[str, Any]:
 
 
 class SurfaceBuilder:
-    """Accumulates one surface's flat component list."""
+    """Accumulates one surface's flat component list.
 
-    def __init__(self, surface_id: str, title: str) -> None:
+    Carries the locale as `t`, because a surface is written in one language
+    throughout and every composer already holds a builder — so the words and
+    the number formatting travel together instead of being passed separately
+    to each call that needs one of them.
+    """
+
+    def __init__(self, surface_id: str, title: str, t: Texts) -> None:
         self.surface_id = surface_id
         self.title = title
+        self.t = t
         self._components: list[Component] = []
         self._root_id: str | None = None
         self._next = 0
@@ -436,12 +444,15 @@ class SurfaceBuilder:
         """
         # `caption` renders as a native <em>, not through Markdown, so the
         # label is written plainly rather than with underscores.
-        trigger = self.text("Annahmen und Datenquellen ansehen", variant="caption")
+        trigger = self.text(self.t("block.assumptions.trigger"), variant="caption")
         content = self.column(
             [
-                self.text("Annahmen und Datenquellen", variant="h3"),
+                self.text(self.t("block.assumptions.title"), variant="h3"),
                 self.text("\n".join(f"- {item}" for item in items)),
-                self.text(f"{source} · {as_of}", variant="caption"),
+                self.text(
+                    self.t("block.assumptions.source", source=source, as_of=as_of),
+                    variant="caption",
+                ),
             ]
         )
         return self.modal(trigger, content)

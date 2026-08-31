@@ -52,6 +52,44 @@
   font-size: 16px;
 }
 
+/*
+ * The language switch. Quiet by design: it is a real choice — it changes the
+ * voice, not just the labels — but it is not what the page is about, so it
+ * reads as a segmented control under the lede rather than as a second call to
+ * action beside the two journeys.
+ */
+.landing__lang {
+  display: inline-flex;
+  margin-top: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.landing__lang-option {
+  padding: 6px 16px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.landing__lang-option + .landing__lang-option {
+  border-left: 1px solid var(--line);
+}
+
+.landing__lang-option:hover:not(.is-active) {
+  color: var(--text);
+}
+
+.landing__lang-option.is-active {
+  background: var(--brand-accent);
+  color: var(--a2ui-color-on-primary);
+}
+
 .landing__choices {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

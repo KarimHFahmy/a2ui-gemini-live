@@ -22,6 +22,7 @@ from google.adk.tools import ToolContext
 
 from ..a2ui import readback
 from ..a2ui.surface import Surface
+from ..texts import DEFAULT_LOCALE, Locale, Texts
 
 #: Marks widgets this application knows how to render.
 A2UI_PROVIDER = "a2ui"
@@ -29,6 +30,20 @@ A2UI_PROVIDER = "a2ui"
 #: Session-state keys. Prefixed so they never collide with agent-authored keys.
 _SURFACES_KEY = "_a2ui_live_surfaces"
 _PROFILE_KEY = "_advisory_profile"
+#: Set once when the session starts; every tool reads it to answer in the
+#: client's language.
+LOCALE_KEY = "_advisory_locale"
+
+
+def texts_for(tool_context: ToolContext) -> Texts:
+    """The locale this conversation is being held in.
+
+    Read from session state rather than closed over, because the advisory tools
+    are module-level functions shared by every session of that journey — and a
+    tool that captured a locale at import time would answer the second client
+    in the first one's language.
+    """
+    return Texts(tool_context.state.get(LOCALE_KEY, DEFAULT_LOCALE))
 
 T = TypeVar("T")
 
@@ -70,7 +85,7 @@ def push(tool_context: ToolContext, surface: Surface) -> str:
     if not exists:
         tool_context.state[_SURFACES_KEY] = [*live, surface.surface_id]
 
-    return readback.describe(surface)
+    return readback.describe(surface, texts_for(tool_context))
 
 
 def shown(tool_context: ToolContext, *surfaces: Surface, **fields: Any) -> dict[str, Any]:
@@ -124,81 +139,7 @@ def open_points(tool_context: ToolContext, supplied: list[str] | None) -> list[s
 # Prompt fragments shared by both journeys
 # ---------------------------------------------------------------------------
 
-HALTUNG = """
-## Deine Haltung
-
-Du bist ein persönlicher Berater, kein Chatbot und kein Verkäufer. Du sprichst
-Deutsch, natürlich und in ganzen Sätzen, wie ein erfahrener Mensch am Telefon.
-
-- **Zuhören vor Fragen.** Lass die Person erzählen. Stelle immer nur EINE Frage
-  auf einmal, und nur wenn die Antwort die Beratung wirklich verändert.
-- **Alltagssprache.** Keine Fachbegriffe ohne Erklärung, kein Produktjargon,
-  keine Abkürzungen, die man nachschlagen muss.
-- **Empathie ohne Druck.** Wenn jemand eine Sorge äußert, nimm sie ernst und
-  benenne sie, bevor du sie einordnest. Verkaufe nichts. Dränge zu nichts.
-- **Kurz sprechen.** Zwei bis vier Sätze pro Redebeitrag. Die Details stehen
-  auf dem Bildschirm, du erklärst sie, du liest sie nicht vor.
-- **Ehrlich bleiben.** Wenn etwas nicht passt, sag es. Ein „das lohnt sich für
-  Sie so nicht" schafft mehr Vertrauen als eine schöngerechnete Empfehlung.
-
-## Wie du den Bildschirm nutzt
-
-Du baust die Oberfläche über deine Werkzeuge auf, während ihr sprecht. Das ist
-kein Nachtrag zum Gespräch, sondern Teil davon.
-
-- Rufe ein Werkzeug auf, sobald du genug verstanden hast — nicht erst am Ende.
-- **Nie Zahlen erfinden.** Alle Zahlen kommen aus den Werkzeugen zurück. Sprich
-  nur über Werte, die dir ein Werkzeug geliefert hat.
-- Nach einem Werkzeugaufruf sagst du in ein bis zwei Sätzen, was jetzt zu sehen
-  ist und was es für die Person bedeutet. Zähle nicht alle Zahlen auf.
-- Aktualisiere `profil_aktualisieren`, sobald du etwas Neues verstanden hast.
-  Die Person soll auf dem Schirm sehen, dass du sie richtig verstanden hast.
-- Wenn eine Sorge im Raum steht, beantworte sie mit `bedenken_adressieren`,
-  bevor du weiterrechnest.
-
-## Was gerade auf dem Bildschirm steht
-
-Jedes Werkzeug gibt dir `auf_dem_schirm` zurück: was die Person in diesem
-Moment vor sich sieht, von oben nach unten — mit den Achsen der Diagramme, dem
-Verlauf jeder Linie und der Stelle, an der sich zwei Linien kreuzen.
-
-- Fragt jemand „was ist die obere Linie?“ oder „warum knickt das da?“, steht
-  die Antwort dort. Rate nicht.
-- Es ist eine Notiz für dich, keine Sprechvorlage. Lies sie nicht vor.
-- Zeig mit Worten hin — „die obere Linie“, „die letzte Zeile“. Die Reihenfolge
-  stimmt mit dem Bildschirm überein.
-- `[Nachteil]` heißt: die Zahl spricht **gegen** die Person. Nicht schönreden.
-- „rechnet live mit den Reglern mit“ heißt: diese Karte hat gerade keinen
-  festen Wert. Nenne keinen, lade zum Ziehen ein.
-
-## Wie du führst
-
-Die Person weiß nicht, was sie sagen darf. Führen heißt: nach jedem Schritt
-weiß sie, was als Nächstes kommt.
-
-- **Gib den Ball konkret zurück.** Nicht „Haben Sie noch Fragen?“, sondern
-  „Wenn Sie wollen, rechne ich als Nächstes durch, ab wann sich das lohnt.“
-- **Ein Schritt, dann Pause.** Nie zwei Ansichten hintereinander ohne ein Wort
-  dazwischen.
-- **Regler gehören der Person.** Steht einer auf dem Schirm, sag einmal, dass
-  sie selbst ziehen kann und alles sofort mitrechnet.
-- **Sag, wo ihr steht**, wenn ein Abschnitt endet: „Technisch passt es —
-  bleibt die Frage, ob es sich rechnet.“
-- **Bei Schweigen** wiederhol dich nicht, biete den nächsten Schritt an.
-- **Bei „weiß ich nicht“** rechne mit einem klaren Näherungswert weiter, sag
-  welchen, und zeig die Regler. Niemand kennt seinen Verbrauch auswendig.
-
-## Grenzen
-
-- Du gibst eine Orientierung, kein verbindliches Angebot. Sag das, wenn es
-  relevant wird — nicht in jedem Satz.
-- Alle Werte sind gekennzeichnete Demo-Beispieldaten.
-- Frage nicht nach Namen, Adresse, Vertragsnummern oder anderen persönlichen
-  Daten. Für die Beratung brauchst du sie nicht.
-""".strip()
-
-
-def opening_line(topics: list[str], frage_nach: str) -> str:
+def opening_line(t: Texts, topics: list[str], frage_nach: str) -> str:
     """The nudge that starts the conversation.
 
     Composed from the journey's own topics rather than written separately, so
@@ -208,18 +149,14 @@ def opening_line(topics: list[str], frage_nach: str) -> str:
     the most common failure of a voice product is a person who does not know
     what they are allowed to say.
     """
-    return (
-        "Begrüße die Person kurz und warm auf Deutsch. Sag ihr dann in einem "
-        "Satz, wobei du helfen kannst: " + join_de(topics) + ". Stelle danach "
-        f"genau eine offene Frage {frage_nach}. Insgesamt höchstens drei Sätze."
-    )
+    return t("prompt.opening", themen=join_list(t, topics), frage=frage_nach)
 
 
-def join_de(items: list[str]) -> str:
-    """`a, b und c` — a spoken list, not a bulleted one."""
+def join_list(t: Texts, items: list[str]) -> str:
+    """`a, b und c` / `a, b and c` — a spoken list, not a bulleted one."""
     if len(items) < 2:
         return "".join(items)
-    return ", ".join(items[:-1]) + " und " + items[-1]
+    return t("prompt.join", vorher=", ".join(items[:-1]), letzter=items[-1])
 
 
 class Journey:
@@ -229,6 +166,7 @@ class Journey:
         self,
         *,
         journey_id: str,
+        locale: Locale,
         label: str,
         tagline: str,
         opener: str,
@@ -239,6 +177,8 @@ class Journey:
         topics: list[str],
     ) -> None:
         self.id = journey_id
+        #: Which language this whole journey speaks — prompt, surfaces and voice.
+        self.locale = locale
         self.label = label
         self.tagline = tagline
         self.opener = opener

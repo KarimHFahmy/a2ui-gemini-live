@@ -11,105 +11,100 @@ from typing import Any
 
 from ..domain import demo_data as dd
 from ..domain import mobilitaet as calc
-from ..format_de import de
+from ..texts import Texts
 from .builder import SurfaceBuilder, bind, minus, money, number, over, plus, times
 from .surface import Surface
 
-_LADE_LABEL = {
-    "wallbox_zuhause": "Wallbox zu Hause",
-    "steckdose_zuhause": "Haushaltssteckdose",
-    "arbeitsplatz": "Laden beim Arbeitgeber",
-    "nur_oeffentlich": "Nur öffentlich",
-}
 
-
-def _euro(value: float) -> str:
-    return de(value, unit="€")
-
-
-def _komma(value: float, digits: int = 2) -> str:
-    return f"{value:.{digits}f}".replace(".", ",")
-
-
-def profil_surface(profil: calc.Mobilitaetsprofil, offene_punkte: list[str]) -> Surface:
+def profil_surface(
+    t: Texts, profil: calc.Mobilitaetsprofil, offene_punkte: list[str]
+) -> Surface:
     """"Zusammenfassung des Verstandenen" for the mobility journey."""
-    b = SurfaceBuilder("profil", "Ihr Alltag")
+    b = SurfaceBuilder("profil", t("mob.profil.eyebrow"), t)
 
     fakt = b.column([b.text(bind("label"), variant="caption"), b.text(bind("wert"))])
 
     # Pinned for the whole session — see the note in composer_energie.
     inner = [
-        b.text("Ihr Alltag", variant="caption"),
-        b.text("Das habe ich verstanden", variant="h3"),
+        b.text(t("mob.profil.eyebrow"), variant="caption"),
+        b.text(t("profil.title"), variant="h3"),
         b.repeat(fakt, "/fakten", direction="horizontal"),
     ]
     if offene_punkte:
-        inner.append(b.bullets(offene_punkte, heading="Noch offen"))
+        inner.append(b.bullets(offene_punkte, heading=t("block.still_open")))
     inner.append(
-        b.text(
-            "Korrigieren Sie mich jederzeit – ich rechne sofort neu.",
-            variant="caption",
-        )
+        b.text(t("mob.profil.correct_me"), variant="caption")
     )
 
     b.root(b.card(b.column(inner)))
 
     fakten: list[dict[str, str]] = [
         {
-            "label": "Täglich",
-            "wert": f"{profil.taeglich_km:.0f} km an {profil.pendeltage_pro_woche} Tagen",
+            "label": t("mob.profil.taeglich"),
+            "wert": t(
+                "mob.profil.taeglich_wert",
+                km=t.num(profil.taeglich_km),
+                tage=profil.pendeltage_pro_woche,
+            ),
         },
         {
-            "label": "Langstrecke",
-            "wert": f"{profil.langstrecken_pro_monat}× im Monat, ~ {profil.langstrecke_km:.0f} km",
+            "label": t("mob.profil.langstrecke"),
+            "wert": t(
+                "mob.profil.langstrecke_wert",
+                mal=profil.langstrecken_pro_monat,
+                km=t.num(profil.langstrecke_km),
+            ),
         },
-        {"label": "Laden", "wert": _LADE_LABEL[profil.lademoeglichkeit]},
         {
-            "label": "Im Jahr",
-            "wert": "~ " + de(profil.jahresfahrleistung_km(), unit="km"),
+            "label": t("mob.profil.laden"),
+            "wert": t(f"mob.lade.{profil.lademoeglichkeit}"),
         },
         {
-            "label": "Fahrzeugwunsch",
+            "label": t("mob.profil.jahr"),
+            "wert": "~ " + t.num(profil.jahresfahrleistung_km(), unit="km"),
+        },
+        {
+            "label": t("mob.profil.wunsch"),
             "wert": dd.FAHRZEUG_KLASSEN[profil.fahrzeugklasse]["label"],
         },
     ]
     if profil.budget_eur_monat:
         fakten.append(
-            {"label": "Budget", "wert": f"bis {profil.budget_eur_monat:.0f} € im Monat"}
+            {
+                "label": t("mob.profil.budget"),
+                "wert": t("mob.profil.budget_wert", budget=t.euro(profil.budget_eur_monat)),
+            }
         )
     if profil.bedenken:
-        fakten.append({"label": "Ihre Bedenken", "wert": ", ".join(profil.bedenken)})
+        fakten.append(
+            {"label": t("mob.profil.bedenken"), "wert": ", ".join(profil.bedenken)}
+        )
 
     return b.finish({"fakten": fakten})
 
 
-def alltag_surface(profil: calc.Mobilitaetsprofil) -> Surface:
+def alltag_surface(t: Texts, profil: calc.Mobilitaetsprofil) -> Surface:
     """"Ist ein E-Auto praktikabel für mich?" answered with their own week."""
     r = calc.reichweite(profil)
-    woche = calc.wochenprofil(profil)
-    ls = calc.langstrecke(profil)
+    woche = calc.wochenprofil(profil, t)
+    ls = calc.langstrecke(profil, t)
     puffer = r["puffer_faktor_winter"]
 
     if puffer >= 3:
-        tone, metric = "positive", f"{puffer:.0f}×"
-        body = (
-            f"Ihre {profil.taeglich_km:.0f} km am Tag sind selbst im Winter kein "
-            f"Thema. Sie laden etwa {_ladehaeufigkeit(profil, r)}."
+        tone, metric = "positive", f"{t.num(puffer)}×"
+        body = t(
+            "mob.alltag.puffer_gut",
+            km=t.num(profil.taeglich_km),
+            laden=_ladehaeufigkeit(t, profil, r),
         )
     elif puffer >= 1.5:
-        tone, metric = "neutral", f"{_komma(puffer, 1)}×"
-        body = (
-            f"Ihre Tagesstrecke passt, im Winter bleibt ein solider Puffer. "
-            f"Sie laden etwa {_ladehaeufigkeit(profil, r)}."
-        )
+        tone, metric = "neutral", f"{t.num(puffer, decimals=1)}×"
+        body = t("mob.alltag.puffer_ok", laden=_ladehaeufigkeit(t, profil, r))
     else:
-        tone, metric = "caution", f"{_komma(puffer, 1)}×"
-        body = (
-            "Im Winter wird es knapp – Sie müssten nahezu täglich laden. Eine "
-            "größere Batterie oder eine verlässliche Lademöglichkeit ist hier wichtig."
-        )
+        tone, metric = "caution", f"{t.num(puffer, decimals=1)}×"
+        body = t("mob.alltag.puffer_knapp")
 
-    b = SurfaceBuilder("alltag", "Alltagstauglichkeit")
+    b = SurfaceBuilder("alltag", t("mob.alltag.eyebrow"), t)
 
     stopp = b.card(
         b.column(
@@ -127,45 +122,51 @@ def alltag_surface(profil: calc.Mobilitaetsprofil) -> Surface:
         b.column(
             [
                 b.heading(
-                    "Alltagstauglichkeit",
-                    "Ihre Woche mit einem E-Auto",
-                    "Nicht der Katalogwert zählt, sondern die Reichweite an einem "
-                    "kalten Januarmorgen.",
+                    t("mob.alltag.eyebrow"),
+                    t("mob.alltag.title"),
+                    t("mob.alltag.subtitle"),
                 ),
                 b.row(
                     [
                         b.stat_card(
-                            title="Puffer im Alltag",
+                            title=t("mob.alltag.puffer"),
                             metric=metric,
-                            metric_label="Ihres Tagesbedarfs",
+                            metric_label=t("mob.alltag.puffer_label"),
                             body=body,
                             tone=tone,
                             weight=1,
                         ),
                         b.stat_card(
-                            title="Reichweite im Winter",
-                            metric=f"{r['reichweite_winter_km']} km",
-                            metric_label=f"{r['fahrzeug']}, {r['batterie_kwh']:.0f} kWh",
-                            body=f"Bei Kälte steigt der Verbrauch auf "
-                            f"{_komma(r['verbrauch_winter'], 1)} kWh/100 km. Im Sommer "
-                            f"sind es {r['reichweite_sommer_km']} km.",
+                            title=t("mob.alltag.winter"),
+                            metric=t.num(r["reichweite_winter_km"], unit="km"),
+                            metric_label=t(
+                                "mob.alltag.winter_label",
+                                fahrzeug=r["fahrzeug"],
+                                batterie=t.num(r["batterie_kwh"]),
+                            ),
+                            body=t(
+                                "mob.alltag.winter_body",
+                                verbrauch=t.num(r["verbrauch_winter"], decimals=1),
+                                sommer=t.num(r["reichweite_sommer_km"]),
+                            ),
                             weight=1,
                         ),
                         b.stat_card(
-                            title="Autobahn im Winter",
-                            metric=f"{r['reichweite_autobahn_winter_km']} km",
-                            metric_label=f"{_komma(r['verbrauch_autobahn_winter'], 1)} kWh/100 km",
-                            body="Der ehrlichste Wert: kalt, bei Richtgeschwindigkeit. "
-                            "Danach planen sich Langstrecken zuverlässig.",
+                            title=t("mob.alltag.autobahn"),
+                            metric=t.num(r["reichweite_autobahn_winter_km"], unit="km"),
+                            metric_label=t(
+                                "mob.alltag.autobahn_label",
+                                verbrauch=t.num(r["verbrauch_autobahn_winter"], decimals=1),
+                            ),
+                            body=t("mob.alltag.autobahn_body"),
                             weight=1,
                         ),
                     ]
                 ),
                 b.card(
                     b.chart(
-                        title="Ihre typische Woche",
-                        subtitle="Die Linie ist die Winterreichweite. Solange die "
-                        "Balken darunter bleiben, kommen Sie ohne Zwischenladen aus.",
+                        title=t("mob.alltag.chart_title"),
+                        subtitle=t("mob.alltag.chart_sub"),
                         chart_type="bar",
                         categories=bind("/tage"),
                         series=bind("/woche"),
@@ -173,16 +174,19 @@ def alltag_surface(profil: calc.Mobilitaetsprofil) -> Surface:
                     )
                 ),
                 b.heading(
-                    "Langstrecke",
-                    f"Ihre {profil.langstrecke_km:.0f}-km-Fahrt konkret",
-                    f"{ls['ladestopps']} Ladestopp(s), zusammen {ls['mehrzeit_min']} "
-                    "Minuten mehr als mit einem Verbrenner."
+                    t("mob.ls.eyebrow"),
+                    t("mob.ls.title", km=t.num(profil.langstrecke_km)),
+                    t(
+                        "mob.ls.subtitle",
+                        stopps=ls["ladestopps"],
+                        minuten=ls["mehrzeit_min"],
+                    )
                     if ls["ladestopps"]
-                    else "Ohne Ladestopp erreichbar.",
+                    else t("mob.ls.ohne_stopp"),
                 ),
                 b.repeat(stopp, "/langstrecke"),
                 b.assumptions(
-                    calc.annahmen(profil), source=dd.QUELLE_MOBILITAET, as_of=dd.STAND
+                    calc.annahmen(profil, t), source=t("data.source.mobilitaet"), as_of=t("data.as_of")
                 ),
             ]
         )
@@ -204,67 +208,64 @@ def alltag_surface(profil: calc.Mobilitaetsprofil) -> Surface:
     )
 
 
-def _ladehaeufigkeit(profil: calc.Mobilitaetsprofil, r: dict[str, Any]) -> str:
+def _ladehaeufigkeit(t: Texts, profil: calc.Mobilitaetsprofil, r: dict[str, Any]) -> str:
     tage = r["reichweite_winter_km"] / max(profil.taeglich_km, 1.0)
     if tage >= 7:
-        return "einmal pro Woche"
+        return t("mob.alltag.laden_woche")
     if tage >= 3:
-        return f"alle {int(tage)} Tage"
-    return "alle zwei Tage"
+        return t("mob.alltag.laden_tage", tage=int(tage))
+    return t("mob.alltag.laden_zwei")
 
 
-def laden_surface(profil: calc.Mobilitaetsprofil) -> Surface:
+def laden_surface(t: Texts, profil: calc.Mobilitaetsprofil) -> Surface:
     """Where you charge decides the economics — shown before the car choice."""
-    lade = calc.ladeoptionen(profil)
+    lade = calc.ladeoptionen(profil, t)
     optionen = lade["optionen"]
     aktuell = next(o for o in optionen if o["id"] == lade["aktuell_id"])
     beste = next(o for o in optionen if o["id"] == lade["beste_id"])
     ersparnis = lade["ersparnis_beste_eur_a"]
 
     if ersparnis > 200:
-        hebel_body = (
-            f"Der Wechsel von „{aktuell['label']}“ zu „{beste['label']}“ spart Ihnen "
-            f"rund {_euro(ersparnis)} im Jahr – mehr als die meisten "
-            "Fahrzeugentscheidungen ausmachen."
+        hebel_body = t(
+            "mob.laden.hebel_body",
+            aktuell=aktuell["label"],
+            beste=beste["label"],
+            betrag=t.euro(ersparnis),
         )
         hebel_tone = "positive"
     else:
-        hebel_body = (
-            "Ihre Ladesituation ist bereits gut. Die Fahrzeugwahl ist bei Ihnen "
-            "der größere Hebel."
-        )
+        hebel_body = t("mob.laden.hebel_schon_gut")
         hebel_tone = "neutral"
 
-    b = SurfaceBuilder("laden", "Ladelösungen")
+    b = SurfaceBuilder("laden", t("mob.laden.surface"), t)
     b.root(
         b.column(
             [
                 b.heading(
-                    "Laden",
-                    "Wo Sie laden, entscheidet über die Kosten",
-                    "Zwischen der günstigsten und der teuersten Ladeart liegt bei "
-                    "Ihrer Fahrleistung ein Vielfaches der Fahrzeugunterschiede.",
+                    t("mob.laden.eyebrow"),
+                    t("mob.laden.title"),
+                    t("mob.laden.subtitle"),
                 ),
                 b.stat_card(
-                    title="Ihr größter Hebel",
-                    metric=_euro(ersparnis) if ersparnis > 0 else "–",
-                    metric_label="Ersparnis pro Jahr",
+                    title=t("mob.laden.hebel"),
+                    metric=t.euro(ersparnis) if ersparnis > 0 else t("block.dash"),
+                    metric_label=t("mob.laden.hebel_label"),
                     body=hebel_body,
                     tone=hebel_tone,
                 ),
                 b.card(
                     b.table(
-                        title="Ladeoptionen im Vergleich",
+                        title=t("mob.laden.table"),
                         columns=bind("/spalten"),
                         rows=bind("/zeilen"),
                         highlight=bind("/beste"),
                     )
                 ),
                 b.assumptions(
-                    calc.annahmen(profil)
-                    + [f"Jahresenergiebedarf rund {de(lade['jahres_kwh'])} kWh"],
-                    source=dd.QUELLE_MOBILITAET,
-                    as_of=dd.STAND,
+                    calc.annahmen(profil, t)
+                    + [t("mob.laden.bedarf", kwh=t.num(lade["jahres_kwh"]))],
+                    source=t("data.source.mobilitaet"),
+                    as_of=t("data.as_of"),
                 ),
             ]
         )
@@ -276,39 +277,47 @@ def laden_surface(profil: calc.Mobilitaetsprofil) -> Surface:
             "spalten": [{"id": o["id"], "label": o["label"]} for o in optionen],
             "zeilen": [
                 {
-                    "label": "Mischpreis",
-                    "werte": [f"{_komma(o['mischpreis_eur_kwh'])} €/kWh" for o in optionen],
+                    "label": t("mob.laden.row.mischpreis"),
+                    "werte": [
+                        t.num(o["mischpreis_eur_kwh"], decimals=2) + " €/kWh"
+                        for o in optionen
+                    ],
                 },
                 {
-                    "label": "Energiekosten pro Jahr",
-                    "werte": [_euro(o["kosten_eur_a"]) for o in optionen],
+                    "label": t("mob.laden.row.kosten_a"),
+                    "werte": [t.euro(o["kosten_eur_a"]) for o in optionen],
                     "hervorheben": True,
                 },
                 {
-                    "label": "Kosten je 100 km",
-                    "werte": [f"{_komma(o['kosten_eur_100km'])} €" for o in optionen],
+                    "label": t("mob.laden.row.kosten_100"),
+                    "werte": [t.euro(o["kosten_eur_100km"], decimals=2) for o in optionen],
                 },
                 {
-                    "label": "Einmalige Investition",
-                    "werte": ["–" if o["investition_eur"] == 0 else _euro(o["investition_eur"]) for o in optionen],
+                    "label": t("mob.laden.row.invest"),
+                    "werte": [
+                        t("block.dash") if o["investition_eur"] == 0 else t.euro(o["investition_eur"])
+                        for o in optionen
+                    ],
                 },
                 {
-                    "label": "Für Sie verfügbar",
-                    "werte": ["ja" if o["verfuegbar"] else "nein" for o in optionen],
+                    "label": t("mob.laden.row.verfuegbar"),
+                    "werte": [
+                        t("mob.ja") if o["verfuegbar"] else t("mob.nein") for o in optionen
+                    ],
                 },
             ],
         }
     )
 
 
-def fahrzeuge_surface(profil: calc.Mobilitaetsprofil) -> Surface:
+def fahrzeuge_surface(t: Texts, profil: calc.Mobilitaetsprofil) -> Surface:
     """Ranked classes with the trade-offs shown, not hidden.
 
     A single template rendered once per suggestion — adding a class is a data
     change, not a layout change.
     """
-    vorschlaege = calc.fahrzeugvorschlaege(profil)
-    b = SurfaceBuilder("fahrzeuge", "Fahrzeugvorschläge")
+    vorschlaege = calc.fahrzeugvorschlaege(profil, t)
+    b = SurfaceBuilder("fahrzeuge", t("mob.fahrzeuge.surface"), t)
 
     vorschlag = b.card(
         b.column(
@@ -335,22 +344,16 @@ def fahrzeuge_surface(profil: calc.Mobilitaetsprofil) -> Surface:
         b.column(
             [
                 b.heading(
-                    "Fahrzeugwahl",
-                    "Diese Klassen passen zu Ihrem Alltag",
-                    "Sortiert nach Passung zu Ihrem Profil, nicht nach Reichweite "
-                    "oder Preis allein.",
+                    t("mob.fahrzeuge.eyebrow"),
+                    t("mob.fahrzeuge.title"),
+                    t("mob.fahrzeuge.subtitle"),
                 ),
                 b.repeat(vorschlag, "/vorschlaege"),
                 b.assumptions(
-                    calc.annahmen(profil)
-                    + [
-                        "Passung berücksichtigt Winterreichweite, Ladestopps, Budget "
-                        "und Ihre Fahrzeugklasse.",
-                        "Generische Fahrzeugklassen statt konkreter Modelle – bewusst "
-                        "herstellerneutral.",
-                    ],
-                    source=dd.QUELLE_MOBILITAET,
-                    as_of=dd.STAND,
+                    calc.annahmen(profil, t)
+                    + t.list("mob.fahrzeuge.assumptions"),
+                    source=t("data.source.mobilitaet"),
+                    as_of=t("data.as_of"),
                 ),
             ]
         )
@@ -361,15 +364,19 @@ def fahrzeuge_surface(profil: calc.Mobilitaetsprofil) -> Surface:
             "vorschlaege": [
                 {
                     "titel": f"{index + 1}. {v['label']}",
-                    "passung": f"Passung {v['score']}/100",
-                    "kennzahlen": (
-                        f"{v['batterie_kwh']:.0f} kWh · {v['reichweite_winter_km']} km im "
-                        f"Winter · {v['ladestopps_langstrecke']} Ladestopp(s) · ab "
-                        f"{v['leasing_eur_monat']:.0f} €/Monat"
+                    "passung": t("mob.fahrzeuge.passung", score=v["score"]),
+                    "kennzahlen": t(
+                        "mob.fahrzeuge.kennzahlen",
+                        batterie=t.num(v["batterie_kwh"]),
+                        winter=t.num(v["reichweite_winter_km"]),
+                        stopps=v["ladestopps_langstrecke"],
+                        rate=t.euro(v["leasing_eur_monat"]),
                     ),
-                    "pro": "**Dafür spricht**\n"
+                    "pro": t("mob.fahrzeuge.pro")
+                    + "\n"
                     + "\n".join(f"- {item}" for item in v["pro"]),
-                    "contra": "**Zu bedenken**\n"
+                    "contra": t("mob.fahrzeuge.contra")
+                    + "\n"
                     + "\n".join(f"- {item}" for item in v["contra"]),
                 }
                 for index, v in enumerate(vorschlaege)
@@ -392,48 +399,47 @@ def _energie_tone(elektro_eur_100km: float, verbrenner_eur_100km: float) -> str:
     return "neutral"
 
 
-def kosten_surface(profil: calc.Mobilitaetsprofil) -> Surface:
+def kosten_surface(t: Texts, profil: calc.Mobilitaetsprofil) -> Surface:
     """Total cost of ownership, itemised so nothing hides in a total."""
-    k = calc.kostenvergleich(profil)
+    k = calc.kostenvergleich(profil, t)
     diff = k["differenz_eur"]
     guenstiger = diff > 0
 
-    b = SurfaceBuilder("kosten", "Kostenvergleich")
+    b = SurfaceBuilder("kosten", t("mob.kosten.surface"), t)
     b.root(
         b.column(
             [
                 b.heading(
-                    "Kosten",
-                    f"Über {k['haltedauer_jahre']} Jahre gerechnet",
-                    "Alle Posten einzeln – Wertverlust, Energie, Wartung, "
-                    "Versicherung, Steuer und THG-Quote.",
+                    t("mob.kosten.eyebrow"),
+                    t("mob.kosten.title", jahre=k["haltedauer_jahre"]),
+                    t("mob.kosten.subtitle"),
                 ),
                 b.row(
                     [
                         b.stat_card(
-                            title="Elektro gegen Verbrenner",
-                            metric=_euro(abs(diff)),
-                            metric_label="Vorteil Elektro" if guenstiger else "Nachteil Elektro",
-                            body=(
-                                f"Das E-Auto ist bei Ihrem Profil insgesamt günstiger – "
-                                f"das entspricht {abs(k['differenz_eur_monat'])} € im Monat."
+                            title=t("mob.kosten.vergleich"),
+                            metric=t.euro(abs(diff)),
+                            metric_label=t(
+                                "mob.kosten.vorteil" if guenstiger else "mob.kosten.nachteil"
+                            ),
+                            body=t(
+                                "mob.kosten.guenstiger_body"
                                 if guenstiger
-                                else (
-                                    f"Mit Ihrer heutigen Ladesituation ist das E-Auto "
-                                    f"insgesamt teurer – rund {abs(k['differenz_eur_monat'])} € "
-                                    "im Monat. Mit einer eigenen Lademöglichkeit dreht "
-                                    "sich das Bild."
-                                )
+                                else "mob.kosten.teurer_body",
+                                monat=t.euro(abs(k["differenz_eur_monat"])),
                             ),
                             tone="positive" if guenstiger else "caution",
                             weight=1,
                         ),
                         b.stat_card(
-                            title="Energie je 100 km",
-                            metric=f"{_komma(k['energie_elektro_eur_100km'])} €",
-                            metric_label="elektrisch, je 100 km",
-                            body=f"Strom {_komma(k['energie_elektro_eur_100km'])} € "
-                            f"gegenüber Kraftstoff {_komma(k['energie_verbrenner_eur_100km'])} €.",
+                            title=t("mob.kosten.energie"),
+                            metric=t.euro(k["energie_elektro_eur_100km"], decimals=2),
+                            metric_label=t("mob.kosten.energie_label"),
+                            body=t(
+                                "mob.kosten.energie_body",
+                                strom=t.euro(k["energie_elektro_eur_100km"], decimals=2),
+                                sprit=t.euro(k["energie_verbrenner_eur_100km"], decimals=2),
+                            ),
                             tone=_energie_tone(
                                 k["energie_elektro_eur_100km"],
                                 k["energie_verbrenner_eur_100km"],
@@ -441,11 +447,11 @@ def kosten_surface(profil: calc.Mobilitaetsprofil) -> Surface:
                             weight=1,
                         ),
                         b.stat_card(
-                            title="CO₂ pro Jahr",
-                            metric=f"− {_komma(k['co2_ersparnis_kg_a'] / 1000, 1)} t",
-                            metric_label="gegenüber Verbrenner",
-                            body="Gerechnet mit dem deutschen Strommix. Mit eigener "
-                            "PV-Anlage oder Ökostromtarif fällt die Bilanz besser aus.",
+                            title=t("mob.kosten.co2"),
+                            metric="− "
+                            + t.num(k["co2_ersparnis_kg_a"] / 1000, decimals=1, unit="t"),
+                            metric_label=t("mob.kosten.co2_label"),
+                            body=t("mob.kosten.co2_body"),
                             tone="positive",
                             weight=1,
                         ),
@@ -453,9 +459,12 @@ def kosten_surface(profil: calc.Mobilitaetsprofil) -> Surface:
                 ),
                 b.card(
                     b.chart(
-                        title="Kostenposten im Vergleich",
-                        subtitle=f"Gesamtkosten über {k['haltedauer_jahre']} Jahre bei "
-                        f"{de(k['jahres_km'])} km im Jahr.",
+                        title=t("mob.kosten.chart_title"),
+                        subtitle=t(
+                            "mob.kosten.chart_sub",
+                            jahre=k["haltedauer_jahre"],
+                            km=t.num(k["jahres_km"]),
+                        ),
                         chart_type="groupedBar",
                         categories=bind("/kategorien"),
                         series=bind("/serien"),
@@ -464,14 +473,14 @@ def kosten_surface(profil: calc.Mobilitaetsprofil) -> Surface:
                     )
                 ),
                 b.assumptions(
-                    calc.annahmen(profil)
-                    + [
-                        f"Gesamtkosten Elektro {_euro(k['gesamt_elektro_eur'])}, "
-                        f"Verbrenner {_euro(k['gesamt_verbrenner_eur'])}",
-                        "Wertverlust auf Basis angenommener Restwerte nach vier Jahren.",
-                    ],
-                    source=dd.QUELLE_MOBILITAET,
-                    as_of=dd.STAND,
+                    calc.annahmen(profil, t)
+                    + t.list(
+                        "mob.kosten.assumptions",
+                        elektro=t.euro(k["gesamt_elektro_eur"]),
+                        verbrenner=t.euro(k["gesamt_verbrenner_eur"]),
+                    ),
+                    source=t("data.source.mobilitaet"),
+                    as_of=t("data.as_of"),
                 ),
             ]
         )
@@ -480,7 +489,7 @@ def kosten_surface(profil: calc.Mobilitaetsprofil) -> Surface:
     return b.finish({"kategorien": k["kategorien"], "serien": k["serien"]})
 
 
-def stellschrauben_surface(profil: calc.Mobilitaetsprofil) -> Surface:
+def stellschrauben_surface(t: Texts, profil: calc.Mobilitaetsprofil) -> Surface:
     """„Was wäre wenn?“ — die zwei Zahlen, bei denen jeder Kunde schätzt.
 
     „So um die fünfzig Kilometer“ und „meistens zu Hause, manchmal unterwegs“
@@ -506,37 +515,39 @@ def stellschrauben_surface(profil: calc.Mobilitaetsprofil) -> Surface:
     strom_eur = times(jahres_km, times(preis_ct, bind("/basis/strom_eur_je_km_je_ct")))
     kraftstoff_eur = times(jahres_km, bind("/basis/kraftstoff_eur_je_km"))
 
-    b = SurfaceBuilder("stellschrauben", "Was wäre wenn")
+    b = SurfaceBuilder("stellschrauben", t("mob.wenn.surface"), t)
     b.root(
         b.column(
             [
                 b.heading(
-                    "Was wäre wenn",
-                    "Ihre Strecke, Ihr Ladeort",
-                    "Zwei Zahlen entscheiden über die Kosten, und bei beiden haben "
-                    "wir bisher geschätzt. Stellen Sie ein, was wirklich zu Ihnen "
-                    "passt – die Rechnung unten folgt sofort.",
+                    t("mob.wenn.surface"),
+                    t("mob.wenn.title"),
+                    t("mob.wenn.subtitle"),
                 ),
                 b.card(
                     b.column(
                         [
-                            b.text("Ihre Einstellung", variant="h3"),
+                            b.text(t("mob.wenn.einstellung"), variant="h3"),
                             b.slider(
-                                label="Kilometer an einem typischen Tag",
+                                label=t("mob.wenn.regler_km"),
                                 value_path="/wenn/taeglich_km",
                                 minimum=werte["taeglich_km_min"],
                                 maximum=werte["taeglich_km_max"],
                             ),
                             b.slider(
-                                label="Anteil, den Sie zu Hause laden, in Prozent",
+                                label=t("mob.wenn.regler_zuhause"),
                                 value_path="/wenn/anteil_zuhause",
                                 minimum=0,
                                 maximum=100,
                             ),
                             b.text(
-                                f"Zu Hause rechne ich mit {_komma(werte['preis_zuhause_ct'] / 100)} "
-                                f"€/kWh, unterwegs mit {_komma(werte['preis_unterwegs_ct'] / 100)} "
-                                "€/kWh im Mix aus AC und Schnellladen.",
+                                t(
+                                    "mob.wenn.preise",
+                                    zuhause=t.num(werte["preis_zuhause_ct"] / 100, decimals=2),
+                                    unterwegs=t.num(
+                                        werte["preis_unterwegs_ct"] / 100, decimals=2
+                                    ),
+                                ),
                                 variant="caption",
                             ),
                         ]
@@ -547,38 +558,39 @@ def stellschrauben_surface(profil: calc.Mobilitaetsprofil) -> Surface:
                         b.live_stat(
                             # Die Einheit steht im Label, damit die Zahl selbst
                             # dieselbe Rechnung bleibt, die auch die Kosten speist.
-                            label="Kilometer im Jahr",
+                            label=t("mob.wenn.km_jahr"),
                             value=number(jahres_km),
-                            hint="mit Langstrecken und Freizeit",
+                            hint=t("mob.wenn.km_jahr_hint"),
                         ),
                         b.live_stat(
-                            label="Strom",
+                            label=t("mob.wenn.strom"),
                             value=money(strom_eur),
-                            hint="pro Jahr",
+                            hint=t("mob.wenn.pro_jahr"),
                         ),
                         b.live_stat(
-                            label=f"{werte['kraftstoff'].capitalize()} zum Vergleich",
+                            label=t.upper_first(
+                                t(
+                                    "mob.wenn.kraftstoff",
+                                    kraftstoff=t(f"mob.kraftstoff.{werte['kraftstoff']}"),
+                                )
+                            ),
                             value=money(kraftstoff_eur),
-                            hint="pro Jahr, gleiche Strecke",
+                            hint=t("mob.wenn.kraftstoff_hint"),
                         ),
                         b.live_stat(
-                            label="Unterschied",
+                            label=t("mob.wenn.unterschied"),
                             value=money(over(minus(kraftstoff_eur, strom_eur), 12)),
-                            hint="pro Monat, nur Energie",
+                            hint=t("mob.wenn.unterschied_hint"),
                         ),
                     ]
                 ),
                 b.card(
                     b.column(
                         [
-                            b.text("Sollen wir so weiterrechnen?", variant="h3"),
-                            b.text(
-                                "Übernehmen Sie Ihre Einstellung, gilt sie für die "
-                                "ganze Beratung – Reichweite, Ladeoptionen und "
-                                "Gesamtkosten."
-                            ),
+                            b.text(t("mob.wenn.uebernehmen_title"), variant="h3"),
+                            b.text(t("mob.wenn.uebernehmen_body")),
                             b.button(
-                                "Mit diesen Werten weiterrechnen",
+                                t("mob.wenn.uebernehmen_button"),
                                 event="annahmen_uebernehmen",
                                 context={
                                     "taeglich_km": bind("/wenn/taeglich_km"),
@@ -591,21 +603,18 @@ def stellschrauben_surface(profil: calc.Mobilitaetsprofil) -> Surface:
                 ),
                 b.assumptions(
                     [
-                        f"{werte['fahrzeug']}, {_komma(werte['verbrauch_kwh_100km'], 1)} "
-                        f"kWh/100 km im Realbetrieb",
-                        f"Verbrenner-Vergleich mit {_komma(werte['verbrauch_l_100km'], 1)} "
-                        f"l/100 km {werte['kraftstoff']}",
-                        f"Neben der Tagesstrecke rechne ich fest mit "
-                        f"{de(werte['km_konstante'])} km im Jahr für Langstrecken "
-                        f"und Freizeit.",
-                        "Die Regler verändern nur Strecke und Ladeort – Verbrauch, "
-                        "Preise und Fahrzeugklasse bleiben, wie berechnet.",
-                        "Nur Energiekosten. Wertverlust, Wartung, Versicherung und "
-                        "Steuer stehen im Kostenvergleich.",
-                        dd.DISCLAIMER,
+                        *t.list(
+                            "mob.wenn.assumptions",
+                            fahrzeug=werte["fahrzeug"],
+                            verbrauch=t.num(werte["verbrauch_kwh_100km"], decimals=1),
+                            liter=t.num(werte["verbrauch_l_100km"], decimals=1),
+                            kraftstoff=t(f"mob.kraftstoff.{werte['kraftstoff']}"),
+                            km=t.num(werte["km_konstante"]),
+                        ),
+                        t("data.disclaimer"),
                     ],
-                    source=dd.QUELLE_MOBILITAET,
-                    as_of=dd.STAND,
+                    source=t("data.source.mobilitaet"),
+                    as_of=t("data.as_of"),
                 ),
             ]
         )

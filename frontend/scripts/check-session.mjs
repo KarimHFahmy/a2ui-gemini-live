@@ -28,9 +28,24 @@ const MIME = {
   '.svg': 'image/svg+xml',
 };
 
+/*
+ * The whole experience runs in either language, so the restart path is driven
+ * in both: the surfaces a session leaks are the same objects either way, but
+ * the *shell* is not, and a language switched between two sessions is one more
+ * way for the last conversation to stay on screen.
+ */
+const LOCALE = process.env.CHECK_LOCALE ?? 'de';
+
+const LABELS = {
+  de: {energie: 'Mein Zuhause', mobilitaet: 'Meine Mobilität', restart: 'Neu starten',
+       confirm: 'Ja, neu starten'},
+  en: {energie: 'My Home', mobilitaet: 'My Mobility', restart: 'Start over',
+       confirm: 'Yes, start over'},
+}[LOCALE];
+
 const JOURNEYS = [
-  {id: 'energie', label: 'Mein Zuhause', tagline: 'Wärmepumpe, Sanierung, Förderung'},
-  {id: 'mobilitaet', label: 'Meine Mobilität', tagline: 'Reichweite, Laden, Kosten'},
+  {id: 'energie', label: LABELS.energie, tagline: '—'},
+  {id: 'mobilitaet', label: LABELS.mobilitaet, tagline: '—'},
 ];
 
 /*
@@ -43,7 +58,7 @@ const OPENING_PAUSE = 250;
 
 const fixtures = JSON.parse(
   fs.readFileSync(path.resolve(import.meta.dirname, '../fixtures.json'), 'utf8'),
-);
+)[LOCALE];
 
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
@@ -143,15 +158,15 @@ async function startJourney(label) {
 }
 
 async function restart() {
-  await page.getByRole('button', {name: 'Neu starten'}).click();
-  await page.getByRole('button', {name: 'Ja, neu starten'}).click();
+  await page.getByRole('button', {name: LABELS.restart}).click();
+  await page.getByRole('button', {name: LABELS.confirm}).click();
   await page.waitForSelector('.landing', {timeout: 8000});
 }
 
-await page.goto('http://localhost:4174/', {waitUntil: 'networkidle'});
+await page.goto(`http://localhost:4174/?lang=${LOCALE}`, {waitUntil: 'networkidle'});
 
 // --- First conversation ----------------------------------------------------
-const opening = await startJourney('Mein Zuhause');
+const opening = await startJourney(LABELS.energie);
 const first = await surfaceIds();
 
 // The agent says what it can help with; the empty screen has to say the same,
@@ -173,7 +188,7 @@ if ((await surfaceIds()).length) {
 }
 
 // --- Second conversation, different journey --------------------------------
-await startJourney('Meine Mobilität');
+await startJourney(LABELS.mobilitaet);
 const second = await surfaceIds();
 
 // `eignung` belongs to the energy journey and `alltag` to the mobility one, so
@@ -192,7 +207,8 @@ const profileText = await page
   .locator('.aside')
   .innerText()
   .catch(() => '');
-if (/Baujahr|Wärmebedarf|Heizung heute/.test(profileText)) {
+const energyProfileWords = LOCALE === 'de' ? /Baujahr|Wärmebedarf|Heizung heute/ : /built |Heat demand|Heating today/;
+if (energyProfileWords.test(profileText)) {
   problems.push('the previous journey’s profile is still in the context column');
 }
 
@@ -200,13 +216,14 @@ if (/Baujahr|Wärmebedarf|Heizung heute/.test(profileText)) {
 const progressLabels = await page.$$eval('.progress__label', nodes =>
   nodes.map(n => n.textContent.trim()),
 );
-if (progressLabels.includes('Eignung') || progressLabels.includes('Förderung')) {
+const energySteps = LOCALE === 'de' ? ['Eignung', 'Förderung'] : ['Suitability', 'Subsidy'];
+if (energySteps.some(label => progressLabels.includes(label))) {
   problems.push(`progress still shows the previous arc: ${progressLabels.join(', ')}`);
 }
 
 // --- Same journey twice, the case a shared surface id would hide ------------
 await restart();
-await startJourney('Meine Mobilität');
+await startJourney(LABELS.mobilitaet);
 const third = await surfaceIds();
 if (third.length !== second.length) {
   problems.push(
@@ -220,7 +237,7 @@ if (sockets !== 3) problems.push(`expected 3 sessions, the shell opened ${socket
 await browser.close();
 server.close();
 
-console.log(`sessions: ${sockets}, surfaces: ${first.length} / ${second.length} / ${third.length}`);
+console.log(`[${LOCALE}] sessions: ${sockets}, surfaces: ${first.length} / ${second.length} / ${third.length}`);
 for (const problem of problems) console.log(`  ${problem}`);
 console.log(problems.length ? `\nFAILURES: ${problems.length}` : '\nSESSION CHECKS PASSED');
 process.exit(problems.length ? 1 : 0);

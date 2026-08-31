@@ -26,7 +26,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
-from .journeys import all_journeys, get_journey
+from .journeys import DEFAULT_LOCALE, LOCALES, all_journeys, get_journey
 from .session import AdvisorySession
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
             settings.model,
             settings.use_vertex_ai,
             settings.voice_name,
-            settings.language_code,
+            "/".join(settings.language_code(loc) for loc in LOCALES),
         )
 
     # ADK reads its Gemini configuration from the environment.
@@ -99,13 +99,15 @@ async def healthz() -> JSONResponse:
 
 
 @app.get("/api/journeys")
-async def journeys() -> dict[str, Any]:
-    """Feeds the landing page: "Mein Zuhause" or "Meine Mobilität"."""
+async def journeys(lang: str = Query(default=DEFAULT_LOCALE)) -> dict[str, Any]:
+    """Feeds the landing page, in the language the client picked."""
+    locale = lang if lang in LOCALES else DEFAULT_LOCALE
     return {
+        "locale": locale,
         "journeys": [
             {"id": j.id, "label": j.label, "tagline": j.tagline}
-            for j in all_journeys()
-        ]
+            for j in all_journeys(locale)
+        ],
     }
 
 
@@ -118,6 +120,7 @@ async def journeys() -> dict[str, Any]:
 async def advisory_socket(
     websocket: WebSocket,
     journey: str = Query(default="energie"),
+    lang: str = Query(default=DEFAULT_LOCALE),
 ) -> None:
     """One advisory session.
 
@@ -143,8 +146,10 @@ async def advisory_socket(
         await websocket.close()
         return
 
-    selected = get_journey(journey)
-    logger.info("WebSocket accepted (journey=%s)", selected.id)
+    selected = get_journey(journey, lang if lang in LOCALES else DEFAULT_LOCALE)
+    logger.info(
+        "WebSocket accepted (journey=%s, locale=%s)", selected.id, selected.locale
+    )
 
     async def audio_sink(chunk: bytes) -> None:
         await websocket.send_bytes(chunk)
@@ -162,6 +167,7 @@ async def advisory_socket(
     await websocket.send_json(
         {
             "type": "session",
+            "locale": selected.locale,
             "journey": {
                 "id": selected.id,
                 "label": selected.label,
