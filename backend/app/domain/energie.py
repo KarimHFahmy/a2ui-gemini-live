@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from . import demo_data as dd
+from ..format_de import de
 
 Heizung = Literal["gas", "oel", "fernwaerme", "nachtspeicher", "waermepumpe"]
 Sanierungsstand = Literal["unsaniert", "teilsaniert", "saniert"]
@@ -495,13 +496,13 @@ def annahmen(profil: Gebaeudeprofil) -> list[str]:
     traeger, preis_alt, _ = _bestand_energietraeger(profil)
     eigene = profil.preis_alt_ct is not None or profil.preis_strom_ct is not None
     return [
-        f"Wärmebedarf {waermebedarf_kwh_a(profil):,.0f} kWh/a".replace(",", "."),
-        f"Strompreis Wärmepumpe {strompreis_eur_kwh(profil):.2f} €/kWh, "
-        f"{traeger}preis {preis_alt:.3f} €/kWh"
+        f"Wärmebedarf {de(waermebedarf_kwh_a(profil))} kWh/a",
+        f"Strompreis Wärmepumpe {de(strompreis_eur_kwh(profil), decimals=2)} €/kWh, "
+        f"{traeger}preis {de(preis_alt, decimals=3)} €/kWh"
         + (" (Ihre eigenen Annahmen)" if eigene else ""),
         f"Preissteigerung Strom {dd.PREISPFAD_STROM_P_A:.0%} p. a., "
         f"fossil {dd.PREISPFAD_GAS_P_A:.1%} p. a.",
-        f"Jahresarbeitszahl {jaz(vorlauftemperatur(profil))} bei "
+        f"Jahresarbeitszahl {de(jaz(vorlauftemperatur(profil)), decimals=1)} bei "
         f"{vorlauftemperatur(profil)} °C Vorlauf",
         "Betrachtungsdauer 20 Jahre, Förderung nach BEG-Demo-Logik",
         dd.DISCLAIMER,

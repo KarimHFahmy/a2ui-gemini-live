@@ -10,6 +10,7 @@ from typing import Any
 
 from ..domain import demo_data as dd
 from ..domain import energie as calc
+from ..format_de import de
 from .builder import SurfaceBuilder, bind, minus, money, over, plus, times
 from .surface import Surface
 
@@ -28,7 +29,7 @@ _STAND_LABEL = {
 
 
 def _euro(value: float) -> str:
-    return f"{value:,.0f} €".replace(",", ".")
+    return de(value, unit="€")
 
 
 def profil_surface(profil: calc.Gebaeudeprofil, offene_punkte: list[str]) -> Surface:
@@ -74,9 +75,8 @@ def profil_surface(profil: calc.Gebaeudeprofil, offene_punkte: list[str]) -> Sur
         {
             "label": "Wärmebedarf",
             # Estimated values are marked so the client can correct them.
-            "wert": f"~ {bedarf:,.0f} kWh/Jahr".replace(",", ".")
-            if profil.verbrauch_kwh_a is None
-            else f"{bedarf:,.0f} kWh/Jahr".replace(",", "."),
+            "wert": ("~ " if profil.verbrauch_kwh_a is None else "")
+            + de(bedarf, unit="kWh/Jahr"),
         },
     ]
     if profil.prioritaeten:
@@ -129,18 +129,17 @@ def eignung_surface(profil: calc.Gebaeudeprofil) -> Surface:
                         ),
                         b.stat_card(
                             title="Erwartete Jahresarbeitszahl",
-                            metric=str(check["jaz"]),
+                            metric=de(check["jaz"], decimals=1),
                             metric_label="JAZ",
-                            body=f"Aus 1 kWh Strom werden {check['jaz']} kWh Wärme – "
-                            f"rund {check['strombedarf_kwh_a']:,.0f} kWh Strom im Jahr.".replace(
-                                ",", "."
-                            ),
+                            body=f"Aus 1 kWh Strom werden {de(check['jaz'], decimals=1)} "
+                            f"kWh Wärme – rund {de(check['strombedarf_kwh_a'])} kWh "
+                            "Strom im Jahr.",
                             tone="positive" if check["jaz"] >= 3.5 else "neutral",
                             weight=1,
                         ),
                         b.stat_card(
                             title="Benötigte Heizleistung",
-                            metric=f"{check['heizlast_kw']} kW",
+                            metric=de(check["heizlast_kw"], decimals=1, unit="kW"),
                             metric_label="Norm-Heizlast",
                             body="Danach wird die Wärmepumpe ausgelegt. Zu groß "
                             "dimensioniert taktet sie und verschleißt schneller.",
@@ -262,7 +261,7 @@ def szenarien_surface(
                     "label": "Energiekosten pro Jahr",
                     "werte": [_euro(s.energiekosten_eur_a) for s in szenarien],
                 },
-                {"label": "CO₂ pro Jahr", "werte": [f"{s.co2_kg_a / 1000:.1f} t" for s in szenarien]},
+                {"label": "CO₂ pro Jahr", "werte": [de(s.co2_kg_a / 1000, decimals=1, unit="t") for s in szenarien]},
                 {"label": "Komfort", "werte": [komfort[s.komfort_score] for s in szenarien]},
                 {"label": "Aufwand für Sie", "werte": [aufwand[s.aufwand_score] for s in szenarien]},
             ],
@@ -584,11 +583,9 @@ def stellschrauben_surface(
                 ),
                 b.assumptions(
                     [
-                        f"Wärmebedarf {werte['bedarf_kwh_a']:,.0f} kWh/a".replace(",", "."),
-                        f"Daraus {werte['kwh_alt']:,.0f} kWh {werte['traeger']} heute "
-                        f"gegenüber {werte['kwh_neu']:,.0f} kWh Strom danach".replace(
-                            ",", "."
-                        ),
+                        f"Wärmebedarf {de(werte['bedarf_kwh_a'])} kWh/a",
+                        f"Daraus {de(werte['kwh_alt'])} kWh {werte['traeger']} heute "
+                        f"gegenüber {de(werte['kwh_neu'])} kWh Strom danach",
                         "Die Regler verändern nur die beiden Preise – Bedarf, "
                         "Jahresarbeitszahl und Investition bleiben, wie berechnet.",
                         "Preissteigerungen sind hier bewusst nicht enthalten: Sie "

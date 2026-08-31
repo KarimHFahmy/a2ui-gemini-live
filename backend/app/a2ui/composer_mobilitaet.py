@@ -11,6 +11,7 @@ from typing import Any
 
 from ..domain import demo_data as dd
 from ..domain import mobilitaet as calc
+from ..format_de import de
 from .builder import SurfaceBuilder, bind, minus, money, number, over, plus, times
 from .surface import Surface
 
@@ -23,7 +24,7 @@ _LADE_LABEL = {
 
 
 def _euro(value: float) -> str:
-    return f"{value:,.0f} €".replace(",", ".")
+    return de(value, unit="€")
 
 
 def _komma(value: float, digits: int = 2) -> str:
@@ -65,7 +66,7 @@ def profil_surface(profil: calc.Mobilitaetsprofil, offene_punkte: list[str]) -> 
         {"label": "Laden", "wert": _LADE_LABEL[profil.lademoeglichkeit]},
         {
             "label": "Im Jahr",
-            "wert": f"~ {profil.jahresfahrleistung_km():,.0f} km".replace(",", "."),
+            "wert": "~ " + de(profil.jahresfahrleistung_km(), unit="km"),
         },
         {
             "label": "Fahrzeugwunsch",
@@ -261,7 +262,7 @@ def laden_surface(profil: calc.Mobilitaetsprofil) -> Surface:
                 ),
                 b.assumptions(
                     calc.annahmen(profil)
-                    + [f"Jahresenergiebedarf rund {lade['jahres_kwh']:,.0f} kWh".replace(",", ".")],
+                    + [f"Jahresenergiebedarf rund {de(lade['jahres_kwh'])} kWh"],
                     source=dd.QUELLE_MOBILITAET,
                     as_of=dd.STAND,
                 ),
@@ -454,7 +455,7 @@ def kosten_surface(profil: calc.Mobilitaetsprofil) -> Surface:
                     b.chart(
                         title="Kostenposten im Vergleich",
                         subtitle=f"Gesamtkosten über {k['haltedauer_jahre']} Jahre bei "
-                        f"{k['jahres_km']:,.0f} km im Jahr.".replace(",", "."),
+                        f"{de(k['jahres_km'])} km im Jahr.",
                         chart_type="groupedBar",
                         categories=bind("/kategorien"),
                         series=bind("/serien"),
@@ -595,8 +596,8 @@ def stellschrauben_surface(profil: calc.Mobilitaetsprofil) -> Surface:
                         f"Verbrenner-Vergleich mit {_komma(werte['verbrauch_l_100km'], 1)} "
                         f"l/100 km {werte['kraftstoff']}",
                         f"Neben der Tagesstrecke rechne ich fest mit "
-                        f"{werte['km_konstante']:,.0f} km im Jahr für Langstrecken "
-                        f"und Freizeit.".replace(",", "."),
+                        f"{de(werte['km_konstante'])} km im Jahr für Langstrecken "
+                        f"und Freizeit.",
                         "Die Regler verändern nur Strecke und Ladeort – Verbrauch, "
                         "Preise und Fahrzeugklasse bleiben, wie berechnet.",
                         "Nur Energiekosten. Wertverlust, Wartung, Versicherung und "
