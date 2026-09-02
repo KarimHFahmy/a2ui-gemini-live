@@ -38,7 +38,7 @@ export function Stage({surfaces, titles, journeyLabel, topics, hasAnySurface}: S
   }, [surfaces.length]);
 
   return (
-    <main className="stage">
+    <main className="stage" id="stage" tabIndex={-1}>
       {!hasAnySurface ? (
         <div className="stage__empty">
           <span className="stage__empty-badge">{journeyLabel}</span>

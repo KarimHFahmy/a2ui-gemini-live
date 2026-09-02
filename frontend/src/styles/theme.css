@@ -129,6 +129,33 @@
   --shadow-lift: 0 2px 6px rgba(16, 21, 26, 0.08), 0 12px 32px rgba(16, 21, 26, 0.1);
 
   /*
+   * Motion, as two curves rather than the browser's `ease`.
+   *
+   * `ease` decelerates symmetrically, which reads as an animation. Weight
+   * reads as a thing that was moved: most of the distance covered early, then
+   * a long settle. That is `--ease-out`, and it is the same curve the stage
+   * already used for a surface arriving — the rest of the interface was still
+   * on the default, so a button and a surface moved to different physics.
+   *
+   * `--ease-press` is near-linear on purpose. A press has to land under the
+   * finger, not glide there; anything with a tail feels like lag.
+   */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-press: cubic-bezier(0.4, 0, 0.6, 1);
+
+  /* Two durations. A state change is felt; a surface arriving is watched. */
+  --motion-fast: 160ms;
+  --motion-slow: 340ms;
+
+  /*
+   * How far an interactive surface gives under a press.
+   *
+   * One value everywhere, because a card and a button that yield by different
+   * amounts feel like different materials.
+   */
+  --press: 0.985;
+
+  /*
    * Two roles with a real job split: prose in the sans, *measurements* in the
    * mono. Units, axis ticks, table figures, slider readouts and the assumption
    * notes are all readings, and setting them like readings is most of what
@@ -256,8 +283,10 @@
     --series-4: #67b39c;
     --series-5: #d18a9c;
 
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3);
-    --shadow-lift: 0 2px 6px rgba(0, 0, 0, 0.5), 0 12px 32px rgba(0, 0, 0, 0.4);
+    /* Tinted with the dark ground rather than pure black: a neutral shadow
+       on a blue-black surface reads as a hole rather than as depth. */
+    --shadow-card: 0 1px 2px rgba(2, 6, 10, 0.5), 0 4px 16px rgba(2, 6, 10, 0.38);
+    --shadow-lift: 0 2px 6px rgba(2, 6, 10, 0.6), 0 12px 32px rgba(2, 6, 10, 0.48);
   }
 }
 

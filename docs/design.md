@@ -136,6 +136,66 @@ not support, and it took making colour honest to see it.
 
 ---
 
+## The taste pass
+
+A second critique, run against an external design checklist
+(`Leonxlnx/taste-skill`) rather than against my own eye. Most of what it flags
+was already handled — self-hosted type with real character, one accent doing
+one job, tabular figures, semantic regions, a focus ring, a designed empty
+state, a varied radius scale. Four things it flagged were true.
+
+**No press feedback anywhere.** Zero `:active` rules in the whole interface. A
+click changed the state and the control never acknowledged the finger. On a
+touch screen there is no hover to confirm the target, so it reads as an
+unresponsive control — in a product built to be poked at while someone talks.
+Every pressable thing now yields by the same `--press` amount, and the landing
+cards give their hover lift back rather than scaling a raised card.
+
+**Two sets of physics.** Every transition ran on the browser's `ease` except
+the one on an arriving surface, which had a considered curve. So a button and
+a surface moved differently for no reason. There are now two tokens —
+`--ease-out` for state changes, `--ease-press` for the near-linear press that
+has to land under the finger — and everything uses them.
+
+**Untinted shadows in dark mode.** Light mode already tinted them with the ink;
+dark mode was pure black, which on a blue-black ground reads as a hole rather
+than as depth.
+
+**Missing pieces.** No favicon, and no skip link past the header controls to
+the advice. Both are there now; the favicon is one rising line across a grid
+square, the smallest mark that still says "a figure over time" at 16 px.
+
+`check-catalog` grew a motion check that presses a real button and reads the
+computed style back, so the first two can only regress loudly. It took two
+tries: the first version read the easing *during* the press, where the press
+rule overrides it on purpose, and so measured the wrong thing and passed a
+mutation it should have caught.
+
+### Rejected, and why
+
+The checklist's headline advice is a house style — dark glass, mesh gradients,
+`rounded-[2rem]` double-bezels, macro-whitespace, a font swap to Geist or
+Satoshi, background photography. Applied here it would fight the brief:
+
+- **The font swap.** IBM Plex was chosen because it reads instrument-grade for
+  a product about measurement, and it is vendored so the design survives a
+  network that blocks font CDNs. Swapping it would undo a decision and a guard.
+- **Glass, mesh gradients, OLED black.** This page's job is to make someone
+  trust a number they did not calculate. Decoration that says "expensive"
+  works against that.
+- **Macro-whitespace, `py-24` upward.** The session is a fixed viewport with a
+  pinned dock. Doubling the padding pushes advice off the screen.
+- **Background imagery, including placeholder photos.** Every figure here is
+  labelled demo data. Dressing it in stock photography would be the one change
+  that makes an honest product look like a mock-up.
+- **Asymmetric bento, broken grid.** The two journeys are a genuine pair.
+  Making one bigger would assert a hierarchy that does not exist.
+
+Same pattern as the first critique pass: a checklist is good at naming what is
+missing, and wrong about what to put there when it has not read the brief.
+
+---
+
 ## Where a rebrand touches
 
 `--brand-*` and the type stack in `theme.css`, plus `VITE_BRAND_NAME`. The tone

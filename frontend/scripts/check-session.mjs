@@ -181,6 +181,46 @@ if (!first.includes('eignung')) {
   problems.push(`the first session is missing its own surfaces: ${first.join(', ')}`);
 }
 
+// --- The advice is reachable without a mouse -------------------------------
+// The stage sits behind a header of controls, so the first thing a keyboard
+// reaches in a session has to be the way past them.
+//
+// Asserted on the DOM and on the link's own behaviour rather than by pressing
+// Tab: Chromium keeps a "sequential focus navigation starting point" from the
+// last click, so a synthetic Tab here starts from the middle of the page and
+// measures the test's setup instead of the page.
+const skip = await page.evaluate(() => {
+  const link = document.querySelector('.skip-link');
+  if (!link) return {present: false};
+
+  const tabbable = document.querySelectorAll('a[href], button, [tabindex]');
+  const hiddenBox = link.getBoundingClientRect();
+  link.focus();
+  const focusedBox = link.getBoundingClientRect();
+
+  return {
+    present: true,
+    first: tabbable[0] === link,
+    // A skip link that stays clipped while focused is one nobody can use.
+    revealed: focusedBox.width > hiddenBox.width || getComputedStyle(link).clipPath === 'none',
+    target: link.getAttribute('href'),
+  };
+});
+
+if (!skip.present) {
+  problems.push('a session has no skip link past the header to the advice');
+} else {
+  if (!skip.first) problems.push('the skip link is not the first thing a keyboard reaches');
+  if (!skip.revealed) problems.push('the skip link stays hidden while focused');
+
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(150);
+  const landed = await page.evaluate(() => document.activeElement?.id);
+  if (landed !== 'stage') {
+    problems.push(`the skip link left focus on ${landed || 'nothing'}, not the stage`);
+  }
+}
+
 // --- Restart ---------------------------------------------------------------
 await restart();
 if ((await surfaceIds()).length) {

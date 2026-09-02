@@ -19,3 +19,10 @@ backend/static/
 # Tooling
 .DS_Store
 *.log
+
+# Agent skills installed with `npx skills add`. Local tooling rather than
+# product: they are design opinions this repo was audited against, not code it
+# ships. Remove these lines to share a specific set with the team.
+/.agents/
+/.claude/skills/
+/skills-lock.json

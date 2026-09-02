@@ -80,6 +80,12 @@ for (const locale of ['de', 'en'])
   });
   await page.waitForSelector('.surface', {timeout: 8000});
 
+  const motion = await checkMotion(page);
+  if (motion.problems.length) {
+    failures++;
+    console.log(`  [${locale}/${scheme}] motion: ${motion.problems.join('; ')}`);
+  }
+
   const type = await checkType(page);
   if (type.problems.length) {
     failures++;
@@ -285,6 +291,60 @@ async function checkType(page) {
     }
     return {problems};
   });
+}
+
+/**
+ * Checks that the interface responds to being touched.
+ *
+ * There was no `:active` state anywhere in it: a click changed the state and
+ * the control never acknowledged the finger. On a touch screen there is no
+ * hover to confirm the target, so that reads as an unresponsive control — in
+ * a product built to be poked at while talking.
+ *
+ * Driven by actually holding the mouse down and reading the computed style
+ * back, rather than by inspecting the stylesheet: the bundled sheet is not
+ * reliably reachable through CSSOM here, and a rule that exists but is
+ * overridden would pass a text check anyway.
+ */
+async function checkMotion(page) {
+  const problems = [];
+  const button = await page.$('.surface button:not(.chip)');
+  if (!button) {
+    problems.push('no surface button to press');
+    return {problems};
+  }
+
+  const transform = () =>
+    button.evaluate(node => getComputedStyle(node).transform);
+  const easing = () =>
+    button.evaluate(node => getComputedStyle(node).transitionTimingFunction);
+
+  // The stage scrolls, so the first button is usually below the fold and a
+  // press at its page coordinates would land on nothing.
+  await button.scrollIntoViewIfNeeded();
+  const box = await button.boundingBox();
+  const resting = await transform();
+  // Sampled at rest: the press rule overrides the timing function on purpose,
+  // so reading it mid-press would measure that override instead.
+  const curve = await easing();
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  // Long enough for the transition to land, short enough not to slow the run.
+  await page.waitForTimeout(300);
+  const pressed = await transform();
+  await page.mouse.up();
+
+  if (pressed === resting) {
+    problems.push('a surface button does not give under a press');
+  }
+  // `ease` is the browser default; everything that changes state moves on the
+  // shared curve so a button and an arriving surface feel like one material.
+  if (/(^|,\s*)(ease|ease-in-out|ease-in)(\s*,|$)/.test(curve)) {
+    problems.push(`a surface button still transitions on ${curve}`);
+  }
+
+  return {problems};
 }
 
 /**

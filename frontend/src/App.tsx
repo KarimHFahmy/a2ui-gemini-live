@@ -162,6 +162,14 @@ export default function App() {
     <LocaleProvider locale={locale}>
       <A2uiHost>
         <div className="session">
+          {/*
+            The advice is the point of the page and it sits behind a header of
+            controls. A keyboard user should not have to tab past the restart
+            button and two badges to reach it.
+          */}
+          <a className="skip-link" href="#stage">
+            {t('session.skip')}
+          </a>
           <header className="session__bar">
             <span className="session__wordmark">{BRAND_NAME}</span>
             <span className="session__journey">{active.label}</span>

@@ -1,0 +1,18 @@
+<!--
+  The mark: a reading taken.
+
+  The product's whole subject is measurement — Vorlauftemperatur, kWh/m²a, a
+  cost curve crossing another one — and the interface already sits on squared
+  paper for that reason. So the icon is one line rising across a grid square,
+  which is the smallest thing that still says "a figure over time" at 16px.
+  Anything with more strokes turns to mud at favicon size.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Adaptive Advisory">
+  <rect width="32" height="32" rx="7" fill="#145a6e"/>
+  <g stroke="#ffffff" stroke-opacity="0.22" stroke-width="1">
+    <path d="M11.5 6v20M20.5 6v20M6 11.5h20M6 20.5h20"/>
+  </g>
+  <path d="M7 23 13 17l5 3.5L25 9"
+        fill="none" stroke="#ffffff" stroke-width="2.75"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
